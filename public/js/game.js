@@ -76,6 +76,9 @@ class CyberSecGame {
         this.logoSoftLab = new Image();
         this.logoSoftLab.src = "images/logo_softlab_pixel.png";
 
+        // Hệ thống thời tiết động (Nắng, Mưa, Tuyết)
+        this.weather = window.WeatherSystem;
+
         this._initParticles();
         this._initEntities();
         this._bindInputs();
@@ -191,6 +194,8 @@ class CyberSecGame {
                 this.handleInput("ENTER");
             } else if (["A", "B", "C", "D"].includes(key)) {
                 this.handleInput(key);
+            } else if (key === "W") {
+                this.toggleWeather();
             }
         });
 
@@ -200,6 +205,18 @@ class CyberSecGame {
                 if (btnKey) this.handleInput(btnKey);
             });
         });
+    }
+
+    // Đổi thời tiết (Nắng -> Mưa -> Tuyết -> Nắng)
+    toggleWeather() {
+        if (!this.weather) return 'SUNNY';
+        const newW = this.weather.toggleWeather();
+        const btn = document.getElementById('btnWeather');
+        if (btn) {
+            const labels = { SUNNY: "☀️ Nắng", RAIN: "🌧️ Mưa", SNOW: "❄️ Tuyết" };
+            btn.innerText = labels[newW] || "☀️ Nắng";
+        }
+        return newW;
     }
 
     handleInput(button) {
@@ -326,6 +343,20 @@ class CyberSecGame {
         this.currentQIndex = 0;
         this.stageCorrectCount = 0;
         this.stageQuestions = window.QuestionGenerator.generateStageQuestions(stageNum);
+
+        // Đổi thời tiết tự nhiên theo vòng chơi
+        if (this.weather) {
+            if (stageNum === 1) this.weather.setWeather('SUNNY'); // Vòng 1: Rừng nắng ấm
+            else if (stageNum === 2) this.weather.setWeather('RAIN'); // Vòng 2: Biển mưa bão
+            else if (stageNum === 3) this.weather.setWeather('SNOW'); // Vòng 3: Tầng mây tuyết trắng
+
+            const btn = document.getElementById('btnWeather');
+            if (btn) {
+                const labels = { SUNNY: "☀️ Nắng", RAIN: "🌧️ Mưa", SNOW: "❄️ Tuyết" };
+                btn.innerText = labels[this.weather.currentType] || "☀️ Nắng";
+            }
+        }
+
         this.state = "STAGE_INTRO";
     }
 
@@ -505,6 +536,11 @@ class CyberSecGame {
         const h = this.canvas.height;
 
         this.heroWalkFrame += dt;
+
+        // Cập nhật hạt thời tiết (Mưa, Tuyết, Nắng, Sấm sét)
+        if (this.weather) {
+            this.weather.update(dt, w, h);
+        }
 
         // Cập nhật sinh vật rừng (Chim bay)
         this.forestBirds.forEach(b => {
@@ -693,16 +729,22 @@ class CyberSecGame {
             return;
         }
 
-        // Vẽ hệ sinh thái theo từng vòng chơi
+        // Vẽ hệ sinh thái theo từng vòng chơi kết hợp trạng thái thời tiết
+        const wType = this.weather ? this.weather.currentType : 'SUNNY';
         if (this.stage === 1) {
-            // Vòng 1: Rừng Mật Mã (Cây cối, Chim bay, Hoa cỏ, Nấm, Đom đóm)
-            window.PixelSprites.drawForestWorld(ctx, w, h, time, this.forestBirds);
+            // Vòng 1: Rừng Mật Mã (Cây cối, Chim bay, Hoa cỏ, Nấm, Đom đóm + Thời tiết)
+            window.PixelSprites.drawForestWorld(ctx, w, h, time, this.forestBirds, wType);
         } else if (this.stage === 2) {
-            // Vòng 2: Vùng Biển Dữ Liệu (Cá vẫy đuôi bơi, Rong rêu uốn lượn, San hô, Bọt khí)
-            window.PixelSprites.drawWaterWorld(ctx, w, h, time, this.waterFishes, this.waterBubbles);
+            // Vòng 2: Vùng Biển Dữ Liệu (Cá vẫy đuôi bơi, Rong rêu uốn lượn, San hô, Bọt khí + Thời tiết)
+            window.PixelSprites.drawWaterWorld(ctx, w, h, time, this.waterFishes, this.waterBubbles, wType);
         } else {
-            // Vòng 3: Tầng Mây Thượng Đỉnh (Mây cuộn trôi parallax, Chim lượn, Đảo bay)
-            window.PixelSprites.drawCloudWorld(ctx, w, h, time, this.skyBirds);
+            // Vòng 3: Tầng Mây Thượng Đỉnh (Mây cuộn trôi parallax, Chim lượn, Đảo bay + Thời tiết)
+            window.PixelSprites.drawCloudWorld(ctx, w, h, time, this.skyBirds, wType);
+        }
+
+        // Vẽ lớp phủ hạt thời tiết (Mưa rơi, Tuyết rơi, Nắng vàng, Sấm sét)
+        if (this.weather) {
+            this.weather.renderOverlay(ctx, w, h, time);
         }
     }
 
@@ -710,8 +752,9 @@ class CyberSecGame {
     _renderStationedHero(ctx, w, h, time) {
         let heroX = 45;
         let heroY = h - 135;
-        // Nhân vật thở nhẹ nhàng nhấp nhô và áo choàng bay trong gió
-        window.PixelSprites.drawAdventurer(ctx, heroX, heroY, 56, time, 1, false, this.roses);
+        const wType = this.weather ? this.weather.currentType : 'SUNNY';
+        // Nhân vật thở nhẹ nhàng nhấp nhô và phản ứng với thời tiết (khói thở khi tuyết, áo choàng khi mưa)
+        window.PixelSprites.drawAdventurer(ctx, heroX, heroY, 56, time, 1, false, this.roses, wType);
 
         // Bong bóng hội thoại nhỏ của Vệ Binh
         ctx.fillStyle = "rgba(20, 15, 30, 0.85)";
@@ -756,7 +799,14 @@ class CyberSecGame {
 
         if (this.state === "QUESTION" || this.state === "QUESTION_RESULT") {
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 440, 34);
+            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 420, 34);
+
+            // Chỉ báo thời tiết hiện tại
+            const weatherIcons = { SUNNY: "☀️ NẮNG", RAIN: "🌧️ MƯA", SNOW: "❄️ TUYẾT" };
+            const wType = this.weather ? this.weather.currentType : 'SUNNY';
+            ctx.fillStyle = "#dfe4ea";
+            ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(`[${weatherIcons[wType] || "☀️"} - Phím W]`, 590, 34);
         }
 
         window.PixelSprites.drawRose(ctx, w - 240, 14, 28);

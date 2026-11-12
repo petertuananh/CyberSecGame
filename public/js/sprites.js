@@ -1,18 +1,18 @@
 /**
  * Procedural Pixel Art Sprites & Canvas Renderers
  * Tự động vẽ các thành phần đồ họa phong cách Pixel Art 16-bit
- * Bao gồm hệ sinh thái chi tiết:
- *  - RỪNG: Cây cối nhiều tầng, chim chóc bay và đậu cành, nấm rực rỡ, hoa cỏ, đom đóm
- *  - NƯỚC: Rong rêu uốn lượn theo sóng, đàn cá bơi lội vẫy đuôi, rạn san hô, bọt khí nổi
- *  - MÂY: Các tầng mây cuộn trôi parallax, chim lượn trên trời, đảo bay lơ lửng
- *  - NHÂN VẬT PHIÊU LƯU (ADVENTURER): Hoạt ảnh đi bộ, áo choàng bay, cầm hoa hồng/khiên
+ * TÍCH HỢP HIỆU ỨNG THỜI TIẾT TƯƠNG HỖ (NẮNG, MƯA, TUYẾT):
+ *  - CÂY CỐI: Tuyết đọng trắng trên tán cây, mưa làm cây lay động mạnh & ướt sũng, nắng làm lá óng ả
+ *  - MẶT NƯỚC: Mưa tạo gợn sóng tóe bọt, tuyết tạo tảng băng trôi lững lờ, nắng chiếu vệt sáng rực rỡ
+ *  - MÂY TRỜI: Bão xám mây đen sấm chớp khi mưa, mây tuyết băng giá, trời xanh nắng vàng
+ *  - NHÂN VẬT: Hơi thở tỏa khói trắng khi tuyết lạnh, áo choàng tung bay trong mưa bão
  */
 
 const PixelSprites = {
     // ========================================================
     // 1. NHÂN VẬT VỆ BINH PHIÊU LƯU (ADVENTURER / CYBER KNIGHT)
     // ========================================================
-    drawAdventurer(ctx, x, y, size = 48, walkFrame = 0, direction = 1, isWalking = true, rosesCount = 1) {
+    drawAdventurer(ctx, x, y, size = 48, walkFrame = 0, direction = 1, isWalking = true, rosesCount = 1, weather = 'SUNNY') {
         ctx.save();
         ctx.translate(x, y);
         if (direction === -1) {
@@ -20,13 +20,15 @@ const PixelSprites = {
         }
 
         const s = size / 24; // 24x24 pixel grid
-
-        // Nhịp bước đi (Bobbing & Leg swing)
         const bob = isWalking ? Math.abs(Math.sin(walkFrame * 8)) * 2 * s : 0;
 
-        // 1. Áo choàng phía sau (Cape)
-        const capeWave = isWalking ? Math.sin(walkFrame * 8 + 1) * 3 * s : Math.sin(walkFrame * 2) * 1.5 * s;
-        ctx.fillStyle = "#1e3799";
+        // 1. Áo choàng phía sau (Cape - bay mạnh hơn khi có mưa bão)
+        const windMulti = (weather === 'RAIN') ? 2.2 : 1.0;
+        const capeWave = isWalking 
+            ? Math.sin(walkFrame * 8 * windMulti + 1) * 3.5 * s 
+            : Math.sin(walkFrame * 2.5 * windMulti) * 2 * s;
+
+        ctx.fillStyle = (weather === 'RAIN') ? "#142952" : "#1e3799";
         ctx.beginPath();
         ctx.moveTo(7 * s, 8 * s - bob);
         ctx.lineTo(2 * s - capeWave, 18 * s);
@@ -35,50 +37,55 @@ const PixelSprites = {
         ctx.closePath();
         ctx.fill();
 
-        // 2. Chân trái & Chân phải (Walking legs)
+        // 2. Chân trái & Chân phải
         const legLeftOffset = isWalking ? Math.sin(walkFrame * 8) * 3 * s : 0;
         const legRightOffset = isWalking ? -Math.sin(walkFrame * 8) * 3 * s : 0;
 
-        // Chân sau (tối hơn)
         ctx.fillStyle = "#2c3e50";
         ctx.fillRect(8 * s - legLeftOffset, 16 * s - bob, 3 * s, 6 * s + legLeftOffset * 0.4);
         ctx.fillStyle = "#34495e";
         ctx.fillRect(7 * s - legLeftOffset, 21 * s, 4 * s, 3 * s);
 
-        // Chân trước (sáng hơn)
         ctx.fillStyle = "#34495e";
         ctx.fillRect(13 * s + legRightOffset, 16 * s - bob, 3 * s, 6 * s - legRightOffset * 0.4);
         ctx.fillStyle = "#2c3e50";
         ctx.fillRect(13 * s + legRightOffset, 21 * s, 4 * s, 3 * s);
 
-        // 3. Thân áo giáp (Body Armor)
+        // 3. Thân áo giáp
         ctx.fillStyle = "#4a69bd";
         ctx.fillRect(8 * s, 9 * s - bob, 8 * s, 8 * s);
         ctx.fillStyle = "#6a89cc";
         ctx.fillRect(10 * s, 10 * s - bob, 5 * s, 6 * s);
-        ctx.fillStyle = "#f1c40f"; // Huy hiệu bảo mật vàng
+        ctx.fillStyle = "#f1c40f";
         ctx.fillRect(12 * s, 12 * s - bob, 2 * s, 2 * s);
 
-        // Thắt lưng (Belt)
         ctx.fillStyle = "#2c3e50";
         ctx.fillRect(8 * s, 15 * s - bob, 8 * s, 2 * s);
         ctx.fillStyle = "#f39c12";
         ctx.fillRect(11 * s, 15 * s - bob, 2 * s, 2 * s);
 
-        // 4. Đầu & Mũ giáp Cyber (Head & Helmet)
+        // 4. Đầu & Mũ giáp Cyber
         ctx.fillStyle = "#dfe4ea";
         ctx.fillRect(9 * s, 3 * s - bob, 7 * s, 6 * s);
 
-        // Kính bảo hộ Cyber phát quang xanh neon (Visor)
         ctx.fillStyle = "#00d2d3";
         ctx.fillRect(12 * s, 5 * s - bob, 5 * s, 2.5 * s);
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(14 * s, 5 * s - bob, 1.5 * s, 1 * s);
 
-        // Băng đầu / Mào mũ giáp
         ctx.fillStyle = "#e74c3c";
         ctx.fillRect(8 * s, 2 * s - bob, 8 * s, 2 * s);
         ctx.fillRect(7 * s, 3 * s - bob, 2 * s, 2 * s);
+
+        // Hiệu ứng khi tuyết lạnh: Thở ra khói trắng (Breath vapor)
+        if (weather === 'SNOW') {
+            const smokePuff = (Math.sin(walkFrame * 3) + 1) * 0.5;
+            if (smokePuff > 0.4) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${smokePuff * 0.6})`;
+                ctx.fillRect(18 * s + smokePuff * 4, 4 * s - bob - smokePuff * 3, 3 * s, 2.5 * s);
+                ctx.fillRect(20 * s + smokePuff * 6, 2 * s - bob - smokePuff * 5, 2 * s, 2 * s);
+            }
+        }
 
         // 5. Tay & Cầm Bông hồng bảo mật
         const armSwing = isWalking ? -Math.sin(walkFrame * 8) * 2 * s : 0;
@@ -87,7 +94,6 @@ const PixelSprites = {
         ctx.fillStyle = "#dfe4ea";
         ctx.fillRect(12 * s, 15 * s - bob + armSwing, 2.5 * s, 2.5 * s);
 
-        // Bông hồng cầm trên tay người hùng
         if (rosesCount > 0) {
             this.drawRose(ctx, 14 * s, 9 * s - bob + armSwing, 16 * s);
         }
@@ -133,68 +139,116 @@ const PixelSprites = {
     },
 
     // ========================================================
-    // 3. VÒNG 1: KHU RỪNG MẬT MÃ (CÂY, CHIM CHÓC, HOA CỎ, ĐOM ĐÓM)
+    // 3. VÒNG 1: KHU RỪNG MẬT MÃ (CÂY, CHIM, HOA CỎ, ĐOM ĐÓM + THỜI TIẾT)
     // ========================================================
-    drawForestWorld(ctx, w, h, time, birds = []) {
+    drawForestWorld(ctx, w, h, time, birds = [], weather = 'SUNNY') {
+        // 1. Bầu trời thay đổi theo thời tiết
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, "#082613");
-        skyGrad.addColorStop(0.5, "#0b3b1c");
-        skyGrad.addColorStop(1, "#031508");
+        if (weather === 'RAIN') {
+            // Trời mưa bão xám u tối
+            skyGrad.addColorStop(0, "#0b1712");
+            skyGrad.addColorStop(0.5, "#14241c");
+            skyGrad.addColorStop(1, "#08120d");
+        } else if (weather === 'SNOW') {
+            // Trời mùa đông tuyết lạnh xám băng giá
+            skyGrad.addColorStop(0, "#192a32");
+            skyGrad.addColorStop(0.5, "#253b47");
+            skyGrad.addColorStop(1, "#101e26");
+        } else {
+            // Trời nắng xanh ngọc huyền ảo
+            skyGrad.addColorStop(0, "#082613");
+            skyGrad.addColorStop(0.5, "#0b3b1c");
+            skyGrad.addColorStop(1, "#031508");
+        }
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h);
 
-        // Lớp cây xa
+        // 2. Lớp cây xa
+        const treeFarColor1 = (weather === 'SNOW') ? "#162f2d" : (weather === 'RAIN' ? "#051f10" : "#062b16");
+        const treeFarColor2 = (weather === 'SNOW') ? "#0f2220" : (weather === 'RAIN' ? "#03140a" : "#041b0d");
         for (let i = 0; i < 9; i++) {
             const tx = i * 160 - 40;
-            this._drawPixelTree(ctx, tx, h * 0.35, 120, 180, "#062b16", "#041b0d");
+            this._drawPixelTree(ctx, tx, h * 0.35, 120, 180, treeFarColor1, treeFarColor2, weather);
         }
 
-        // Lớp cây gần lay động theo gió
+        // 3. Lớp cây gần lay động theo gió (gió bão lay mạnh hơn)
+        const windPower = (weather === 'RAIN') ? 6 : (weather === 'SNOW' ? 2 : 3);
+        const windFreq = (weather === 'RAIN') ? 3.0 : 1.5;
+
         for (let i = 0; i < 7; i++) {
             const tx = i * 220 + 20;
-            const sway = Math.sin(time * 1.5 + i) * 3;
-            this._drawPixelTree(ctx, tx + sway, h * 0.45, 150, 240, "#196f3d", "#0e4424");
+            const sway = Math.sin(time * windFreq + i) * windPower;
+            const c1 = (weather === 'SNOW') ? "#1e5245" : (weather === 'RAIN' ? "#114726" : "#196f3d");
+            const c2 = (weather === 'SNOW') ? "#143a31" : (weather === 'RAIN' ? "#0a2e19" : "#0e4424");
+            this._drawPixelTree(ctx, tx + sway, h * 0.45, 150, 240, c1, c2, weather);
         }
 
-        // Mặt đất rừng & cỏ
-        ctx.fillStyle = "#1e3a1f";
-        ctx.fillRect(0, h - 80, w, 80);
-        ctx.fillStyle = "#27ae60";
-        ctx.fillRect(0, h - 84, w, 6);
+        // 4. Mặt đất rừng & cỏ (Tuyết phủ trắng nếu là mùa đông tuyết)
+        if (weather === 'SNOW') {
+            // Mặt đất phủ tuyết trắng xóa
+            ctx.fillStyle = "#dcdde1";
+            ctx.fillRect(0, h - 80, w, 80);
+            ctx.fillStyle = "#f5f6fa"; // Lớp tuyết xốp bên trên
+            ctx.fillRect(0, h - 86, w, 8);
 
-        // Cỏ và nấm phát sáng
-        for (let i = 0; i < w; i += 30) {
-            const grassH = 6 + (Math.sin(i * 13) + 1) * 4;
-            ctx.fillStyle = (i % 60 === 0) ? "#2ecc71" : "#1abc9c";
-            ctx.fillRect(i, h - 84 - grassH, 4, grassH);
+            // Bụi cỏ phủ tuyết
+            for (let i = 0; i < w; i += 30) {
+                const grassH = 5 + (Math.sin(i * 13) + 1) * 3;
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(i, h - 86 - grassH, 4, grassH);
 
-            if (i % 150 === 30) {
-                this._drawMushroom(ctx, i, h - 84);
+                if (i % 150 === 30) {
+                    this._drawMushroom(ctx, i, h - 86, true);
+                }
+            }
+        } else {
+            // Mặt đất xanh tươi / ẩm ướt khi mưa
+            ctx.fillStyle = (weather === 'RAIN') ? "#152617" : "#1e3a1f";
+            ctx.fillRect(0, h - 80, w, 80);
+            ctx.fillStyle = (weather === 'RAIN') ? "#1e8449" : "#27ae60";
+            ctx.fillRect(0, h - 84, w, 6);
+
+            for (let i = 0; i < w; i += 30) {
+                const grassH = 6 + (Math.sin(i * 13) + 1) * 4;
+                ctx.fillStyle = (i % 60 === 0) ? "#2ecc71" : "#1abc9c";
+                ctx.fillRect(i, h - 84 - grassH, 4, grassH);
+
+                if (i % 150 === 30) {
+                    this._drawMushroom(ctx, i, h - 84, false);
+                }
             }
         }
 
-        // Chim chóc trong rừng
-        birds.forEach(b => {
-            this.drawBird(ctx, b.x, b.y, b.vx, time + b.offset, "#f39c12");
-        });
+        // 5. Chim chóc trong rừng (bay trốn mưa hoặc lượn thảnh thơi)
+        if (weather !== 'RAIN' || Math.sin(time) > 0) {
+            birds.forEach(b => {
+                this.drawBird(ctx, b.x, b.y, b.vx, time + b.offset, "#f39c12");
+            });
+        }
 
-        // Đom đóm bay lấp lánh
-        for (let i = 0; i < 18; i++) {
-            const fx = (Math.sin(time * 0.8 + i * 2) * 0.4 + 0.5) * w;
-            const fy = (Math.cos(time * 0.6 + i * 3) * 0.3 + 0.5) * (h - 100);
-            const pulse = (Math.sin(time * 4 + i) + 1) * 0.5;
+        // 6. Đom đóm bay lấp lánh (sáng rực khi trời tối/mưa)
+        if (weather !== 'SNOW') {
+            const count = (weather === 'RAIN') ? 8 : 18;
+            for (let i = 0; i < count; i++) {
+                const fx = (Math.sin(time * 0.8 + i * 2) * 0.4 + 0.5) * w;
+                const fy = (Math.cos(time * 0.6 + i * 3) * 0.3 + 0.5) * (h - 100);
+                const pulse = (Math.sin(time * 4 + i) + 1) * 0.5;
 
-            ctx.fillStyle = `rgba(241, 196, 15, ${pulse * 0.8})`;
-            ctx.fillRect(fx, fy, 4, 4);
-            ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
-            ctx.fillRect(fx + 1, fy + 1, 2, 2);
+                ctx.fillStyle = `rgba(241, 196, 15, ${pulse * 0.8})`;
+                ctx.fillRect(fx, fy, 4, 4);
+                ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+                ctx.fillRect(fx + 1, fy + 1, 2, 2);
+            }
         }
     },
 
-    _drawPixelTree(ctx, x, y, width, height, leafColor1, leafColor2) {
+    // Vẽ 1 Cây thông Pixel (Tích hợp tuyết đọng trên tán lá nếu có tuyết)
+    _drawPixelTree(ctx, x, y, width, height, leafColor1, leafColor2, weather = 'SUNNY') {
+        // Thân cây gỗ
         ctx.fillStyle = "#4a2d14";
         ctx.fillRect(x + width * 0.42, y + height * 0.5, width * 0.16, height * 0.5);
 
+        // Tán lá 3 tầng
         const layers = [
             { yOff: 0.55, h: height * 0.35, w: width },
             { yOff: 0.30, h: height * 0.32, w: width * 0.8 },
@@ -212,63 +266,109 @@ const PixelSprites = {
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-            ctx.fillRect(lx + 6, ly + l.h - 4, l.w - 12, 3);
+            // Nếu thời tiết TUYẾT: Đọng lớp tuyết trắng xóa trên đỉnh mỗi tầng lá!
+            if (weather === 'SNOW') {
+                ctx.fillStyle = "#ffffff";
+                // Lớp tuyết trên viền tầng lá
+                ctx.fillRect(lx + 4, ly + l.h - 5, l.w - 8, 5);
+                ctx.fillRect(lx + 8, ly + l.h - 7, l.w - 16, 3);
+                // Chóp tuyết trên đỉnh
+                if (idx === 2) {
+                    ctx.fillRect(x + width / 2 - 4, ly - 3, 8, 6);
+                }
+            } else {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+                ctx.fillRect(lx + 6, ly + l.h - 4, l.w - 12, 3);
+            }
         });
     },
 
-    _drawMushroom(ctx, x, y) {
+    // Vẽ Nấm rừng (Có thể phủ tuyết)
+    _drawMushroom(ctx, x, y, hasSnow = false) {
         ctx.fillStyle = "#ecf0f1";
         ctx.fillRect(x + 3, y - 8, 4, 8);
         ctx.fillStyle = "#e74c3c";
         ctx.fillRect(x, y - 14, 10, 6);
         ctx.fillRect(x + 2, y - 16, 6, 2);
+
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(x + 2, y - 13, 2, 2);
         ctx.fillRect(x + 6, y - 13, 2, 2);
+
+        // Mũ nấm phủ tuyết trắng
+        if (hasSnow) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(x + 1, y - 18, 8, 3);
+        }
     },
 
     // ========================================================
-    // 4. VÒNG 2: VÙNG BIỂN DỮ LIỆU (CÁ, RONG RÊU, SAN HÔ, BỌT KHÍ)
+    // 4. VÒNG 2: VÙNG BIỂN DỮ LIỆU (CÁ, RONG RÊU, SAN HÔ + THỜI TIẾT)
     // ========================================================
-    drawWaterWorld(ctx, w, h, time, fishes = [], bubbles = []) {
+    drawWaterWorld(ctx, w, h, time, fishes = [], bubbles = [], weather = 'SUNNY') {
         const seaGrad = ctx.createLinearGradient(0, 0, 0, h);
-        seaGrad.addColorStop(0, "#0984e3");
-        seaGrad.addColorStop(0.3, "#0056b3");
-        seaGrad.addColorStop(0.7, "#0c2461");
-        seaGrad.addColorStop(1, "#041033");
+        if (weather === 'RAIN') {
+            // Biển bão tối sầm
+            seaGrad.addColorStop(0, "#08375e");
+            seaGrad.addColorStop(0.4, "#062242");
+            seaGrad.addColorStop(1, "#020c1a");
+        } else if (weather === 'SNOW') {
+            // Biển băng bắc cực lạnh buốt xanh ngọc băng
+            seaGrad.addColorStop(0, "#1289a7");
+            seaGrad.addColorStop(0.4, "#0c3b5e");
+            seaGrad.addColorStop(1, "#031526");
+        } else {
+            // Biển nắng ấm rực rỡ
+            seaGrad.addColorStop(0, "#0984e3");
+            seaGrad.addColorStop(0.3, "#0056b3");
+            seaGrad.addColorStop(0.7, "#0c2461");
+            seaGrad.addColorStop(1, "#041033");
+        }
         ctx.fillStyle = seaGrad;
         ctx.fillRect(0, 0, w, h);
 
-        // Vệt nắng khúc xạ
-        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
-        for (let i = 0; i < 6; i++) {
-            const rx = (i * 240 + Math.sin(time + i) * 40);
-            ctx.beginPath();
-            ctx.moveTo(rx, 0);
-            ctx.lineTo(rx + 60, 0);
-            ctx.lineTo(rx + 160, h);
-            ctx.lineTo(rx + 70, h);
-            ctx.closePath();
-            ctx.fill();
+        // Vệt nắng khúc xạ (Mạnh khi nắng, yếu khi mưa/tuyết)
+        if (weather === 'SUNNY') {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+            for (let i = 0; i < 6; i++) {
+                const rx = (i * 240 + Math.sin(time + i) * 40);
+                ctx.beginPath();
+                ctx.moveTo(rx, 0);
+                ctx.lineTo(rx + 60, 0);
+                ctx.lineTo(rx + 160, h);
+                ctx.lineTo(rx + 70, h);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // TẢNG BĂNG TRÔI PIXEL (Nếu thời tiết là TUYẾT)
+        if (weather === 'SNOW') {
+            for (let i = 0; i < 4; i++) {
+                const iceX = ((i * 360 + time * 18) % (w + 200)) - 100;
+                const iceY = 30 + Math.sin(time * 2 + i) * 5;
+                this._drawIceFloe(ctx, iceX, iceY, 70 + (i % 2) * 30);
+            }
         }
 
         // Đáy biển
-        ctx.fillStyle = "#e58e26";
+        ctx.fillStyle = (weather === 'SNOW') ? "#8395a7" : "#e58e26";
         ctx.fillRect(0, h - 70, w, 70);
-        ctx.fillStyle = "#b76b16";
+        ctx.fillStyle = (weather === 'SNOW') ? "#576574" : "#b76b16";
         ctx.fillRect(0, h - 75, w, 5);
 
         // San hô
         for (let i = 40; i < w; i += 180) {
-            this._drawCoral(ctx, i, h - 75, (i % 2 === 0) ? "#e84393" : "#fd79a8");
+            const coralColor = (weather === 'SNOW') ? "#74b9ff" : ((i % 2 === 0) ? "#e84393" : "#fd79a8");
+            this._drawCoral(ctx, i, h - 75, coralColor);
         }
 
-        // Rong rêu uốn lượn
+        // Rong rêu uốn lượn (Sóng bão mưa uốn mạnh hơn)
+        const seaweedSpeed = (weather === 'RAIN') ? 3.5 : 2.0;
         for (let i = 15; i < w; i += 45) {
             const kelpH = 80 + (Math.sin(i * 9) + 1) * 40;
-            const color = (i % 90 === 0) ? "#00b894" : "#00cec9";
-            this._drawSwayingSeaweed(ctx, i, h - 75, kelpH, time, color);
+            const color = (weather === 'SNOW') ? "#48dbfb" : ((i % 90 === 0) ? "#00b894" : "#00cec9");
+            this._drawSwayingSeaweed(ctx, i, h - 75, kelpH, time * (seaweedSpeed / 2.0), color);
         }
 
         // Đàn cá bơi lội vẫy đuôi
@@ -287,6 +387,20 @@ const PixelSprites = {
             ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
             ctx.fillRect(bx - b.r * 0.4, b.y - b.r * 0.4, b.r * 0.5, b.r * 0.5);
         });
+    },
+
+    // Vẽ Tảng băng trôi Pixel (Ice Floe)
+    _drawIceFloe(ctx, x, y, width) {
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x, y, width, 14);
+        ctx.fillRect(x + 4, y - 6, width - 12, 8);
+
+        // Chân băng chìm dưới nước xanh lơ
+        ctx.fillStyle = "#74b9ff";
+        ctx.fillRect(x + 6, y + 14, width - 16, 12);
+        ctx.fillRect(x + 14, y + 26, width - 32, 8);
+        ctx.restore();
     },
 
     _drawSwayingSeaweed(ctx, x, y, height, time, color) {
@@ -361,49 +475,72 @@ const PixelSprites = {
     },
 
     // ========================================================
-    // 5. VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH (MÂY TRÔI, CHIM LƯỢN, ĐẢO BAY)
+    // 5. VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH (+ THỜI TIẾT)
     // ========================================================
-    drawCloudWorld(ctx, w, h, time, birds = []) {
+    drawCloudWorld(ctx, w, h, time, birds = [], weather = 'SUNNY') {
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, "#4834d4");
-        skyGrad.addColorStop(0.4, "#686de0");
-        skyGrad.addColorStop(0.8, "#be2edd");
-        skyGrad.addColorStop(1, "#22a6b3");
+        if (weather === 'RAIN') {
+            // Trời mưa bão sấm sét trên mây
+            skyGrad.addColorStop(0, "#19172e");
+            skyGrad.addColorStop(0.4, "#272347");
+            skyGrad.addColorStop(0.8, "#34284d");
+            skyGrad.addColorStop(1, "#171526");
+        } else if (weather === 'SNOW') {
+            // Mùa đông băng giá trên mây
+            skyGrad.addColorStop(0, "#303952");
+            skyGrad.addColorStop(0.4, "#596275");
+            skyGrad.addColorStop(0.8, "#778ca3");
+            skyGrad.addColorStop(1, "#4b6584");
+        } else {
+            // Nắng đẹp rực rỡ
+            skyGrad.addColorStop(0, "#4834d4");
+            skyGrad.addColorStop(0.4, "#686de0");
+            skyGrad.addColorStop(0.8, "#be2edd");
+            skyGrad.addColorStop(1, "#22a6b3");
+        }
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h);
 
-        ctx.fillStyle = "#f9ca24";
-        ctx.beginPath();
-        ctx.arc(w * 0.82, h * 0.22, 50, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(249, 202, 36, 0.25)";
-        ctx.beginPath();
-        ctx.arc(w * 0.82, h * 0.22, 75, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Đảo bay lơ lửng
-        this._drawFloatingIsland(ctx, w * 0.15, h * 0.38, 120, time * 0.5);
-        this._drawFloatingIsland(ctx, w * 0.70, h * 0.30, 160, time * 0.5 + 2);
-
-        // Mây xa
-        for (let i = 0; i < 5; i++) {
-            const cx = ((i * 320 + time * 15) % (w + 400)) - 200;
-            this._drawFluffyCloud(ctx, cx, h * 0.18 + (i % 2) * 50, 140, "rgba(255, 255, 255, 0.45)");
+        // Mặt trời công nghệ (chỉ khi NẮNG)
+        if (weather === 'SUNNY') {
+            ctx.fillStyle = "#f9ca24";
+            ctx.beginPath();
+            ctx.arc(w * 0.82, h * 0.22, 50, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "rgba(249, 202, 36, 0.25)";
+            ctx.beginPath();
+            ctx.arc(w * 0.82, h * 0.22, 75, 0, Math.PI * 2);
+            ctx.fill();
         }
 
-        // Mây trung
+        // Đảo bay lơ lửng (phủ tuyết nếu là tuyết)
+        this._drawFloatingIsland(ctx, w * 0.15, h * 0.38, 120, time * 0.5, weather);
+        this._drawFloatingIsland(ctx, w * 0.70, h * 0.30, 160, time * 0.5 + 2, weather);
+
+        // Mây cuộn trôi Parallax (đổi màu theo mưa/tuyết)
+        const cloudColorFar = (weather === 'RAIN') ? "rgba(90, 85, 115, 0.45)" : (weather === 'SNOW' ? "rgba(223, 230, 233, 0.5)" : "rgba(255, 255, 255, 0.45)");
+        const cloudColorMid = (weather === 'RAIN') ? "rgba(70, 65, 95, 0.75)" : (weather === 'SNOW' ? "rgba(245, 246, 250, 0.8)" : "rgba(255, 255, 255, 0.75)");
+
+        for (let i = 0; i < 5; i++) {
+            const cx = ((i * 320 + time * 15) % (w + 400)) - 200;
+            this._drawFluffyCloud(ctx, cx, h * 0.18 + (i % 2) * 50, 140, cloudColorFar);
+        }
+
         for (let i = 0; i < 4; i++) {
             const cx = ((i * 380 + time * 30) % (w + 400)) - 200;
-            this._drawFluffyCloud(ctx, cx, h * 0.45 + (i % 2) * 40, 180, "rgba(255, 255, 255, 0.75)");
+            this._drawFluffyCloud(ctx, cx, h * 0.45 + (i % 2) * 40, 180, cloudColorMid);
         }
 
         // Chim chao lượn trên trời mây
-        birds.forEach(b => {
-            this.drawBird(ctx, b.x, b.y, b.vx, time + b.offset, "#ffffff");
-        });
+        if (weather !== 'RAIN') {
+            birds.forEach(b => {
+                this.drawBird(ctx, b.x, b.y, b.vx, time + b.offset, "#ffffff");
+            });
+        }
 
         // Thảm mây đáy
-        ctx.fillStyle = "#ffffff";
+        const bottomCloud = (weather === 'RAIN') ? "#484360" : (weather === 'SNOW' ? "#dcdde1" : "#ffffff");
+        ctx.fillStyle = bottomCloud;
         ctx.fillRect(0, h - 60, w, 60);
         for (let i = -50; i < w + 50; i += 60) {
             const puffY = h - 60 + Math.sin(time * 2 + i) * 6;
@@ -411,11 +548,11 @@ const PixelSprites = {
             ctx.arc(i, puffY, 40, 0, Math.PI * 2);
             ctx.fill();
         }
-        ctx.fillStyle = "#dfe4ea";
+        ctx.fillStyle = (weather === 'RAIN') ? "#342e47" : (weather === 'SNOW' ? "#b2bec3" : "#dfe4ea");
         ctx.fillRect(0, h - 30, w, 30);
     },
 
-    _drawFloatingIsland(ctx, x, y, width, bobTime) {
+    _drawFloatingIsland(ctx, x, y, width, bobTime, weather = 'SUNNY') {
         const bob = Math.sin(bobTime) * 6;
         ctx.save();
         ctx.translate(x, y + bob);
@@ -436,12 +573,21 @@ const PixelSprites = {
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = "#2ed573";
-        ctx.fillRect(0, 6, width, 12);
-        ctx.fillStyle = "#7bed9f";
-        ctx.fillRect(4, 2, width - 8, 5);
+        if (weather === 'SNOW') {
+            // Đảo bay phủ tuyết trắng
+            ctx.fillStyle = "#dfe4ea";
+            ctx.fillRect(0, 6, width, 12);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(4, 2, width - 8, 6);
+        } else {
+            ctx.fillStyle = "#2ed573";
+            ctx.fillRect(0, 6, width, 12);
+            ctx.fillStyle = "#7bed9f";
+            ctx.fillRect(4, 2, width - 8, 5);
+        }
 
-        ctx.fillStyle = "#00d2d3";
+        // Tinh thể phát sáng
+        ctx.fillStyle = (weather === 'SNOW') ? "#70a1ff" : "#00d2d3";
         ctx.fillRect(width * 0.45, -12, 12, 18);
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(width * 0.48, -10, 4, 10);
@@ -462,9 +608,6 @@ const PixelSprites = {
         ctx.restore();
     },
 
-    // ========================================================
-    // 6. VẼ CHIM CHÓC ĐANG BAY (FLYING BIRD)
-    // ========================================================
     drawBird(ctx, x, y, vx, time, color = "#ffffff") {
         ctx.save();
         ctx.translate(x, y);
@@ -547,7 +690,6 @@ const PixelSprites = {
         ctx.fillStyle = "#f39c12";
         ctx.fillRect(0, h - 84, w, 6);
 
-        // Vệ Binh bước đi
         const heroX = 80 + (w - 220) * progress;
         const heroY = h - 130;
         this.drawAdventurer(ctx, heroX, heroY, 60, time, 1, true, 1);
