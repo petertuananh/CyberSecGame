@@ -566,13 +566,15 @@
     // Render Tab 3: Settings & Cards
     function renderRandomSettings() {
         const s = currentConfig.settings || {};
-        chkShuffleQuestions.checked = !!s.shuffleQuestions;
-        chkShuffleOptions.checked = !!s.shuffleOptions;
-        chkAllowSkipStory.checked = (s.allowSkipStory !== false);
+        const active = document.activeElement;
 
-        inputBossHP.value = s.bossHP || 9;
-        inputRequiredRoses.value = s.requiredRosesForBoss || 9;
-        inputBossSpeed.value = s.bossSpeedMs || 1400;
+        if (active !== chkShuffleQuestions) chkShuffleQuestions.checked = !!s.shuffleQuestions;
+        if (active !== chkShuffleOptions) chkShuffleOptions.checked = !!s.shuffleOptions;
+        if (active !== chkAllowSkipStory) chkAllowSkipStory.checked = (s.allowSkipStory !== false);
+
+        if (active !== inputBossHP) inputBossHP.value = s.bossHP || 9;
+        if (active !== inputRequiredRoses) inputRequiredRoses.value = s.requiredRosesForBoss || 9;
+        if (active !== inputBossSpeed) inputBossSpeed.value = s.bossSpeedMs || 1400;
     }
 
     function renderCardsTable() {
@@ -626,7 +628,9 @@
     // Render Tab 4: Raw JSON
     function renderRawJsonView() {
         syncFormToState();
-        rawJsonEditor.value = JSON.stringify(currentConfig, null, 2);
+        if (document.activeElement !== rawJsonEditor) {
+            rawJsonEditor.value = JSON.stringify(currentConfig, null, 2);
+        }
     }
 
     // Đồng bộ Form Settings vào object state
@@ -1395,6 +1399,12 @@
         } else if (modalCard.classList.contains("active")) {
             targetType = 'card';
             targetId = editingCard ? editingCard.id : 'new';
+        } else if (el.id === 'rawJsonEditor') {
+            targetType = 'json';
+            targetId = 'rawJson';
+        } else if (el.closest && el.closest('#tab-random')) {
+            targetType = 'settings';
+            targetId = 'random_boss';
         }
 
         const val = (el.type === 'checkbox') ? (el.checked ? 'Bật' : 'Tắt') : el.value;
@@ -1454,6 +1464,12 @@
         } else if (modalCard.classList.contains("active")) {
             targetType = 'card';
             targetId = editingCard ? editingCard.id : 'new';
+        } else if (el.id === 'rawJsonEditor') {
+            targetType = 'json';
+            targetId = 'rawJson';
+        } else if (el.closest && el.closest('#tab-random')) {
+            targetType = 'settings';
+            targetId = 'random_boss';
         }
 
         sendWs({
@@ -1470,7 +1486,7 @@
             #modalQuestion input, #modalQuestion textarea, #modalQuestion select,
             #modalSection input, #modalSection textarea, #modalSection select,
             #modalCard input, #modalCard textarea, #modalCard select,
-            #tab-random input
+            #tab-random input, #rawJsonEditor
         `;
         const elements = document.querySelectorAll(selector);
 
@@ -1479,6 +1495,15 @@
             el.addEventListener("focus", () => handleFieldInput(el));
             el.addEventListener("change", () => handleFieldInput(el));
             el.addEventListener("blur", () => handleFieldBlur(el));
+        });
+
+        // Tự động lưu và phát tán ngay khi thay đổi bất kỳ cài đặt Ngẫu nhiên & Boss nào
+        document.querySelectorAll("#tab-random input").forEach(input => {
+            input.addEventListener("change", () => {
+                syncFormToState();
+                const fieldLabel = FIELD_LABELS[input.id] || input.id;
+                saveConfigToServer(false, `cài đặt "${fieldLabel}"`);
+            });
         });
     }
 
@@ -1615,6 +1640,73 @@
             }
         }
 
+        // 2b. CẬP NHẬT TRONG CÀI ĐẶT NGẪU NHIÊN & BOSS (tab-random)
+        if (msg.targetType === 'settings') {
+            const inputEl = document.getElementById(msg.fieldId);
+            if (inputEl) {
+                if (inputEl.type === 'checkbox') {
+                    const isChecked = (msg.value === true || msg.value === 'true' || msg.value === 'Bật' || msg.value === 1);
+                    inputEl.checked = isChecked;
+                    const toggleRow = inputEl.closest('.toggle-row');
+                    if (toggleRow) {
+                        toggleRow.classList.add('peer-value-sync-active');
+                        setTimeout(() => toggleRow.classList.remove('peer-value-sync-active'), 800);
+                    }
+                } else {
+                    inputEl.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    inputEl.style.setProperty('--peer-collab-glow', (msg.sender.color || '#3498db') + '66');
+                    inputEl.classList.add('peer-editing-field');
+
+                    let tag = document.getElementById(`peer_tag_${msg.fieldId}`);
+                    if (!tag) {
+                        tag = document.createElement('div');
+                        tag.id = `peer_tag_${msg.fieldId}`;
+                        tag.className = 'live-field-cursor-tag';
+                        if (inputEl.parentNode) {
+                            inputEl.parentNode.insertBefore(tag, inputEl);
+                        }
+                    }
+                    tag.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    tag.innerHTML = `
+                        <span class="tag-author">✍️ <strong>${escapeHtml(msg.sender.name)}</strong> đang nhập:</span>
+                        <span class="tag-preview">"${escapeHtml(String(msg.value || ''))}"</span>
+                    `;
+
+                    if (document.activeElement !== inputEl) {
+                        inputEl.value = (msg.value !== undefined) ? msg.value : '';
+                        inputEl.classList.add('peer-value-sync-active');
+                        setTimeout(() => inputEl.classList.remove('peer-value-sync-active'), 800);
+                    }
+                }
+            }
+        }
+
+        // 2c. CẬP NHẬT TRONG TRÌNH SOẠN THẢO JSON (tab-json)
+        if (msg.targetType === 'json' && msg.fieldId === 'rawJsonEditor') {
+            const editor = document.getElementById('rawJsonEditor');
+            if (editor) {
+                let banner = document.getElementById('jsonLiveBanner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'jsonLiveBanner';
+                    banner.className = 'json-live-editor-banner';
+                    const wrapper = editor.parentElement;
+                    if (wrapper) wrapper.insertBefore(banner, editor);
+                }
+                banner.style.background = msg.sender.color || '#3498db';
+                banner.innerHTML = `
+                    <span class="live-dot"></span>
+                    <span>✍️ <strong>${escapeHtml(msg.sender.name)}</strong> đang chỉnh sửa trực tiếp mã JSON (${(msg.value || '').length} ký tự)...</span>
+                `;
+
+                if (document.activeElement !== editor) {
+                    editor.value = msg.value || '';
+                    editor.classList.add('peer-value-sync-active');
+                    setTimeout(() => editor.classList.remove('peer-value-sync-active'), 800);
+                }
+            }
+        }
+
         // 3. CẬP NHẬT COLLABORATORS LIST DROPDOWN
         const collab = collaborators.find(c => c.clientId === msg.clientId);
         if (collab) {
@@ -1641,6 +1733,11 @@
         }
         const tag = document.getElementById(`peer_tag_${msg.fieldId}`);
         if (tag) tag.remove();
+
+        if (msg.targetType === 'json' || msg.fieldId === 'rawJsonEditor') {
+            const banner = document.getElementById('jsonLiveBanner');
+            if (banner) banner.remove();
+        }
 
         // Kiểm tra xem thẻ câu hỏi còn trường nào đang được edit không
         if (msg.targetType === 'question') {
