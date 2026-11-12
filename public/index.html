@@ -21,10 +21,20 @@
             </div>
         </div>
 
-        <div class="brand-title">🎮 VỆ BINH MẬT KHẨU</div>
+        <div class="brand-title">
+            <img id="brandIcon" class="pixel-badge-icon" alt="" />
+            <span>VỆ BINH MẬT KHẨU</span>
+        </div>
 
         <div class="arduino-panel">
-            <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">☀️ Nắng</button>
+            <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">
+                <img id="weatherIconImg" class="pixel-icon-btn" alt="" />
+                <span id="weatherLabel">Nắng</span>
+            </button>
+            <button id="btnFullscreen" class="btn-fullscreen" title="Bật/Tắt Toàn Màn Hình (phím F)">
+                <img id="iconFs" class="pixel-icon-btn" style="width:14px;height:14px;image-rendering:pixelated;" alt="" />
+                <span>TOÀN MÀN HÌNH [F]</span>
+            </button>
             <span id="arduinoStatus" class="disconnected">Arduino: Đang quét...</span>
             <div class="port-select-box">
                 <select id="portSelect">
@@ -73,7 +83,7 @@
     </div>
 
     <div class="hint-text">
-        💡 Hỗ trợ song song: 5 nút bấm Arduino hoặc Bàn phím máy tính (Phím A, B, C, D và phím ENTER/SPACE)
+        Hỗ trợ song song: 5 nút bấm Arduino hoặc Bàn phím máy tính (A, B, C, D | ENTER/SPACE | Phím W: Thời tiết | Phím F: Toàn màn hình)
     </div>
 
     <!-- Scripts -->
@@ -81,10 +91,72 @@
     <script src="js/question_generator.js"></script>
     <script src="js/weather.js"></script>
     <script src="js/sprites.js"></script>
+    <script src="js/cursor_fx.js"></script>
     <script src="js/game.js"></script>
 
     <!-- Quản lý cổng COM Arduino qua giao diện -->
     <script>
+        // Cập nhật Pixel Icons cho các thành phần giao diện HTML
+        function initHtmlPixelIcons() {
+            if (!window.PixelSprites || !window.PixelSprites.getPixelIconDataUrl) return;
+
+            // Icon cho Brand Title
+            const brandIcon = document.getElementById('brandIcon');
+            if (brandIcon) {
+                brandIcon.src = window.PixelSprites.getPixelIconDataUrl('gamepad', 24);
+            }
+
+            // Icon cho nút Toàn màn hình
+            const iconFs = document.getElementById('iconFs');
+            if (iconFs) {
+                iconFs.src = window.PixelSprites.getPixelIconDataUrl('star', 16);
+            }
+
+            updateWeatherButtonIcon(window.WeatherSystem ? window.WeatherSystem.currentType : 'SUNNY');
+        }
+
+        function updateWeatherButtonIcon(type) {
+            if (!window.PixelSprites || !window.PixelSprites.getPixelIconDataUrl) return;
+            const iconImg = document.getElementById('weatherIconImg');
+            const label = document.getElementById('weatherLabel');
+            if (!iconImg || !label) return;
+
+            const map = {
+                SUNNY: { icon: 'sun', text: 'Nắng' },
+                RAIN: { icon: 'rain', text: 'Mưa' },
+                SNOW: { icon: 'snow', text: 'Tuyết' }
+            };
+            const cur = map[type] || map.SUNNY;
+            iconImg.src = window.PixelSprites.getPixelIconDataUrl(cur.icon, 16);
+            label.innerText = cur.text;
+        }
+
+        // Toàn màn hình (FHD Fullscreen)
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    document.body.classList.add('is-fullscreen');
+                }).catch(err => {
+                    console.warn(`Lỗi mở toàn màn hình: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().then(() => {
+                        document.body.classList.remove('is-fullscreen');
+                    });
+                }
+            }
+        }
+
+        document.getElementById('btnFullscreen').addEventListener('click', toggleFullScreen);
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                document.body.classList.add('is-fullscreen');
+            } else {
+                document.body.classList.remove('is-fullscreen');
+            }
+        });
+
         async function loadPorts() {
             try {
                 const res = await fetch('/api/ports');
@@ -132,8 +204,7 @@
         document.getElementById('btnWeather').addEventListener('click', () => {
             if (window.game) {
                 const w = window.game.toggleWeather();
-                const labels = { SUNNY: "☀️ Nắng", RAIN: "🌧️ Mưa", SNOW: "❄️ Tuyết" };
-                document.getElementById('btnWeather').innerText = labels[w] || "☀️ Nắng";
+                updateWeatherButtonIcon(w);
             }
         });
 
@@ -141,9 +212,19 @@
         loadPorts();
         setInterval(loadPorts, 5000);
 
-        // Hiệu ứng sáng nút khi nhấn phím
+        // Khởi tạo các pixel icons giao diện khi DOM sẵn sàng
+        window.addEventListener('DOMContentLoaded', () => {
+            initHtmlPixelIcons();
+        });
+        setTimeout(initHtmlPixelIcons, 100);
+
+        // Hiệu ứng sáng nút khi nhấn phím & Phím F cho toàn màn hình
         window.addEventListener('keydown', (e) => {
             let k = e.key.toUpperCase();
+            if (k === 'F' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                toggleFullScreen();
+                return;
+            }
             if (k === ' ' || k === 'ENTER') k = 'ENTER';
             const btn = document.querySelector(`.arcade-btn[data-key="${k}"]`);
             if (btn) {

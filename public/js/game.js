@@ -76,8 +76,31 @@ class CyberSecGame {
         this.logoSoftLab = new Image();
         this.logoSoftLab.src = "images/logo_softlab_pixel.png";
 
-        // Hệ thống thời tiết động (Nắng, Mưa, Tuyết)
+        // Hệ thống thời tiết động (Nắng, Mưa, Tuyết) & Tự động đổi ngẫu nhiên
         this.weather = window.WeatherSystem;
+        this.weatherToast = null;
+
+        if (this.weather) {
+            this.weather.onWeatherChange = (newType) => {
+                const names = {
+                    SUNNY: "THỜI TIẾT: TRỜI NẮNG ẤM (Đội nón che nắng)",
+                    RAIN: "THỜI TIẾT: MƯA RÀO & SẤM CHỚP (Che dù đi mưa)",
+                    SNOW: "THỜI TIẾT: TUYẾT RƠI GIÁ LẠNH (Mặc áo ấm, khăn len)"
+                };
+                const icons = { SUNNY: "sun", RAIN: "rain", SNOW: "snow" };
+                this.weatherToast = {
+                    text: names[newType] || `THỜI TIẾT: ${newType}`,
+                    icon: icons[newType] || "sun",
+                    timer: 3.5
+                };
+                if (window.updateWeatherButtonIcon) {
+                    window.updateWeatherButtonIcon(newType);
+                }
+                if (window.CursorFX && window.CursorFX.burst) {
+                    window.CursorFX.burst(this.canvas.width / 2, 70, 20);
+                }
+            };
+        }
 
         this._initParticles();
         this._initEntities();
@@ -211,10 +234,8 @@ class CyberSecGame {
     toggleWeather() {
         if (!this.weather) return 'SUNNY';
         const newW = this.weather.toggleWeather();
-        const btn = document.getElementById('btnWeather');
-        if (btn) {
-            const labels = { SUNNY: "☀️ Nắng", RAIN: "🌧️ Mưa", SNOW: "❄️ Tuyết" };
-            btn.innerText = labels[newW] || "☀️ Nắng";
+        if (window.updateWeatherButtonIcon) {
+            window.updateWeatherButtonIcon(newW);
         }
         return newW;
     }
@@ -350,10 +371,8 @@ class CyberSecGame {
             else if (stageNum === 2) this.weather.setWeather('RAIN'); // Vòng 2: Biển mưa bão
             else if (stageNum === 3) this.weather.setWeather('SNOW'); // Vòng 3: Tầng mây tuyết trắng
 
-            const btn = document.getElementById('btnWeather');
-            if (btn) {
-                const labels = { SUNNY: "☀️ Nắng", RAIN: "🌧️ Mưa", SNOW: "❄️ Tuyết" };
-                btn.innerText = labels[this.weather.currentType] || "☀️ Nắng";
+            if (window.updateWeatherButtonIcon) {
+                window.updateWeatherButtonIcon(this.weather.currentType);
             }
         }
 
@@ -369,8 +388,11 @@ class CyberSecGame {
             this.isAnswerCorrect = true;
             this.stageCorrectCount++;
             this.roses++;
-            this.resultTitle = "CHÍNH XÁC! (+1 BÔNG HỒNG 🌹)";
+            this.resultTitle = "CHÍNH XÁC! (+1 BÔNG HỒNG)";
             window.SoundEngine.play("correct");
+            if (window.CursorFX && window.CursorFX.burst) {
+                window.CursorFX.burst(this.canvas.width / 2, this.canvas.height / 2, 24);
+            }
         } else {
             this.isAnswerCorrect = false;
             this.resultTitle = "CHƯA CHÍNH XÁC! (0 BÔNG HỒNG)";
@@ -537,6 +559,14 @@ class CyberSecGame {
 
         this.heroWalkFrame += dt;
 
+        // Cập nhật đếm ngược thông báo thời tiết (Weather Toast)
+        if (this.weatherToast) {
+            this.weatherToast.timer -= dt;
+            if (this.weatherToast.timer <= 0) {
+                this.weatherToast = null;
+            }
+        }
+
         // Cập nhật hạt thời tiết (Mưa, Tuyết, Nắng, Sấm sét)
         if (this.weather) {
             this.weather.update(dt, w, h);
@@ -691,6 +721,38 @@ class CyberSecGame {
 
         // 6. Watermark chìm tinh tế ở góc dưới màn hình
         this._renderWatermark(ctx, w, h);
+
+        // 7. Thông báo thời tiết Pixel nổi bật (Weather Toast)
+        this._renderWeatherToast(ctx, w, h);
+    }
+
+    _renderWeatherToast(ctx, w, h) {
+        if (!this.weatherToast || this.weatherToast.timer <= 0) return;
+        const toast = this.weatherToast;
+        const alpha = Math.min(1.0, toast.timer / 0.5);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        const boxW = 460;
+        const boxH = 40;
+        const boxX = (w - boxW) / 2;
+        const boxY = 64;
+
+        ctx.fillStyle = "rgba(16, 12, 30, 0.94)";
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.strokeStyle = "#f1c40f";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        window.PixelSprites.drawPixelIcon(ctx, toast.icon, boxX + 14, boxY + 9, 22);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(toast.text, boxX + 46, boxY + 25);
+
+        ctx.restore();
     }
 
     _renderWorldBackground(ctx, w, h, time) {
@@ -758,15 +820,16 @@ class CyberSecGame {
 
         // Bong bóng hội thoại nhỏ của Vệ Binh
         ctx.fillStyle = "rgba(20, 15, 30, 0.85)";
-        ctx.fillRect(heroX + 55, heroY - 15, 140, 28);
+        ctx.fillRect(heroX + 55, heroY - 15, 145, 28);
         ctx.strokeStyle = "#00d2d3";
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(heroX + 55, heroY - 15, 140, 28);
+        ctx.strokeRect(heroX + 55, heroY - 15, 145, 28);
 
+        window.PixelSprites.drawPixelIcon(ctx, 'rose', heroX + 62, heroY - 9, 16);
         ctx.fillStyle = "#00d2d3";
         ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(`🌹 Giữ chắc ${this.roses} hoa!`, heroX + 125, heroY + 3);
+        ctx.textAlign = "left";
+        ctx.fillText(`Giữ chắc ${this.roses} hoa!`, heroX + 84, heroY + 4);
     }
 
     _renderTravelScreen(ctx, w, h, time) {
@@ -787,33 +850,46 @@ class CyberSecGame {
         ctx.strokeRect(0, 0, w, 56);
 
         let stageName = "";
-        if (this.state.startsWith("BOSS")) stageName = "⚔️ TRẬN ĐÁNH BOSS CUỐI: RỒNG HẮC ÁM";
-        else if (this.stage === 1) stageName = "🌲 VÒNG 1: KHU RỪNG MẬT MÃ (Cây & Chim chóc)";
-        else if (this.stage === 2) stageName = "🌊 VÒNG 2: VÙNG BIỂN DỮ LIỆU (Cá & Rong rêu)";
-        else stageName = "☁️ VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH (Mây & Đảo bay)";
+        let stageIcon = "tree";
+        if (this.state.startsWith("BOSS")) {
+            stageName = "TRẬN ĐÁNH BOSS CUỐI: RỒNG HẮC ÁM";
+            stageIcon = "dragon";
+        } else if (this.stage === 1) {
+            stageName = "VÒNG 1: KHU RỪNG MẬT MÃ (Cây & Chim chóc)";
+            stageIcon = "tree";
+        } else if (this.stage === 2) {
+            stageName = "VÒNG 2: VÙNG BIỂN DỮ LIỆU (Cá & Rong rêu)";
+            stageIcon = "wave";
+        } else {
+            stageName = "VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH (Mây & Đảo bay)";
+            stageIcon = "cloud";
+        }
 
+        window.PixelSprites.drawPixelIcon(ctx, stageIcon, 22, 17, 22);
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(stageName, 24, 34);
+        ctx.fillText(stageName, 52, 34);
 
         if (this.state === "QUESTION" || this.state === "QUESTION_RESULT") {
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 420, 34);
+            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 460, 34);
 
-            // Chỉ báo thời tiết hiện tại
-            const weatherIcons = { SUNNY: "☀️ NẮNG", RAIN: "🌧️ MƯA", SNOW: "❄️ TUYẾT" };
+            // Chỉ báo thời tiết hiện tại bằng Pixel Icon
             const wType = this.weather ? this.weather.currentType : 'SUNNY';
+            const iconMap = { SUNNY: 'sun', RAIN: 'rain', SNOW: 'snow' };
+            const labelMap = { SUNNY: 'NẮNG', RAIN: 'MƯA', SNOW: 'TUYẾT' };
+            window.PixelSprites.drawPixelIcon(ctx, iconMap[wType] || 'sun', 640, 18, 20);
             ctx.fillStyle = "#dfe4ea";
             ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(`[${weatherIcons[wType] || "☀️"} - Phím W]`, 590, 34);
+            ctx.fillText(`[${labelMap[wType]} - Phím W]`, 668, 34);
         }
 
-        window.PixelSprites.drawRose(ctx, w - 240, 14, 28);
+        window.PixelSprites.drawPixelIcon(ctx, 'rose', w - 240, 16, 24);
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 18px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(`Hoa hồng: ${this.roses} 🌹`, w - 200, 36);
+        ctx.fillText(`Hoa hồng: ${this.roses}`, w - 208, 36);
 
         ctx.fillStyle = "#a4b0be";
         ctx.font = "13px 'Segoe UI', Tahoma, sans-serif";
@@ -864,33 +940,43 @@ class CyberSecGame {
         ctx.font = "bold 18px 'Courier New', monospace";
         ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.28);
 
-        // Hiển thị Vệ Binh bước đi dũng cảm ở trung tâm
-        window.PixelSprites.drawAdventurer(ctx, w / 2 - 25, h * 0.29, 65, performance.now() / 150, 1, true, 1);
+        // Hiển thị Vệ Binh bước đi dũng cảm ở trung tâm (kèm trang bị thích ứng thời tiết)
+        const curW = this.weather ? this.weather.currentType : 'SUNNY';
+        window.PixelSprites.drawAdventurer(ctx, w / 2 - 25, h * 0.29, 65, performance.now() / 150, 1, true, 1, curW);
 
         ctx.fillStyle = "#ecf0f1";
-        ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "15px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
         const startX = w * 0.22;
         let startY = h * 0.44;
-        const lines = [
-            "🛡️ 3 Thế giới phiêu lưu: Rừng Mật Mã 🌲, Biển Dữ Liệu 🌊, Tầng Mây ☁️",
-            "🌿 Cảnh quan sinh động: Cây cối lay động, chim hót, rong rêu uốn lượn, đàn cá bơi lội",
-            "🚶 Nhân vật Vệ Binh đồng hành phiêu lưu qua từng thế giới kỳ thú",
-            "🌹 Mỗi câu trả lời đúng được thưởng 1 Bông Hồng (cần đúng 3 câu để pass vòng)",
-            "🎲 Sau mỗi vòng: Lắc xúc xắc (Lẻ: đi tiếp | Chẵn: bốc thẻ may rủi tặng hoa)",
-            "🐉 Boss Cuối: Cần >= 9 bông hồng để bắn hạ Rồng ở 4 vị trí A, B, C, D!"
+
+        const infoItems = [
+            { icon: "shield", text: "3 Thế giới phiêu lưu: Rừng Mật Mã (Cây/Chim), Biển Dữ Liệu (Cá/Rong), Tầng Mây (Đảo bay)" },
+            { icon: "tree", text: "Hệ sinh thái sống động: Cây cối lay động, chim hót, rong rêu uốn lượn, đàn cá bơi lội" },
+            { icon: "sword", text: "Vệ Binh thích ứng thời tiết: Đội nón che nắng, che dù đi mưa, mặc áo ấm quàng khăn len" },
+            { icon: "rose", text: "Mỗi câu trả lời đúng được thưởng 1 Bông Hồng (cần đúng cả 3 câu để pass vòng)" },
+            { icon: "dice", text: "Sau mỗi vòng: Lắc xúc xắc (Lẻ: đi tiếp bình thường | Chẵn: bốc thẻ may rủi tặng hoa)" },
+            { icon: "dragon", text: "Boss Cuối: Cần >= 9 bông hồng để bắn hạ Rồng ở 4 vị trí ngẫu nhiên A, B, C, D!" }
         ];
-        lines.forEach(l => {
-            ctx.fillText(l, startX, startY);
+
+        infoItems.forEach(item => {
+            window.PixelSprites.drawPixelIcon(ctx, item.icon, startX - 28, startY - 16, 20);
+            ctx.fillText(item.text, startX, startY);
             startY += 30;
         });
 
         const blink = Math.sin(performance.now() / 250) > 0;
         if (blink) {
             ctx.fillStyle = "#2ecc71";
-            ctx.font = "bold 24px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("👉 NHẤN [ENTER] ĐỂ BẮT ĐẦU CUỘC PHIÊU LƯU 👈", w / 2, h * 0.81);
+            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CUỘC PHIÊU LƯU", w / 2, h * 0.81);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 340, h * 0.81 - 18, 22);
+            ctx.save();
+            ctx.translate(w / 2 + 340, h * 0.81 - 8);
+            ctx.scale(-1, 1);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -10, 22);
+            ctx.restore();
         }
 
         // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
@@ -922,19 +1008,25 @@ class CyberSecGame {
         ctx.textAlign = "center";
 
         let title = "";
+        let stageIcon = "tree";
         let desc = "";
         if (this.stage === 1) {
-            title = "VÒNG 1: KHU RỪNG MẬT MÃ 🌲";
+            title = "VÒNG 1: KHU RỪNG MẬT MÃ";
+            stageIcon = "tree";
             desc = "Cây cối rợp bóng và chim chóc ríu rít! Khám phá độ dài & cấu trúc mật khẩu!";
         } else if (this.stage === 2) {
-            title = "VÒNG 2: VÙNG BIỂN DỮ LIỆU 🌊";
+            title = "VÒNG 2: VÙNG BIỂN DỮ LIỆU";
+            stageIcon = "wave";
             desc = "Lặn sâu cùng đàn cá & rong rêu uốn lượn! Cảnh giác Phishing & kích hoạt 2FA!";
         } else {
-            title = "VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH ☁️";
+            title = "VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH";
+            stageIcon = "cloud";
             desc = "Bay cùng những hòn đảo bồng bềnh! Cụm mật khẩu Passphrase & chống Brute-force!";
         }
 
         ctx.fillText(title, w / 2, h * 0.36);
+        window.PixelSprites.drawPixelIcon(ctx, stageIcon, w / 2 - 250, h * 0.36 - 28, 32);
+        window.PixelSprites.drawPixelIcon(ctx, stageIcon, w / 2 + 218, h * 0.36 - 28, 32);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "18px 'Segoe UI', Tahoma, sans-serif";
@@ -1015,13 +1107,17 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.18, h * 0.18, w * 0.68, h * 0.64);
 
+        const resIcon = this.isAnswerCorrect ? "check" : "cross";
+        window.PixelSprites.drawPixelIcon(ctx, resIcon, w / 2 - 240, h * 0.28 - 22, 28);
+        window.PixelSprites.drawPixelIcon(ctx, resIcon, w / 2 + 212, h * 0.28 - 22, 28);
+
         ctx.fillStyle = borderColor;
         ctx.font = "bold 28px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(this.resultTitle, w / 2, h * 0.28);
 
         if (this.isAnswerCorrect) {
-            window.PixelSprites.drawRose(ctx, w / 2 - 20, h * 0.32, 40);
+            window.PixelSprites.drawPixelIcon(ctx, 'rose', w / 2 - 20, h * 0.32, 40);
         }
 
         ctx.fillStyle = "rgba(40, 35, 65, 0.85)";
@@ -1030,10 +1126,11 @@ class CyberSecGame {
         ctx.lineWidth = 2;
         ctx.strokeRect(w * 0.22, h * 0.42, w * 0.60, h * 0.24);
 
+        window.PixelSprites.drawPixelIcon(ctx, "lightbulb", w * 0.24, h * 0.47 - 16, 20);
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText("💡 BÍ KÍP BẢO MẬT:", w * 0.24, h * 0.47);
+        ctx.fillText("BÍ KÍP BẢO MẬT:", w * 0.24 + 26, h * 0.47);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
@@ -1052,26 +1149,31 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.2, h * 0.2, w * 0.6, h * 0.6);
 
+        window.PixelSprites.drawPixelIcon(ctx, "star", w / 2 - 270, h * 0.34 - 26, 30);
+        window.PixelSprites.drawPixelIcon(ctx, "star", w / 2 + 240, h * 0.34 - 26, 30);
+
         ctx.fillStyle = "#2ecc71";
         ctx.font = "bold 32px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("🎉 CHÚC MỪNG BẠN ĐÃ PASS VÒNG! 🎉", w / 2, h * 0.34);
+        ctx.fillText("CHÚC MỪNG BẠN ĐÃ PASS VÒNG!", w / 2, h * 0.34);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "18px 'Segoe UI', Tahoma, sans-serif";
         ctx.fillText(`Bạn đã trả lời chính xác cả 3/3 câu hỏi của Vòng ${this.stage}!`, w / 2, h * 0.44);
 
+        window.PixelSprites.drawPixelIcon(ctx, "rose", w / 2 - 130, h * 0.52 - 18, 22);
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`Số hoa hồng hiện có: ${this.roses} 🌹`, w / 2, h * 0.52);
+        ctx.fillText(`Số hoa hồng hiện có: ${this.roses}`, w / 2 + 10, h * 0.52);
 
         ctx.fillStyle = "#00d2d3";
         ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
         ctx.fillText("Bước tiếp theo: Thử vận may với Minigame LẮC XÚC XẮC!", w / 2, h * 0.60);
 
+        window.PixelSprites.drawPixelIcon(ctx, "dice", w / 2 - 190, h * 0.72 - 20, 24);
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("👉 Nhấn [ENTER] để Lắc Xúc Xắc 🎲", w / 2, h * 0.72);
+        ctx.fillText("Nhấn [ENTER] để Lắc Xúc Xắc", w / 2, h * 0.72);
     }
 
     _renderStageFailedScreen(ctx, w, h) {
@@ -1081,10 +1183,13 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.2, h * 0.2, w * 0.6, h * 0.6);
 
+        window.PixelSprites.drawPixelIcon(ctx, "skull", w / 2 - 270, h * 0.34 - 26, 30);
+        window.PixelSprites.drawPixelIcon(ctx, "skull", w / 2 + 240, h * 0.34 - 26, 30);
+
         ctx.fillStyle = "#e74c3c";
         ctx.font = "bold 30px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("⚠️ CHƯA ĐẠT ĐIỀU KIỆN PASS VÒNG! ⚠️", w / 2, h * 0.34);
+        ctx.fillText("CHƯA ĐẠT ĐIỀU KIỆN PASS VÒNG!", w / 2, h * 0.34);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "18px 'Segoe UI', Tahoma, sans-serif";
@@ -1106,10 +1211,13 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.2, h * 0.15, w * 0.6, h * 0.7);
 
+        window.PixelSprites.drawPixelIcon(ctx, "dice", w / 2 - 280, h * 0.26 - 26, 30);
+        window.PixelSprites.drawPixelIcon(ctx, "dice", w / 2 + 250, h * 0.26 - 26, 30);
+
         ctx.fillStyle = "#9b59b6";
         ctx.font = "bold 30px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("🎲 MINIGAME: LẮC XÚC XẮC ĐỊNH MỆNH 🎲", w / 2, h * 0.26);
+        ctx.fillText("MINIGAME: LẮC XÚC XẮC ĐỊNH MỆNH", w / 2, h * 0.26);
 
         window.PixelSprites.drawDice(ctx, w / 2 - 50, h * 0.34, 100, this.diceValue, this.isDiceRolling);
 
@@ -1122,14 +1230,14 @@ class CyberSecGame {
 
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("👉 Nhấn [ENTER] để Gieo Xúc Xắc 👈", w / 2, h * 0.76);
+            ctx.fillText("Nhấn [ENTER] để Gieo Xúc Xắc", w / 2, h * 0.76);
         } else {
             const isEven = (this.diceValue % 2 === 0);
             ctx.fillStyle = isEven ? "#f1c40f" : "#2ecc71";
             ctx.font = "bold 24px 'Segoe UI', Tahoma, sans-serif";
 
             if (isEven) {
-                ctx.fillText(`KẾT QUẢ: SỐ ${this.diceValue} (SỐ CHẴN) -> BỐC THẺ MAY RỦI! 🃏`, w / 2, h * 0.58);
+                ctx.fillText(`KẾT QUẢ: SỐ ${this.diceValue} (SỐ CHẴN) -> BỐC THẺ MAY RỦI!`, w / 2, h * 0.58);
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
                 ctx.fillText("Bạn mở khóa ô Thẻ Bí Ẩn! Cơ hội nhận thêm 1-3 hoa hồng!", w / 2, h * 0.64);
@@ -1137,7 +1245,7 @@ class CyberSecGame {
                 ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
                 ctx.fillText("Nhấn [ENTER] để tiến vào Bốc Thẻ", w / 2, h * 0.76);
             } else {
-                ctx.fillText(`KẾT QUẢ: SỐ ${this.diceValue} (SỐ LẺ) -> PHIÊU LƯU TIẾP TỤC! 🚀`, w / 2, h * 0.58);
+                ctx.fillText(`KẾT QUẢ: SỐ ${this.diceValue} (SỐ LẺ) -> PHIÊU LƯU TIẾP TỤC!`, w / 2, h * 0.58);
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
                 ctx.fillText("Đường đi an toàn! Vệ Binh chuẩn bị bước đi sang vùng đất mới!", w / 2, h * 0.64);
@@ -1155,21 +1263,24 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.2, h * 0.12, w * 0.6, h * 0.76);
 
+        window.PixelSprites.drawPixelIcon(ctx, "star", w / 2 - 260, h * 0.22 - 24, 28);
+        window.PixelSprites.drawPixelIcon(ctx, "star", w / 2 + 232, h * 0.22 - 24, 28);
+
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 28px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("🃏 THẺ BÀI MA THUẬT AN NINH MẠNG 🃏", w / 2, h * 0.22);
+        ctx.fillText("THẺ BÀI MA THUẬT AN NINH MẠNG", w / 2, h * 0.22);
 
         window.PixelSprites.drawCard(ctx, w / 2 - 100, h * 0.28, 200, 270, this.currentCard, this.cardRevealed);
 
         if (!this.cardRevealed) {
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("👉 Nhấn [ENTER] để Lật Thẻ Bí Ẩn 👈", w / 2, h * 0.81);
+            ctx.fillText("Nhấn [ENTER] để Lật Thẻ Bí Ẩn", w / 2, h * 0.81);
         } else {
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("👉 Nhấn [ENTER] để Bước Vào Hành Trình Phiêu Lưu 👈", w / 2, h * 0.81);
+            ctx.fillText("Nhấn [ENTER] để Bước Vào Hành Trình Phiêu Lưu", w / 2, h * 0.81);
         }
     }
 
@@ -1180,29 +1291,36 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.15, h * 0.14, w * 0.7, h * 0.72);
 
+        window.PixelSprites.drawPixelIcon(ctx, "dragon", w / 2 - 280, h * 0.24 - 26, 30);
+        window.PixelSprites.drawPixelIcon(ctx, "dragon", w / 2 + 250, h * 0.24 - 26, 30);
+
         ctx.fillStyle = "#e74c3c";
         ctx.font = "bold 32px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("⚠️ CẢNH BÁO: RỒNG HẮC ÁM XUẤT HIỆN! ⚠️", w / 2, h * 0.24);
+        ctx.fillText("CẢNH BÁO: RỒNG HẮC ÁM XUẤT HIỆN!", w / 2, h * 0.24);
 
         window.PixelSprites.drawDragon(ctx, w / 2 - 70, h * 0.28, 140, 120, false, performance.now() / 200);
 
+        window.PixelSprites.drawPixelIcon(ctx, "rose", w / 2 - 210, h * 0.52 - 18, 22);
+        window.PixelSprites.drawPixelIcon(ctx, "dragon", w / 2 + 160, h * 0.52 - 18, 22);
         ctx.fillStyle = "#ffffff";
         ctx.font = "18px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`Bạn đang có: ${this.roses} Bông Hồng 🌹  |  Máu Boss Rồng: 9 HP 🐉`, w / 2, h * 0.52);
+        ctx.fillText(`Bạn đang có: ${this.roses} Bông Hồng   |   Máu Boss Rồng: 9 HP`, w / 2, h * 0.52);
 
         if (this.roses >= 9) {
+            window.PixelSprites.drawPixelIcon(ctx, "check", w / 2 - 270, h * 0.58 - 18, 22);
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("✅ BẠN ĐÃ CÓ ĐỦ >= 9 HOA HỒNG ĐỂ TIÊU DIỆT RỒNG!", w / 2, h * 0.58);
+            ctx.fillText("BẠN ĐÃ CÓ ĐỦ >= 9 HOA HỒNG ĐỂ TIÊU DIỆT RỒNG!", w / 2 + 12, h * 0.58);
             ctx.fillStyle = "#ecf0f1";
             ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("Cách chơi: Rồng sẽ xuất hiện ngẫu nhiên ở 4 vị trí A, B, C, D.", w / 2, h * 0.63);
             ctx.fillText("Bấm phím tương ứng (A, B, C hoặc D) thật nhanh để phóng hoa hồng bắn hạ nó!", w / 2, h * 0.67);
         } else {
+            window.PixelSprites.drawPixelIcon(ctx, "cross", w / 2 - 290, h * 0.58 - 18, 22);
             ctx.fillStyle = "#e74c3c";
             ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(`⚠️ NGUY HIỂM! Bạn chỉ có ${this.roses} hoa hồng (cần 9 hoa để tiêu diệt Rồng)!`, w / 2, h * 0.58);
+            ctx.fillText(`NGUY HIỂM! Bạn chỉ có ${this.roses} hoa hồng (cần 9 hoa để tiêu diệt Rồng)!`, w / 2 + 12, h * 0.58);
             ctx.fillStyle = "#ecf0f1";
             ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("Nếu hết hoa hồng mà Rồng chưa chết, bạn sẽ bị ném xuống thung lũng!", w / 2, h * 0.64);
@@ -1210,7 +1328,7 @@ class CyberSecGame {
 
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("👉 Nhấn [ENTER] để Bước Vào Trận Chiến Sinh Tử! 👈", w / 2, h * 0.78);
+        ctx.fillText("Nhấn [ENTER] để Bước Vào Trận Chiến Sinh Tử!", w / 2, h * 0.78);
     }
 
     _renderBossBattleScreen(ctx, w, h) {
@@ -1272,15 +1390,19 @@ class CyberSecGame {
         ctx.textAlign = "center";
         ctx.fillText(`MÁU RỒNG HẮC ÁM: ${this.bossHP} / ${this.bossMaxHP} HP`, w / 2, barY + 18);
 
-        // Vẽ Vệ Binh ở vị trí bắn sẵn sàng
+        // Vẽ Vệ Binh ở vị trí bắn sẵn sàng (thích ứng thời tiết)
         const px = w / 2 - 20;
         const py = h - 90;
-        window.PixelSprites.drawAdventurer(ctx, px, py, 50, performance.now() / 200, 1, false, this.roses);
+        const curW = this.weather ? this.weather.currentType : 'SUNNY';
+        window.PixelSprites.drawAdventurer(ctx, px, py, 50, performance.now() / 200, 1, false, this.roses, curW);
+
+        window.PixelSprites.drawPixelIcon(ctx, "dragon", w / 2 - 290, h - 30, 20);
+        window.PixelSprites.drawPixelIcon(ctx, "rose", w / 2 + 270, h - 30, 20);
 
         ctx.fillStyle = "#f1c40f";
-        ctx.font = "bold 18px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`🎯 Rồng đang ở cổng [${this.bossCurrentPos}]! BẤM PHÍM [${this.bossCurrentPos}] ĐỂ BẮN HOA HỒNG! 🌹`, w / 2, h - 18);
+        ctx.fillText(`Rồng đang ở cổng [${this.bossCurrentPos}]! BẤM PHÍM [${this.bossCurrentPos}] ĐỂ BẮN HOA HỒNG!`, w / 2, h - 16);
     }
 
     _renderVictoryScreen(ctx, w, h) {
@@ -1290,10 +1412,13 @@ class CyberSecGame {
         ctx.lineWidth = 5;
         ctx.strokeRect(w * 0.15, h * 0.12, w * 0.7, h * 0.76);
 
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 260, h * 0.22 - 28, 34);
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 + 226, h * 0.22 - 28, 34);
+
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 34px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("🏆 CHIẾN THẮNG TUYỆT ĐỐI! 🏆", w / 2, h * 0.22);
+        ctx.fillText("CHIẾN THẮNG TUYỆT ĐỐI!", w / 2, h * 0.22);
 
         ctx.fillStyle = "#2ecc71";
         ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
@@ -1301,13 +1426,14 @@ class CyberSecGame {
 
         window.PixelSprites.drawTreasureChest(ctx, w / 2 - 75, h * 0.32, 150, true);
 
-        // Vệ Binh đứng cạnh rương ăn mừng
-        window.PixelSprites.drawAdventurer(ctx, w / 2 + 100, h * 0.38, 55, performance.now() / 200, -1, false, 5);
+        // Vệ Binh đứng cạnh rương ăn mừng (thích ứng thời tiết)
+        const curW = this.weather ? this.weather.currentType : 'SUNNY';
+        window.PixelSprites.drawAdventurer(ctx, w / 2 + 100, h * 0.38, 55, performance.now() / 200, -1, false, 5, curW);
 
         for (let i = 0; i < 6; i++) {
             const rx = w * 0.25 + Math.random() * (w * 0.5);
             const ry = h * 0.25 + Math.random() * (h * 0.4);
-            window.PixelSprites.drawRose(ctx, rx, ry, 30);
+            window.PixelSprites.drawPixelIcon(ctx, "rose", rx, ry, 26);
         }
 
         ctx.fillStyle = "#ffffff";
@@ -1334,7 +1460,7 @@ class CyberSecGame {
 
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("👉 Nhấn [ENTER] để Chơi Lại Từ Đầu 👈", w / 2, h * 0.83);
+        ctx.fillText("Nhấn [ENTER] để Chơi Lại Từ Đầu", w / 2, h * 0.83);
     }
 
     _renderGameOverScreen(ctx, w, h) {
@@ -1344,10 +1470,13 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.15, h * 0.2, w * 0.7, h * 0.6);
 
+        window.PixelSprites.drawPixelIcon(ctx, "skull", w / 2 - 310, h * 0.32 - 28, 34);
+        window.PixelSprites.drawPixelIcon(ctx, "skull", w / 2 + 276, h * 0.32 - 28, 34);
+
         ctx.fillStyle = "#e74c3c";
         ctx.font = "bold 34px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("💀 GAME OVER: BỊ NÉM XUỐNG THUNG LŨNG! 💀", w / 2, h * 0.32);
+        ctx.fillText("GAME OVER: BỊ NÉM XUỐNG THUNG LŨNG!", w / 2, h * 0.32);
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "18px 'Segoe UI', Tahoma, sans-serif";
@@ -1357,13 +1486,14 @@ class CyberSecGame {
         ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
         ctx.fillText("Rồng đã dùng sức mạnh bão lửa thổi bay bạn rơi thẳng xuống vực thẳm đá nhọn!", w / 2, h * 0.50);
 
+        window.PixelSprites.drawPixelIcon(ctx, "lightbulb", w / 2 - 350, h * 0.60 - 16, 20);
         ctx.fillStyle = "#f1c40f";
         ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("💡 Mẹo: Hãy cố gắng trả lời đúng tất cả các câu và tận dụng thẻ may mắn để tích >= 9 bông hồng!", w / 2, h * 0.60);
+        ctx.fillText("Mẹo: Hãy cố gắng trả lời đúng tất cả các câu và tận dụng thẻ may mắn để tích >= 9 bông hồng!", w / 2 + 10, h * 0.60);
 
         ctx.fillStyle = "#2ecc71";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("👉 Nhấn [ENTER] để Thử Thách Lại Từ Đầu 👈", w / 2, h * 0.72);
+        ctx.fillText("Nhấn [ENTER] để Thử Thách Lại Từ Đầu", w / 2, h * 0.72);
     }
 
     _renderProjectiles(ctx) {

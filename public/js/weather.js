@@ -4,16 +4,22 @@
  *  - NẮNG (Sunny): Vệt nắng vàng rực rỡ, lấp lánh ánh kim, tán lá rạng rỡ, biển sóng sánh ánh dương.
  *  - MƯA RƠI (Rain): Hạt mưa bay nghiêng theo gió, sóng gợn vỡ hạt nước, chớp giật sấm sét, cây lay động mạnh.
  *  - TUYẾT RƠI (Snow): Bông tuyết xoay tròn lơ lửng, tuyết đọng trắng xóa trên tán cây và mặt đất, sương giá.
- * Tác động tương hỗ trực tiếp lên Cây cối, Mặt biển, Mây trời và Vệ Binh.
+ * TỰ ĐỘNG THAY ĐỔI THEO THỜI GIAN & Tác động tương hỗ trực tiếp lên Cây cối, Mặt biển, Mây trời và Vệ Binh.
  */
 
 class WeatherSystem {
     constructor() {
         // Trạng thái: 'SUNNY' | 'RAIN' | 'SNOW'
         this.currentType = 'SUNNY';
-        this.wind = 1.0; // Tốc độ gió
+        this.wind = 1.0;
         this.lightningTimer = 0;
         this.lightningFlash = 0;
+
+        // Tự động chuyển đổi thời tiết ngẫu nhiên sau một khoảng thời gian
+        this.autoCycle = true;
+        this.cycleTimer = 0;
+        this.cycleDuration = 22; // 22 giây tự động đổi thời tiết một lần
+        this.onWeatherChange = null; // Callback thông báo cho Game & UI
 
         // Các hạt thời tiết
         this.rainDrops = [];
@@ -63,12 +69,18 @@ class WeatherSystem {
         }
     }
 
-    setWeather(type) {
+    setWeather(type, notify = true) {
         if (['SUNNY', 'RAIN', 'SNOW'].includes(type)) {
             this.currentType = type;
+            this.cycleTimer = 0; // Reset đếm ngược
+
             if (type === 'RAIN') this.wind = 2.5;
             else if (type === 'SNOW') this.wind = 0.8;
             else this.wind = 1.0;
+
+            if (notify && typeof this.onWeatherChange === 'function') {
+                this.onWeatherChange(this.currentType);
+            }
         }
     }
 
@@ -80,7 +92,23 @@ class WeatherSystem {
         return this.currentType;
     }
 
+    // Chọn ngẫu nhiên một thời tiết khác với thời tiết hiện tại
+    randomizeWeather() {
+        const types = ['SUNNY', 'RAIN', 'SNOW'].filter(t => t !== this.currentType);
+        const next = types[Math.floor(Math.random() * types.length)];
+        this.setWeather(next);
+        return next;
+    }
+
     update(dt, w, h) {
+        // Tự động chuyển đổi thời tiết định kỳ
+        if (this.autoCycle) {
+            this.cycleTimer += dt;
+            if (this.cycleTimer >= this.cycleDuration) {
+                this.randomizeWeather();
+            }
+        }
+
         // Cập nhật hạt mưa
         if (this.currentType === 'RAIN') {
             const windShift = this.wind * 4;
@@ -89,7 +117,6 @@ class WeatherSystem {
                 r.x += windShift;
 
                 if (r.y > h - 70) {
-                    // Tạo gợn sóng nước tóe trên mặt đất hoặc mặt biển
                     if (Math.random() > 0.6 && this.ripples.length < 25) {
                         this.ripples.push({
                             x: r.x,
@@ -104,7 +131,6 @@ class WeatherSystem {
                 }
             });
 
-            // Sấm chớp ngẫu nhiên khi mưa
             this.lightningTimer += dt;
             if (this.lightningTimer > 7 && Math.random() < 0.02) {
                 this.lightningFlash = 0.8;
@@ -140,7 +166,6 @@ class WeatherSystem {
         }
     }
 
-    // Vẽ các hiệu ứng thời tiết phủ lên thế giới
     renderOverlay(ctx, w, h, time) {
         if (this.currentType === 'RAIN') {
             this._renderRain(ctx, w, h);
@@ -154,13 +179,11 @@ class WeatherSystem {
     _renderRain(ctx, w, h) {
         ctx.save();
 
-        // Chớp giật sáng bầu trời
         if (this.lightningFlash > 0) {
             ctx.fillStyle = `rgba(235, 240, 255, ${this.lightningFlash * 0.4})`;
             ctx.fillRect(0, 0, w, h);
         }
 
-        // Vệt mưa rơi nghiêng
         ctx.strokeStyle = "rgba(180, 220, 255, 0.65)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -171,7 +194,6 @@ class WeatherSystem {
         });
         ctx.stroke();
 
-        // Gợn sóng hạt nước bắn tung tóe
         this.ripples.forEach(rip => {
             ctx.strokeStyle = `rgba(200, 230, 255, ${rip.alpha})`;
             ctx.lineWidth = 1.2;
@@ -190,7 +212,6 @@ class WeatherSystem {
             ctx.fillRect(s.x, s.y, s.size, s.size);
         });
 
-        // Lớp sương giá lạnh mờ ảo đáy màn hình
         const frostGrad = ctx.createLinearGradient(0, h - 80, 0, h);
         frostGrad.addColorStop(0, "rgba(223, 249, 251, 0)");
         frostGrad.addColorStop(1, "rgba(223, 249, 251, 0.25)");
@@ -203,7 +224,6 @@ class WeatherSystem {
     _renderSun(ctx, w, h, time) {
         ctx.save();
 
-        // Vệt nắng vàng ấm áp chiếu chéo
         this.sunRays.forEach((ray, idx) => {
             const sway = Math.sin(time * 0.8 + idx) * 30;
             const grad = ctx.createLinearGradient(ray.x + sway, 0, ray.x + sway + 100, h);
@@ -221,7 +241,6 @@ class WeatherSystem {
             ctx.fill();
         });
 
-        // Bụi nắng vàng phát quang bay lơ lửng
         for (let i = 0; i < 12; i++) {
             const px = ((i * 120 + time * 20) % w);
             const py = (h * 0.3) + Math.sin(time + i) * 100;

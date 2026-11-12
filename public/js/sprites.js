@@ -12,7 +12,12 @@ const PixelSprites = {
     // ========================================================
     // 1. NHÂN VẬT VỆ BINH PHIÊU LƯU (ADVENTURER / CYBER KNIGHT)
     // ========================================================
-    drawAdventurer(ctx, x, y, size = 48, walkFrame = 0, direction = 1, isWalking = true, rosesCount = 1, weather = 'SUNNY') {
+    drawAdventurer(ctx, x, y, size = 48, walkFrame = 0, direction = 1, isWalking = true, rosesCount = 1, weather = null) {
+        if (!weather && window.WeatherSystem) {
+            weather = window.WeatherSystem.currentType;
+        }
+        if (!weather) weather = 'SUNNY';
+
         ctx.save();
         ctx.translate(x, y);
         if (direction === -1) {
@@ -77,21 +82,91 @@ const PixelSprites = {
         ctx.fillRect(8 * s, 2 * s - bob, 8 * s, 2 * s);
         ctx.fillRect(7 * s, 3 * s - bob, 2 * s, 2 * s);
 
-        // Hiệu ứng khi tuyết lạnh: Thở ra khói trắng (Breath vapor)
-        if (weather === 'SNOW') {
+        // ========================================================
+        // PHỤ KIỆN THỜI TIẾT TƯƠNG TÁC LÊN NHÂN VẬT:
+        // ========================================================
+        if (weather === 'SUNNY') {
+            // ☀️ Khi NẮNG: Đội nón phiêu lưu rộng vành + Đeo kính râm ngầu
+            ctx.fillStyle = "#d35400";
+            ctx.fillRect(4 * s, 1 * s - bob, 18 * s, 2.5 * s); // Vành nón rộng
+            ctx.fillStyle = "#f39c12";
+            ctx.fillRect(7 * s, -2.5 * s - bob, 11 * s, 3.5 * s); // Chóp nón
+            ctx.fillStyle = "#c0392b";
+            ctx.fillRect(7 * s, 0 * s - bob, 11 * s, 1.2 * s); // Dải băng đỏ
+
+            // Kính mát râm pixel sành điệu
+            ctx.fillStyle = "#1e272e";
+            ctx.fillRect(12 * s, 5 * s - bob, 5 * s, 2.5 * s);
+            ctx.fillStyle = "#00d2d3";
+            ctx.fillRect(12.5 * s, 5.5 * s - bob, 1.5 * s, 1 * s);
+            ctx.fillRect(15 * s, 5.5 * s - bob, 1.5 * s, 1 * s);
+        } else if (weather === 'RAIN') {
+            // 🌧️ Khi MƯA: Che chiếc dù pixel đỏ sọc vàng rực rỡ
+            // Cán dù kim loại
+            ctx.fillStyle = "#bdc3c7";
+            ctx.fillRect(6 * s, -9 * s - bob, 1.5 * s, 18 * s);
+            // Tay cầm móc cong
+            ctx.fillStyle = "#7f8c8d";
+            ctx.fillRect(4.5 * s, 8 * s - bob, 3 * s, 1.5 * s);
+            ctx.fillRect(4.5 * s, 6.5 * s - bob, 1.5 * s, 2 * s);
+
+            // Tán dù pixel bậc thang (Stepped pixel dome)
+            ctx.fillStyle = "#e74c3c";
+            ctx.fillRect(-1 * s, -14 * s - bob, 16 * s, 5 * s);
+            ctx.fillRect(1 * s, -17 * s - bob, 12 * s, 3.5 * s);
+            ctx.fillRect(4 * s, -20 * s - bob, 6 * s, 3.5 * s);
+
+            // Sọc vàng nổi bật trên tán dù
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(5 * s, -20 * s - bob, 3 * s, 11 * s);
+            ctx.fillRect(-1 * s, -10 * s - bob, 16 * s, 1.5 * s);
+
+            // Chóp kim loại đỉnh dù
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(6.2 * s, -22 * s - bob, 1.2 * s, 2.5 * s);
+
+            // Giọt nước nảy trên mép dù
+            const splashTick = (walkFrame * 6) % 1;
+            ctx.fillStyle = "rgba(180, 225, 255, 0.85)";
+            ctx.fillRect(-2 * s - splashTick * 2 * s, -12 * s - bob - splashTick * 2 * s, 1.5 * s, 1.5 * s);
+            ctx.fillRect(15 * s + splashTick * 2 * s, -12 * s - bob - splashTick * 2 * s, 1.5 * s, 1.5 * s);
+        } else if (weather === 'SNOW') {
+            // ❄️ Khi TUYẾT: Mũ len có quả bông, Khăn len đỏ quàng cổ dày, Áo ấm
+            // Quả bông len trắng trên đỉnh đầu
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(10 * s, -1.5 * s - bob, 4 * s, 3 * s);
+            // Mũ len ấm áp màu đỏ
+            ctx.fillStyle = "#c0392b";
+            ctx.fillRect(8 * s, 1 * s - bob, 9 * s, 2.5 * s);
+
+            // Cổ áo lót lông trắng
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(7 * s, 7 * s - bob, 10 * s, 2 * s);
+
+            // Khăn len quàng cổ dày
+            ctx.fillStyle = "#c0392b";
+            ctx.fillRect(7 * s, 8 * s - bob, 10 * s, 3 * s);
+            // Vạt khăn rủ xuống bay trong gió lạnh
+            const scarfWave = Math.sin(walkFrame * 4) * 2 * s;
+            ctx.fillRect(10 * s, 11 * s - bob, 3 * s, 6 * s);
+            ctx.fillStyle = "#e74c3c";
+            ctx.fillRect(10 * s + scarfWave, 17 * s - bob, 3 * s, 1.8 * s); // Tua rua đỏ sáng
+
+            // Hơi thở tỏa khói trắng
             const smokePuff = (Math.sin(walkFrame * 3) + 1) * 0.5;
-            if (smokePuff > 0.4) {
+            if (smokePuff > 0.3) {
                 ctx.fillStyle = `rgba(255, 255, 255, ${smokePuff * 0.6})`;
-                ctx.fillRect(18 * s + smokePuff * 4, 4 * s - bob - smokePuff * 3, 3 * s, 2.5 * s);
-                ctx.fillRect(20 * s + smokePuff * 6, 2 * s - bob - smokePuff * 5, 2 * s, 2 * s);
+                ctx.fillRect(18 * s + smokePuff * 5, 4 * s - bob - smokePuff * 3, 3 * s, 2.5 * s);
+                ctx.fillRect(20 * s + smokePuff * 7, 2 * s - bob - smokePuff * 5, 2.5 * s, 2.5 * s);
             }
         }
 
-        // 5. Tay & Cầm Bông hồng bảo mật
+        // 5. Tay & Găng tay ấm khi tuyết
         const armSwing = isWalking ? -Math.sin(walkFrame * 8) * 2 * s : 0;
         ctx.fillStyle = "#6a89cc";
         ctx.fillRect(11 * s, 11 * s - bob + armSwing, 3 * s, 5 * s);
-        ctx.fillStyle = "#dfe4ea";
+        // Bàn tay / Bao tay len khi tuyết
+        ctx.fillStyle = (weather === 'SNOW') ? "#e74c3c" : "#dfe4ea";
         ctx.fillRect(12 * s, 15 * s - bob + armSwing, 2.5 * s, 2.5 * s);
 
         if (rosesCount > 0) {
@@ -1039,6 +1114,400 @@ const PixelSprites = {
             }
         }
         ctx.fillText(line, x, y);
+    },
+
+    // ========================================================
+    // 13. VẼ HỆ THỐNG ICON PIXEL 16-BIT THUẦN (THAY THẾ EMOJI)
+    // ========================================================
+    drawPixelIcon(ctx, iconName, x, y, size = 16) {
+        if (!ctx) return;
+        ctx.save();
+        const s = size / 16;
+        const key = (iconName || '').toLowerCase().trim();
+
+        switch (key) {
+            case 'tree':
+            case 'forest': {
+                // Thân cây gỗ
+                ctx.fillStyle = "#795548";
+                ctx.fillRect(x + 7 * s, y + 11 * s, 2 * s, 5 * s);
+                // Tán lá 3 tầng
+                ctx.fillStyle = "#27ae60";
+                ctx.fillRect(x + 2 * s, y + 8 * s, 12 * s, 3.5 * s);
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(x + 4 * s, y + 5 * s, 8 * s, 3.5 * s);
+                ctx.fillStyle = "#1abc9c";
+                ctx.fillRect(x + 6 * s, y + 2 * s, 4 * s, 3.5 * s);
+                ctx.fillRect(x + 7 * s, y + 1 * s, 2 * s, 1.5 * s);
+                // Đốm sáng lá
+                ctx.fillStyle = "#a8e6cf";
+                ctx.fillRect(x + 5 * s, y + 6 * s, 2 * s, 1 * s);
+                ctx.fillRect(x + 7 * s, y + 3 * s, 1 * s, 1 * s);
+                break;
+            }
+
+            case 'wave':
+            case 'water':
+            case 'ocean': {
+                // Nền biển sâu
+                ctx.fillStyle = "#1e3799";
+                ctx.fillRect(x + 1 * s, y + 9 * s, 14 * s, 6 * s);
+                // Thân sóng
+                ctx.fillStyle = "#0984e3";
+                ctx.fillRect(x + 2 * s, y + 6 * s, 11 * s, 4 * s);
+                // Đỉnh ngọn sóng uốn
+                ctx.fillStyle = "#00d2d3";
+                ctx.fillRect(x + 3 * s, y + 4 * s, 7 * s, 3 * s);
+                ctx.fillRect(x + 8 * s, y + 2 * s, 4 * s, 3 * s);
+                // Bọt sóng trắng xóa
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 10 * s, y + 1 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 8 * s, y + 3 * s, 2 * s, 1 * s);
+                ctx.fillRect(x + 3 * s, y + 6 * s, 2 * s, 1 * s);
+                break;
+            }
+
+            case 'cloud':
+            case 'sky': {
+                // Đáy mây xanh lơ đổ bóng
+                ctx.fillStyle = "#74b9ff";
+                ctx.fillRect(x + 2 * s, y + 10 * s, 12 * s, 3 * s);
+                // Thân mây xám nhạt
+                ctx.fillStyle = "#dfe6e9";
+                ctx.fillRect(x + 1 * s, y + 7 * s, 14 * s, 4 * s);
+                // Khối bông mây trắng tinh
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 3 * s, y + 5 * s, 5 * s, 3 * s);
+                ctx.fillRect(x + 7 * s, y + 3 * s, 5 * s, 5 * s);
+                ctx.fillRect(x + 2 * s, y + 7 * s, 12 * s, 3 * s);
+                break;
+            }
+
+            case 'sun':
+            case 'sunny': {
+                // Tâm mặt trời vàng cam
+                ctx.fillStyle = "#f39c12";
+                ctx.fillRect(x + 5 * s, y + 5 * s, 6 * s, 6 * s);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 6 * s, y + 6 * s, 4 * s, 4 * s);
+                // 4 Tia thẳng
+                ctx.fillRect(x + 7 * s, y + 1 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 7 * s, y + 12 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 1 * s, y + 7 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 12 * s, y + 7 * s, 3 * s, 2 * s);
+                // 4 Tia chéo
+                ctx.fillRect(x + 3 * s, y + 3 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 11 * s, y + 3 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 3 * s, y + 11 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 11 * s, y + 11 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'rain':
+            case 'rainy': {
+                // Mây mưa xám giông
+                ctx.fillStyle = "#636e72";
+                ctx.fillRect(x + 3 * s, y + 2 * s, 10 * s, 5 * s);
+                ctx.fillStyle = "#b2bec3";
+                ctx.fillRect(x + 4 * s, y + 1 * s, 8 * s, 3 * s);
+                // Hạt mưa nghiêng màu xanh ngọc
+                ctx.fillStyle = "#00d2d3";
+                ctx.fillRect(x + 3 * s, y + 9 * s, 1.5 * s, 3 * s);
+                ctx.fillRect(x + 7 * s, y + 8 * s, 1.5 * s, 3 * s);
+                ctx.fillRect(x + 11 * s, y + 9 * s, 1.5 * s, 3 * s);
+                ctx.fillRect(x + 5 * s, y + 12 * s, 1.5 * s, 3 * s);
+                ctx.fillRect(x + 9 * s, y + 12 * s, 1.5 * s, 3 * s);
+                break;
+            }
+
+            case 'snow':
+            case 'snowy': {
+                // Bông hoa tuyết pha lê 6 cánh
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 7 * s, y + 1 * s, 2 * s, 14 * s);
+                ctx.fillRect(x + 1 * s, y + 7 * s, 14 * s, 2 * s);
+                // Nhánh chéo
+                ctx.fillRect(x + 4 * s, y + 4 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 10 * s, y + 4 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 4 * s, y + 10 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 10 * s, y + 10 * s, 2 * s, 2 * s);
+                // Mũi nhọn xanh băng
+                ctx.fillStyle = "#74b9ff";
+                ctx.fillRect(x + 5 * s, y + 2 * s, 1 * s, 1 * s);
+                ctx.fillRect(x + 10 * s, y + 2 * s, 1 * s, 1 * s);
+                ctx.fillRect(x + 5 * s, y + 13 * s, 1 * s, 1 * s);
+                ctx.fillRect(x + 10 * s, y + 13 * s, 1 * s, 1 * s);
+                break;
+            }
+
+            case 'rose':
+            case 'flower': {
+                // Cuống hoa xanh lá
+                ctx.fillStyle = "#27ae60";
+                ctx.fillRect(x + 7 * s, y + 8 * s, 2 * s, 7 * s);
+                // Lá xanh non
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(x + 4 * s, y + 10 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 9 * s, y + 12 * s, 3 * s, 2 * s);
+                // Cánh hoa hồng đỏ thắm
+                ctx.fillStyle = "#c0392b";
+                ctx.fillRect(x + 4 * s, y + 2 * s, 8 * s, 6 * s);
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 5 * s, y + 1 * s, 6 * s, 6 * s);
+                ctx.fillStyle = "#ff7675";
+                ctx.fillRect(x + 6 * s, y + 3 * s, 3 * s, 2 * s);
+                break;
+            }
+
+            case 'dice': {
+                // Khối xúc xắc 3D trắng viền đậm
+                ctx.fillStyle = "#2c3e50";
+                ctx.fillRect(x + 1 * s, y + 1 * s, 14 * s, 14 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 2 * s, y + 2 * s, 12 * s, 12 * s);
+                // Bóng cạnh
+                ctx.fillStyle = "#dcdde1";
+                ctx.fillRect(x + 11 * s, y + 3 * s, 2 * s, 10 * s);
+                ctx.fillRect(x + 3 * s, y + 11 * s, 10 * s, 2 * s);
+                // Chấm đỏ chính giữa tượng trưng may mắn
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 6 * s, y + 6 * s, 4 * s, 4 * s);
+                // 4 Chấm đen góc
+                ctx.fillStyle = "#2c3e50";
+                ctx.fillRect(x + 3 * s, y + 3 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 11 * s, y + 3 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 3 * s, y + 11 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 11 * s, y + 11 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'dragon': {
+                // Đầu rồng hắc ám
+                ctx.fillStyle = "#1e1329";
+                ctx.fillRect(x + 2 * s, y + 3 * s, 12 * s, 10 * s);
+                // Sừng rồng vàng nhọn
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 1 * s, y + 1 * s, 3 * s, 4 * s);
+                ctx.fillRect(x + 6 * s, y + 1 * s, 3 * s, 3 * s);
+                // Vảy tím sẫm
+                ctx.fillStyle = "#4834d4";
+                ctx.fillRect(x + 3 * s, y + 5 * s, 11 * s, 7 * s);
+                // Mắt đỏ rực lửa
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 6 * s, y + 6 * s, 2 * s, 2 * s);
+                ctx.fillStyle = "#f39c12";
+                ctx.fillRect(x + 7 * s, y + 6 * s, 1 * s, 1 * s);
+                // Răng nanh nhọn & ngọn lửa
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 12 * s, y + 9 * s, 1 * s, 2 * s);
+                ctx.fillStyle = "#e67e22";
+                ctx.fillRect(x + 13 * s, y + 10 * s, 2.5 * s, 2 * s);
+                break;
+            }
+
+            case 'trophy':
+            case 'cup': {
+                // Chén vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 4 * s, y + 2 * s, 8 * s, 6 * s);
+                ctx.fillRect(x + 3 * s, y + 1 * s, 10 * s, 2 * s);
+                // Quai cúp 2 bên
+                ctx.fillRect(x + 2 * s, y + 3 * s, 2 * s, 4 * s);
+                ctx.fillRect(x + 12 * s, y + 3 * s, 2 * s, 4 * s);
+                // Ánh kim trắng
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 5 * s, y + 3 * s, 2 * s, 4 * s);
+                // Trụ cúp
+                ctx.fillStyle = "#e67e22";
+                ctx.fillRect(x + 7 * s, y + 8 * s, 2 * s, 3 * s);
+                // Đế cúp
+                ctx.fillStyle = "#2c3e50";
+                ctx.fillRect(x + 4 * s, y + 11 * s, 8 * s, 3 * s);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 6 * s, y + 12 * s, 4 * s, 1.5 * s);
+                break;
+            }
+
+            case 'skull': {
+                // Xương sọ trắng ngà
+                ctx.fillStyle = "#ecf0f1";
+                ctx.fillRect(x + 3 * s, y + 2 * s, 10 * s, 8 * s);
+                ctx.fillRect(x + 5 * s, y + 10 * s, 6 * s, 4 * s);
+                // Hốc mắt đen rỗng
+                ctx.fillStyle = "#1e272e";
+                ctx.fillRect(x + 4 * s, y + 5 * s, 3 * s, 3 * s);
+                ctx.fillRect(x + 9 * s, y + 5 * s, 3 * s, 3 * s);
+                // Mũi
+                ctx.fillRect(x + 7 * s, y + 8 * s, 2 * s, 2 * s);
+                // Kẽ răng
+                ctx.fillRect(x + 6 * s, y + 12 * s, 1 * s, 2 * s);
+                ctx.fillRect(x + 8 * s, y + 12 * s, 1 * s, 2 * s);
+                break;
+            }
+
+            case 'sword': {
+                // Lưỡi kiếm bạc chéo
+                ctx.fillStyle = "#dfe4ea";
+                ctx.fillRect(x + 9 * s, y + 3 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 7 * s, y + 5 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 5 * s, y + 7 * s, 2 * s, 2 * s);
+                // Mũi kiếm bén
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 11 * s, y + 1 * s, 2 * s, 2 * s);
+                // Chuôi kiếm vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 3 * s, y + 8 * s, 5 * s, 2 * s);
+                ctx.fillRect(x + 6 * s, y + 6 * s, 2 * s, 5 * s);
+                // Cán kiếm gỗ
+                ctx.fillStyle = "#795548";
+                ctx.fillRect(x + 2 * s, y + 10 * s, 2 * s, 2 * s);
+                // Ngọc chuôi kiếm lam
+                ctx.fillStyle = "#00d2d3";
+                ctx.fillRect(x + 1 * s, y + 12 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'shield': {
+                // Viền khiên vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 2 * s, y + 1 * s, 12 * s, 10 * s);
+                ctx.fillRect(x + 4 * s, y + 11 * s, 8 * s, 3 * s);
+                ctx.fillRect(x + 6 * s, y + 14 * s, 4 * s, 2 * s);
+                // Nền lam an ninh
+                ctx.fillStyle = "#2980b9";
+                ctx.fillRect(x + 4 * s, y + 3 * s, 8 * s, 8 * s);
+                ctx.fillRect(x + 5 * s, y + 11 * s, 6 * s, 2 * s);
+                // Biểu tượng thập tự an ninh sáng
+                ctx.fillStyle = "#00d2d3";
+                ctx.fillRect(x + 7 * s, y + 4 * s, 2 * s, 7 * s);
+                ctx.fillRect(x + 5 * s, y + 6 * s, 6 * s, 2 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 7 * s, y + 6 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'chest':
+            case 'treasure': {
+                // Thùng rương gỗ
+                ctx.fillStyle = "#d35400";
+                ctx.fillRect(x + 2 * s, y + 4 * s, 12 * s, 10 * s);
+                // Nẹp kim loại vàng & Ổ khóa
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 1 * s, y + 3 * s, 14 * s, 2 * s);
+                ctx.fillRect(x + 4 * s, y + 4 * s, 2 * s, 10 * s);
+                ctx.fillRect(x + 10 * s, y + 4 * s, 2 * s, 10 * s);
+                // Ổ khóa sáng
+                ctx.fillRect(x + 7 * s, y + 7 * s, 2 * s, 3 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 7.5 * s, y + 7.5 * s, 1 * s, 1 * s);
+                break;
+            }
+
+            case 'arrow': {
+                // Mũi tên pixel chỉ hướng xanh lá
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(x + 2 * s, y + 6 * s, 7 * s, 4 * s);
+                ctx.fillRect(x + 8 * s, y + 4 * s, 2 * s, 8 * s);
+                ctx.fillRect(x + 10 * s, y + 5 * s, 2 * s, 6 * s);
+                ctx.fillRect(x + 12 * s, y + 7 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'star':
+            case 'sparkle': {
+                // Ngôi sao lấp lánh vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 7 * s, y + 1 * s, 2 * s, 14 * s);
+                ctx.fillRect(x + 1 * s, y + 7 * s, 14 * s, 2 * s);
+                ctx.fillRect(x + 4 * s, y + 4 * s, 8 * s, 8 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 6 * s, y + 6 * s, 4 * s, 4 * s);
+                break;
+            }
+
+            case 'gamepad': {
+                // Tay cầm arcade tím retro
+                ctx.fillStyle = "#8e44ad";
+                ctx.fillRect(x + 1 * s, y + 4 * s, 14 * s, 8 * s);
+                // D-pad
+                ctx.fillStyle = "#2c3e50";
+                ctx.fillRect(x + 3 * s, y + 6 * s, 4 * s, 4 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 4 * s, y + 5 * s, 2 * s, 6 * s);
+                ctx.fillRect(x + 2 * s, y + 7 * s, 6 * s, 2 * s);
+                // Nút bấm đỏ / vàng
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 11 * s, y + 6 * s, 2 * s, 2 * s);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 9 * s, y + 8 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'check': {
+                // Dấu tick xanh thành công
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(x + 2 * s, y + 8 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 4 * s, y + 9 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 6 * s, y + 11 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 8 * s, y + 8 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 10 * s, y + 5 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 12 * s, y + 2 * s, 2 * s, 3 * s);
+                break;
+            }
+
+            case 'cross': {
+                // Dấu X đỏ cảnh báo
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 2 * s, y + 2 * s, 3 * s, 3 * s);
+                ctx.fillRect(x + 11 * s, y + 2 * s, 3 * s, 3 * s);
+                ctx.fillRect(x + 5 * s, y + 5 * s, 6 * s, 6 * s);
+                ctx.fillRect(x + 2 * s, y + 11 * s, 3 * s, 3 * s);
+                ctx.fillRect(x + 11 * s, y + 11 * s, 3 * s, 3 * s);
+                break;
+            }
+
+            case 'lightbulb':
+            case 'tip': {
+                // Bóng đèn ý tưởng vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 4 * s, y + 2 * s, 8 * s, 8 * s);
+                ctx.fillRect(x + 3 * s, y + 4 * s, 10 * s, 4 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 5 * s, y + 3 * s, 3 * s, 3 * s);
+                // Đui đèn kim loại
+                ctx.fillStyle = "#bdc3c7";
+                ctx.fillRect(x + 5 * s, y + 10 * s, 6 * s, 2 * s);
+                ctx.fillRect(x + 6 * s, y + 12 * s, 4 * s, 2 * s);
+                ctx.fillStyle = "#e67e22";
+                ctx.fillRect(x + 7 * s, y + 14 * s, 2 * s, 1 * s);
+                break;
+            }
+
+            default: {
+                // Mặc định: Ngôi sao pixel vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 6 * s, y + 2 * s, 4 * s, 12 * s);
+                ctx.fillRect(x + 2 * s, y + 6 * s, 12 * s, 4 * s);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 7 * s, y + 7 * s, 2 * s, 2 * s);
+                break;
+            }
+        }
+        ctx.restore();
+    },
+
+    // Tạo Data URL ảnh PNG trong suốt từ Pixel Icon để nhúng vào HTML/CSS
+    getPixelIconDataUrl(iconName, size = 16) {
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = size;
+            canvas.height = size;
+            const cCtx = canvas.getContext("2d");
+            this.drawPixelIcon(cCtx, iconName, 0, 0, size);
+            return canvas.toDataURL("image/png");
+        } catch (e) {
+            return "";
+        }
     }
 };
 

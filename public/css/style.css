@@ -1,4 +1,4 @@
-/* Retro Pixel Arcade Styling */
+/* Retro Pixel Arcade Styling - Optimized for FHD 1920x1080 & Fullscreen */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 * {
@@ -8,36 +8,56 @@
     user-select: none;
 }
 
-body {
-    background: #090714;
+:root {
+    --bg-dark: #090714;
+    --panel-bg: #140f26;
+    --border-color: #2f254e;
+    --bezel-color: #1d182e;
+    --accent-gold: #f1c40f;
+    --accent-cyan: #00d2d3;
+    --accent-red: #eb445a;
+    --accent-green: #2ecc71;
+}
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bg-dark);
     color: #f1f2f6;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden; /* Không có thanh cuộn dọc trên laptop FHD */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    overflow-x: hidden;
+    justify-content: space-between;
+    padding: 6px 12px;
 }
 
-/* Header & Arduino Port Status Bar */
+/* ========================================================
+   HEADER & ARDUINO BAR (COMPACT FHD)
+   ======================================================== */
 .top-bar {
     width: 100%;
-    max-width: 1280px;
+    max-width: 1320px;
+    height: 38px;
+    min-height: 38px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 16px;
-    background: #140f26;
-    border-bottom: 2px solid #2f254e;
-    font-size: 14px;
+    padding: 0 14px;
+    background: var(--panel-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 13px;
     gap: 12px;
+    z-index: 100;
 }
 
 .partner-logos {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .logo-item {
@@ -48,18 +68,18 @@ body {
     padding: 3px 8px;
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    opacity: 0.7;
+    opacity: 0.75;
     transition: opacity 0.2s, background 0.2s;
 }
 
 .logo-item:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.09);
 }
 
 .logo-img-pixel {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     image-rendering: pixelated;
     object-fit: contain;
     border-radius: 3px;
@@ -69,48 +89,92 @@ body {
 .logo-text {
     font-size: 11px;
     font-weight: 500;
-    color: #95a5a6;
+    color: #a4b0be;
     letter-spacing: 0.5px;
     white-space: nowrap;
 }
 
 .brand-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: 'Press Start 2P', monospace;
-    font-size: 13px;
-    color: #f1c40f;
+    font-size: 12px;
+    color: var(--accent-gold);
     letter-spacing: 1px;
     white-space: nowrap;
+}
+
+.brand-title .pixel-badge-icon {
+    width: 18px;
+    height: 18px;
+    image-rendering: pixelated;
+    vertical-align: middle;
 }
 
 .arduino-panel {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
+/* Nút Đổi Thời Tiết Pixel */
 .weather-btn {
     background: #23193d;
-    color: #f1c40f;
+    color: var(--accent-gold);
     border: 1px solid #574b90;
-    padding: 4px 10px;
+    padding: 3px 10px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     transition: 0.2s;
 }
 
 .weather-btn:hover {
     background: #341f97;
-    border-color: #f1c40f;
-    transform: scale(1.05);
+    border-color: var(--accent-gold);
+    transform: scale(1.04);
+}
+
+.weather-btn img.pixel-icon-btn {
+    width: 14px;
+    height: 14px;
+    image-rendering: pixelated;
+}
+
+/* Nút Toàn Màn Hình (Fullscreen) */
+.btn-fullscreen {
+    background: #1e272e;
+    color: var(--accent-cyan);
+    border: 1px solid #00d2d3;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.btn-fullscreen:hover {
+    background: #00d2d3;
+    color: #1e272e;
+    transform: scale(1.04);
+    box-shadow: 0 0 10px rgba(0, 210, 211, 0.5);
 }
 
 #arduinoStatus {
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 4px;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 #arduinoStatus.connected {
@@ -120,166 +184,240 @@ body {
 }
 
 #arduinoStatus.disconnected {
-    background: #7f8c8d;
+    background: #576574;
     color: #ecf0f1;
 }
 
 .port-select-box {
     display: flex;
-    gap: 6px;
+    gap: 4px;
 }
 
 select#portSelect {
     background: #23193d;
-    color: #f1c40f;
+    color: var(--accent-gold);
     border: 1px solid #574b90;
-    padding: 4px 8px;
+    padding: 2px 6px;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 11px;
     cursor: pointer;
+    max-width: 140px;
 }
 
 button.btn-connect {
     background: #3498db;
     color: white;
     border: none;
-    padding: 5px 12px;
+    padding: 3px 10px;
     border-radius: 4px;
     font-weight: bold;
+    font-size: 11px;
     cursor: pointer;
     transition: 0.2s;
+    white-space: nowrap;
 }
 
 button.btn-connect:hover {
     background: #2980b9;
 }
 
-/* Arcade Cabinet Bezel */
+/* ========================================================
+   ARCADE CABINET BEZEL & CANVAS (FLUID FHD SCALING)
+   ======================================================== */
 .arcade-wrapper {
     position: relative;
-    background: #1d182e;
-    padding: 14px;
-    border-radius: 12px;
-    border: 4px solid #3c325c;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
-    margin: 15px 0;
+    background: var(--bezel-color);
+    padding: 8px;
+    border-radius: 10px;
+    border: 3px solid #3c325c;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
+    margin: 4px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: calc(100vh - 142px);
+    max-width: 100%;
 }
 
-/* Game Canvas */
 #gameCanvas {
     display: block;
     background: #000;
     border-radius: 6px;
-    width: 1080px;
-    height: 607px;
+    max-height: calc(100vh - 158px);
+    max-width: 95vw;
+    width: auto;
+    height: auto;
+    aspect-ratio: 16 / 9;
     image-rendering: pixelated;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
 }
 
-/* Scanline Overlay (Hiệu ứng màn hình CRT Retro) */
+/* Scanline Overlay CRT Retro */
 .crt-overlay {
     position: absolute;
-    top: 14px;
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
     background-size: 100% 3px, 6px 100%;
     pointer-events: none;
     border-radius: 6px;
 }
 
-/* Physical Buttons Simulation Panel (5 Nút Bấm A, B, C, D, ENTER) */
+/* ========================================================
+   CONTROLS DOCK (5 NÚT BẤM VẬT LÝ A, B, C, D, ENTER)
+   ======================================================== */
 .controls-dock {
     width: 100%;
-    max-width: 1080px;
+    max-width: 1100px;
+    height: 58px;
+    min-height: 58px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #151026;
-    border: 2px solid #2f254e;
+    border: 2px solid var(--border-color);
     border-radius: 10px;
-    padding: 12px 24px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+    padding: 4px 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
 }
 
 .control-group {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .dock-label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: bold;
     color: #a4b0be;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
 }
 
-/* Arcade Buttons */
+/* Arcade Buttons A, B, C, D */
 .arcade-btn {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-family: 'Press Start 2P', monospace;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     color: white;
     cursor: pointer;
-    transition: transform 0.08s, box-shadow 0.08s;
+    transition: transform 0.06s, box-shadow 0.06s;
     position: relative;
-    border: 3px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.35);
 }
 
 .arcade-btn .sub-text {
     font-family: 'Segoe UI', sans-serif;
-    font-size: 9px;
-    margin-top: 2px;
-    opacity: 0.9;
+    font-size: 8px;
+    margin-top: 1px;
+    opacity: 0.95;
+    font-weight: 600;
 }
 
-/* Màu các nút bấm A, B, C, D */
 .arcade-btn[data-key="A"] {
     background: radial-gradient(circle at 35% 35%, #ff5252, #b33939);
-    box-shadow: 0 6px 0 #771f1f, 0 8px 15px rgba(235, 68, 90, 0.4);
+    box-shadow: 0 4px 0 #771f1f, 0 6px 12px rgba(235, 68, 90, 0.4);
 }
 .arcade-btn[data-key="B"] {
     background: radial-gradient(circle at 35% 35%, #3498db, #227093);
-    box-shadow: 0 6px 0 #194f68, 0 8px 15px rgba(52, 152, 219, 0.4);
+    box-shadow: 0 4px 0 #194f68, 0 6px 12px rgba(52, 152, 219, 0.4);
 }
 .arcade-btn[data-key="C"] {
     background: radial-gradient(circle at 35% 35%, #f1c40f, #cc8e14);
-    box-shadow: 0 6px 0 #8f630e, 0 8px 15px rgba(241, 196, 15, 0.4);
+    box-shadow: 0 4px 0 #8f630e, 0 6px 12px rgba(241, 196, 15, 0.4);
 }
 .arcade-btn[data-key="D"] {
     background: radial-gradient(circle at 35% 35%, #2ecc71, #218c74);
-    box-shadow: 0 6px 0 #155c4d, 0 8px 15px rgba(46, 204, 113, 0.4);
+    box-shadow: 0 4px 0 #155c4d, 0 6px 12px rgba(46, 204, 113, 0.4);
 }
 
-/* Nút ENTER hình chữ nhật bo góc lớn */
+/* Nút ENTER */
 .arcade-btn-enter {
-    width: 140px;
-    height: 58px;
-    border-radius: 12px;
+    width: 125px;
+    height: 48px;
+    border-radius: 10px;
     background: radial-gradient(circle at 35% 35%, #9b59b6, #6c3483);
-    box-shadow: 0 6px 0 #4a235a, 0 8px 15px rgba(155, 89, 182, 0.4);
-    font-size: 13px;
+    box-shadow: 0 4px 0 #4a235a, 0 6px 12px rgba(155, 89, 182, 0.4);
+    font-size: 11px;
 }
 
-/* Hiệu ứng ấn nút (Active state do nhấn bàn phím hoặc Arduino) */
 .arcade-btn:active, .arcade-btn.active {
-    transform: translateY(5px);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.8), 0 0 20px #ffffff;
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.8), 0 0 18px #ffffff;
     filter: brightness(1.3);
 }
 
 .hint-text {
-    font-size: 12px;
+    font-size: 11px;
     color: #747d8c;
-    margin-top: 8px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    text-align: center;
+}
+
+/* ========================================================
+   FULLSCREEN MODE STYLING (:fullscreen)
+   ======================================================== */
+:fullscreen body, body.is-fullscreen {
+    padding: 8px 16px;
+}
+
+:fullscreen .arcade-wrapper, body.is-fullscreen .arcade-wrapper {
+    max-height: calc(100vh - 130px);
+}
+
+:fullscreen #gameCanvas, body.is-fullscreen #gameCanvas {
+    max-height: calc(100vh - 146px);
+}
+
+/* ========================================================
+   MEDIA QUERIES (LAPTOP MÀN HÌNH NHỎ HOẶC SCALING CAO)
+   ======================================================== */
+@media (max-height: 800px) {
+    .top-bar {
+        height: 34px;
+        min-height: 34px;
+        font-size: 12px;
+        padding: 0 10px;
+    }
+    .brand-title {
+        font-size: 11px;
+    }
+    .arcade-wrapper {
+        padding: 6px;
+        margin: 2px 0;
+        max-height: calc(100vh - 120px);
+    }
+    #gameCanvas {
+        max-height: calc(100vh - 132px);
+    }
+    .controls-dock {
+        height: 50px;
+        min-height: 50px;
+        padding: 2px 14px;
+    }
+    .arcade-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 12px;
+    }
+    .arcade-btn-enter {
+        width: 110px;
+        height: 42px;
+        font-size: 10px;
+    }
+    .hint-text {
+        font-size: 10px;
+        margin-top: 1px;
+    }
 }
