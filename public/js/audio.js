@@ -49,6 +49,23 @@ class SoundEngine {
         osc.stop(ctx.currentTime + 0.05);
     }
 
+    // 1b. Tiếng gõ chữ Typewriter retro nhẹ nhàng cho Story cutscene
+    blip() {
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800 + Math.random() * 80, ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.025);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.025);
+    }
+
     // 2. Trả lời đúng (Arpeggio chuông 8-bit vui tươi)
     correct() {
         const ctx = this.ctx;

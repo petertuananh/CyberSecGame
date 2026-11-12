@@ -102,6 +102,12 @@ class CyberSecGame {
             };
         }
 
+        // Trạng thái Cốt truyện Mở đầu (Story Mode: Tự giới thiệu nhân vật, game, thử thách)
+        this.storySlideIndex = 0;
+        this.storyCharProgress = 0;
+        this.storyTextDone = false;
+        this.storySlides = this._initStorySlides();
+
         this._initParticles();
         this._initEntities();
         this._bindInputs();
@@ -215,10 +221,40 @@ class CyberSecGame {
             let key = e.key.toUpperCase();
             if (key === "ENTER" || key === " ") {
                 this.handleInput("ENTER");
+            } else if (key === "ESCAPE") {
+                if (this.state === "STORY") {
+                    this.startStage(1);
+                }
             } else if (["A", "B", "C", "D"].includes(key)) {
                 this.handleInput(key);
             } else if (key === "W") {
                 this.toggleWeather();
+            }
+        });
+
+        // Nhấp chuột vào Canvas tương tác chuyển cốt truyện
+        this.canvas.addEventListener("click", (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const cx = (e.clientX - rect.left) * scaleX;
+            const cy = (e.clientY - rect.top) * scaleY;
+
+            if (this.state === "STORY") {
+                // Kiểm tra vùng nút BỎ QUA [Phím B] ở góc trên hộp thoại
+                const boxX = 330;
+                const boxY = 65;
+                const boxW = 900;
+                const skipX = boxX + boxW - 145;
+                const skipY = boxY + 11;
+
+                if (cx >= skipX && cx <= skipX + 130 && cy >= skipY && cy <= skipY + 28) {
+                    this.startStage(1);
+                } else {
+                    this.advanceStory();
+                }
+            } else if (this.state === "START") {
+                this.startStory();
             }
         });
 
@@ -249,6 +285,16 @@ class CyberSecGame {
         switch (this.state) {
             case "START":
                 if (button === "ENTER") {
+                    this.startStory();
+                } else if (button === "A") {
+                    this.startStage(1);
+                }
+                break;
+
+            case "STORY":
+                if (button === "ENTER") {
+                    this.advanceStory();
+                } else if (button === "B") {
                     this.startStage(1);
                 }
                 break;
@@ -357,6 +403,98 @@ class CyberSecGame {
             { id: "c5", title: "KHIÊN MÃ HÓA AES-256", type: "bonus", roses: 1, description: "Mã hóa cấp quân sự bảo vệ bạn! Tặng 1 bông hồng chiến đấu!" }
         ];
         return cards[Math.floor(Math.random() * cards.length)];
+    }
+
+    _initStorySlides() {
+        return [
+            {
+                chapter: "HỒI 1: VỆ BINH MẬT KHẨU XUẤT HIỆN",
+                icon: "shield",
+                speaker: "VỆ BINH AN NINH MẠNG",
+                paragraphs: [
+                    "Xin chào dũng sĩ! Ta là VỆ BINH MẬT KHẨU (CyberSec Guardian) - hiệp sĩ số bảo vệ Vương Quốc Dữ Liệu Hoàng Kim.",
+                    "Được tôi luyện từ các thuật toán mã hóa hiện đại nhất, ta mang trên mình giáp hộ mệnh và đóa Hoa Hồng Năng Lượng có thể thanh tẩy mọi lỗ hổng bảo mật.",
+                    "Hôm nay, ta rất vinh hạnh được đồng hành cùng bạn trong một sứ mệnh an ninh mạng vô cùng hệ trọng và vinh quang!"
+                ]
+            },
+            {
+                chapter: "HỒI 2: HIỂM HỌA TỪ RỒNG HẮC ÁM",
+                icon: "dragon",
+                speaker: "VỆ BINH AN NINH MẠNG",
+                paragraphs: [
+                    "Một thảm họa khủng khiếp vừa giáng xuống! Từ vực thẳm sâu nhất của không gian mạng, RỒNG HẮC ÁM (Cyber Dragon) đã thức giấc!",
+                    "Nó chỉ huy các đàn mã độc nguy hiểm, liên tục tấn công dò quét và bẻ khóa các tài khoản có mật khẩu yếu nhằm chiếm đoạt KHO BÁU DỮ LIỆU HOÀNG KIM!",
+                    "Nếu Kho Báu bị chiếm đoạt, toàn bộ hệ thống thông tin của chúng ta sẽ sụp đổ. Chúng ta phải chặn đứng dã tâm của nó trước khi quá muộn!"
+                ]
+            },
+            {
+                chapter: "HỒI 3: THỬ THÁCH QUA 3 THẾ GIỚI",
+                icon: "tree",
+                speaker: "VỆ BINH AN NINH MẠNG",
+                paragraphs: [
+                    "Để tiến đến sào huyệt của Rồng, chúng ta phải vượt qua 3 Vùng Đất Thử Thách cam go:",
+                    "• KHU RỪNG MẬT MÃ: Cây cối rợp bóng & chim hót! Rèn luyện độ dài mật khẩu (12-16 ký tự), kết hợp hoa - thường - số & ký tự đặc biệt.",
+                    "• VÙNG BIỂN DỮ LIỆU: Bơi lội cùng đàn cá & rong rêu! Cảnh giác bẫy câu trộm Phishing và kích hoạt xác thực đa yếu tố (2FA).",
+                    "• TẦNG MÂY THƯỢNG ĐỈNH: Bay cùng những hòn đảo bồng bềnh! Thiết lập cụm mật khẩu (Passphrase) ngẫu nhiên để khắc chế tấn công Brute-force."
+                ]
+            },
+            {
+                chapter: "HỒI 4: BÍ THUẬT HOA HỒNG & XÚC XẮC",
+                icon: "rose",
+                speaker: "VỆ BINH AN NINH MẠNG",
+                paragraphs: [
+                    "Hãy ghi lòng tạc dạ những quy luật sinh tử của cuộc phiêu lưu:",
+                    "• MỖI CÂU TRẢ LỜI ĐÚNG = 1 BÔNG HỒNG BẢO MẬT. Bạn cần trả lời đúng cả 3/3 câu mới pass mỗi vòng!",
+                    "• SAU MỖI VÒNG: Gieo Xúc Xắc định mệnh. Số LẺ (1, 3, 5) đi tiếp, số CHẴN (2, 4, 6) mở khóa BỐC THẺ BÍ ẨN tặng thêm 1-3 hoa hồng!",
+                    "• QUYẾT CHIẾN BOSS: Rồng Boss có 9 HP máu. Bạn BẮT BUỘC phải tích lũy >= 9 đóa hồng để tiêu diệt Rồng! Thiếu hoa hồng sẽ bị ném thẳng xuống vực thẳm!"
+                ]
+            },
+            {
+                chapter: "HỒI 5: BẢNG ĐIỀU KHIỂN & XUẤT KÍCH!",
+                icon: "gamepad",
+                speaker: "VỆ BINH AN NINH MẠNG",
+                paragraphs: [
+                    "Hệ thống điều khiển 5 nút bấm vật lý Arduino (hoặc Bàn phím máy tính) đã kết nối:",
+                    "• 4 NÚT A, B, C, D: Dùng để chọn đáp án câu hỏi & ngắm bắn hoa hồng vào Boss Rồng theo 4 cổng tương ứng.",
+                    "• NÚT ENTER (hoặc Space): Mở cửa, xác nhận hành động, gieo xúc xắc và lật thẻ bí ẩn.",
+                    "• PHÍM W: Đổi thời tiết (Nắng, Mưa, Tuyết)  |  PHÍM F: Bật / Tắt Toàn Màn Hình.",
+                    "Vũ khí đã sẵn sàng! Hiệp sĩ, hãy cùng ta XUẤT TRẬN BẢO VỆ VƯƠNG QUỐC!"
+                ]
+            }
+        ];
+    }
+
+    startStory() {
+        this.state = "STORY";
+        this.storySlideIndex = 0;
+        this.storyCharProgress = 0;
+        this.storyTextDone = false;
+        window.SoundEngine.play("click");
+    }
+
+    advanceStory() {
+        const slide = this.storySlides[this.storySlideIndex];
+        if (!slide) return;
+        const allText = slide.paragraphs.join("\n\n");
+
+        // Nếu chữ đang chạy mà ấn ENTER -> Hiện toàn bộ chữ ngay lập tức
+        if (!this.storyTextDone && this.storyCharProgress < allText.length) {
+            this.storyCharProgress = allText.length;
+            this.storyTextDone = true;
+            window.SoundEngine.play("click");
+            return;
+        }
+
+        // Chuyển sang slide tiếp theo
+        if (this.storySlideIndex < this.storySlides.length - 1) {
+            this.storySlideIndex++;
+            this.storyCharProgress = 0;
+            this.storyTextDone = false;
+            window.SoundEngine.play("click");
+        } else {
+            // Hết cốt truyện -> Bước vào Vòng 1
+            this.startStage(1);
+        }
     }
 
     startStage(stageNum) {
@@ -559,6 +697,26 @@ class CyberSecGame {
 
         this.heroWalkFrame += dt;
 
+        // Cập nhật gõ chữ cốt truyện (Typewriter cho Story Mode)
+        if (this.state === "STORY" && this.storySlides) {
+            const slide = this.storySlides[this.storySlideIndex];
+            if (slide) {
+                const totalLen = slide.paragraphs.join("\n\n").length;
+                if (this.storyCharProgress < totalLen) {
+                    const prev = Math.floor(this.storyCharProgress);
+                    this.storyCharProgress += dt * 65;
+                    const curr = Math.floor(this.storyCharProgress);
+                    if (curr > prev && curr % 5 === 0) {
+                        window.SoundEngine.play("blip");
+                    }
+                    if (this.storyCharProgress >= totalLen) {
+                        this.storyCharProgress = totalLen;
+                        this.storyTextDone = true;
+                    }
+                }
+            }
+        }
+
         // Cập nhật đếm ngược thông báo thời tiết (Weather Toast)
         if (this.weatherToast) {
             this.weatherToast.timer -= dt;
@@ -677,6 +835,9 @@ class CyberSecGame {
             case "START":
                 this._renderStartScreen(ctx, w, h);
                 break;
+            case "STORY":
+                this._renderStoryScreen(ctx, w, h, time);
+                break;
             case "STAGE_INTRO":
                 this._renderStageIntro(ctx, w, h);
                 break;
@@ -793,8 +954,8 @@ class CyberSecGame {
 
         // Vẽ hệ sinh thái theo từng vòng chơi kết hợp trạng thái thời tiết
         const wType = this.weather ? this.weather.currentType : 'SUNNY';
-        if (this.stage === 1) {
-            // Vòng 1: Rừng Mật Mã (Cây cối, Chim bay, Hoa cỏ, Nấm, Đom đóm + Thời tiết)
+        if (this.stage === 1 || this.state === "STORY" || this.state === "START") {
+            // Vòng 1 / Cốt truyện Story / Start: Rừng Mật Mã (Cây cối, Chim bay, Hoa cỏ, Nấm, Đom đóm + Thời tiết)
             window.PixelSprites.drawForestWorld(ctx, w, h, time, this.forestBirds, wType);
         } else if (this.stage === 2) {
             // Vòng 2: Vùng Biển Dữ Liệu (Cá vẫy đuôi bơi, Rong rêu uốn lượn, San hô, Bọt khí + Thời tiết)
@@ -841,7 +1002,7 @@ class CyberSecGame {
     }
 
     _renderHUD(ctx, w, h) {
-        if (this.state === "START" || this.state === "GAME_OVER" || this.state === "TRAVELING") return;
+        if (this.state === "START" || this.state === "STORY" || this.state === "GAME_OVER" || this.state === "TRAVELING") return;
 
         ctx.fillStyle = "rgba(10, 8, 20, 0.85)";
         ctx.fillRect(0, 0, w, 56);
@@ -924,6 +1085,234 @@ class CyberSecGame {
         ctx.restore();
     }
 
+    // ========================================================
+    // CỐT TRUYỆN MỞ ĐẦU: VỆ BINH TỰ GIỚI THIỆU & THỬ THÁCH (STORY SCENE)
+    // ========================================================
+    _renderStoryScreen(ctx, w, h, time) {
+        const slide = this.storySlides[this.storySlideIndex];
+        if (!slide) return;
+
+        const curW = this.weather ? this.weather.currentType : 'SUNNY';
+
+        // 1. CỘT TRÁI: VỆ BINH ĐỨNG TRÊN BỆ ĐÁ HÙNG DŨNG TỰ GIỚI THIỆU
+        const daisX = 180;
+        const daisY = h * 0.72;
+
+        // Bệ đá cổ phong cách pixel (Dais)
+        ctx.fillStyle = "#2c3e50";
+        ctx.fillRect(daisX - 90, daisY + 20, 180, 28);
+        ctx.fillStyle = "#1e272e";
+        ctx.fillRect(daisX - 95, daisY + 44, 190, 8); // Chân đế
+        ctx.fillStyle = "#34495e";
+        ctx.fillRect(daisX - 80, daisY, 160, 22);
+
+        // Mảng rêu phong xanh trên đá
+        ctx.fillStyle = "#27ae60";
+        ctx.fillRect(daisX - 75, daisY - 2, 28, 4);
+        ctx.fillRect(daisX + 35, daisY - 2, 35, 4);
+
+        // Vạch cổ ngữ Cyber phát quang
+        ctx.fillStyle = "#00d2d3";
+        ctx.fillRect(daisX - 60, daisY + 10, 120, 3);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(daisX - 2, daisY + 9, 5, 5);
+
+        // Nhân vật Vệ Binh khổ lớn đứng hiên ngang (kèm trang bị thời tiết nón/dù/áo ấm)
+        window.PixelSprites.drawAdventurer(ctx, daisX - 60, daisY - 125, 120, time * 2, 1, false, 1, curW);
+
+        // Bảng tên nhân vật phát quang trên đầu
+        const nameX = daisX - 90;
+        const nameY = daisY - 170;
+        ctx.fillStyle = "rgba(16, 12, 32, 0.95)";
+        ctx.fillRect(nameX, nameY, 180, 32);
+        ctx.strokeStyle = "#00d2d3";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(nameX, nameY, 180, 32);
+
+        window.PixelSprites.drawPixelIcon(ctx, "shield", nameX + 8, nameY + 6, 20);
+        ctx.fillStyle = "#00d2d3";
+        ctx.font = "bold 12px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("VỆ BINH AN NINH MẠNG", nameX + 34, nameY + 21);
+
+        // Trạng thái phụ kiện thời tiết dưới chân
+        const weatherGearText = {
+            SUNNY: "Nón thám hiểm & Kính mát",
+            RAIN: "Dù che mưa & Áo choàng",
+            SNOW: "Mũ len, Khăn đỏ & Áo ấm"
+        };
+        ctx.fillStyle = "#a4b0be";
+        ctx.font = "11px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`Trang bị: ${weatherGearText[curW] || "Áo giáp bảo mật"}`, daisX, daisY + 68);
+
+        // 2. CỘT PHẢI: KHUNG ĐỐI THOẠI & CỐT TRUYỆN RPG (STORY SCROLL)
+        const boxX = 330;
+        const boxY = 65;
+        const boxW = 900;
+        const boxH = 595;
+
+        // Nền khung thoại tối mờ sang trọng
+        ctx.fillStyle = "rgba(14, 10, 28, 0.97)";
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+
+        // Khung viền vàng Pixel Hoàng gia
+        ctx.strokeStyle = "#f1c40f";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        // Viền chỉ Cyan bên trong
+        ctx.strokeStyle = "rgba(0, 210, 211, 0.4)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX + 5, boxY + 5, boxW - 10, boxH - 10);
+
+        // 4 Khối góc đinh vàng trang trí
+        ctx.fillStyle = "#f39c12";
+        ctx.fillRect(boxX - 5, boxY - 5, 12, 12);
+        ctx.fillRect(boxX + boxW - 7, boxY - 5, 12, 12);
+        ctx.fillRect(boxX - 5, boxY + boxH - 7, 12, 12);
+        ctx.fillRect(boxX + boxW - 7, boxY + boxH - 7, 12, 12);
+
+        // Header: Tên Hồi truyện (Chapter Ribbon)
+        ctx.fillStyle = "rgba(42, 28, 72, 0.95)";
+        ctx.fillRect(boxX + 4, boxY + 4, boxW - 8, 46);
+        ctx.strokeStyle = "#574b90";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX + 4, boxY + 4, boxW - 8, 46);
+
+        // Icon hồi truyện
+        window.PixelSprites.drawPixelIcon(ctx, slide.icon, boxX + 18, boxY + 12, 26);
+
+        // Tiêu đề hồi truyện
+        ctx.fillStyle = "#f1c40f";
+        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(slide.chapter, boxX + 56, boxY + 31);
+
+        // Nút bấm BỎ QUA ở góc trên
+        const skipX = boxX + boxW - 145;
+        const skipY = boxY + 11;
+        ctx.fillStyle = "rgba(231, 76, 60, 0.25)";
+        ctx.fillRect(skipX, skipY, 130, 28);
+        ctx.strokeStyle = "#e74c3c";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(skipX, skipY, 130, 28);
+
+        ctx.fillStyle = "#ecf0f1";
+        ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("BỎ QUA [Phím B]", skipX + 65, skipY + 19);
+
+        // Speaker Tag: Tên người nói
+        const spkX = boxX + 26;
+        const spkY = boxY + 64;
+        ctx.fillStyle = "rgba(0, 210, 211, 0.15)";
+        ctx.fillRect(spkX, spkY, 250, 26);
+        ctx.strokeStyle = "#00d2d3";
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(spkX, spkY, 250, 26);
+
+        window.PixelSprites.drawPixelIcon(ctx, "star", spkX + 8, spkY + 5, 16);
+        ctx.fillStyle = "#00d2d3";
+        ctx.font = "bold 12px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(slide.speaker, spkX + 32, spkY + 18);
+
+        // Nội dung lời thoại với hiệu ứng Typewriter
+        const allText = slide.paragraphs.join("\n\n");
+        const revealedChars = Math.min(allText.length, Math.floor(this.storyCharProgress));
+        const revealedText = allText.substring(0, revealedChars);
+
+        const paras = revealedText.split("\n\n");
+        let curY = boxY + 120;
+        const maxW = boxW - 55;
+        const lineH = 26;
+
+        paras.forEach((para) => {
+            if (!para) return;
+            const isBullet = para.startsWith("•") || /^\d+\./.test(para);
+            ctx.fillStyle = isBullet ? "#f1c40f" : "#f1f2f6";
+            ctx.font = isBullet ? "bold 15px 'Segoe UI', Tahoma, sans-serif" : "16px 'Segoe UI', Tahoma, sans-serif";
+
+            const lines = this._getTextLines(ctx, para, maxW);
+            lines.forEach((l) => {
+                ctx.fillText(l, boxX + 28, curY);
+                curY += lineH;
+            });
+            curY += 10;
+        });
+
+        // Nhấp nháy con trỏ gõ chữ |
+        if (!this.storyTextDone && Math.sin(time * 8) > 0) {
+            ctx.fillStyle = "#00d2d3";
+            ctx.fillRect(boxX + 28, curY - 6, 8, 16);
+        }
+
+        // 3. ĐÁY HỘP THOẠI: CHẤM TIẾN TRÌNH & NÚT HÀNH ĐỘNG
+        const footY = boxY + boxH - 32;
+
+        // Chấm tiến trình các Hồi (5 trang)
+        const dotStartX = boxX + 30;
+        for (let i = 0; i < this.storySlides.length; i++) {
+            const dx = dotStartX + i * 22;
+            const isCurrent = (i === this.storySlideIndex);
+
+            if (isCurrent) {
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(dx, footY - 10, 14, 14);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(dx + 3, footY - 7, 8, 8);
+            } else if (i < this.storySlideIndex) {
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(dx + 2, footY - 8, 10, 10);
+            } else {
+                ctx.fillStyle = "#34495e";
+                ctx.fillRect(dx + 2, footY - 8, 10, 10);
+                ctx.strokeStyle = "#576574";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(dx + 2, footY - 8, 10, 10);
+            }
+        }
+
+        ctx.fillStyle = "#a4b0be";
+        ctx.font = "bold 12px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`Hồi ${this.storySlideIndex + 1}/${this.storySlides.length}`, dotStartX + this.storySlides.length * 22 + 10, footY + 1);
+
+        // Nút hành động góc dưới phải
+        if (!this.storyTextDone) {
+            ctx.fillStyle = "#747d8c";
+            ctx.font = "12px 'Segoe UI', Tahoma, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText("Nhấn [ENTER] hoặc nhấp chuột để hiện toàn bộ chữ", boxX + boxW - 24, footY + 1);
+        } else {
+            const isLast = (this.storySlideIndex === this.storySlides.length - 1);
+            const promptText = isLast ? "XUẤT KÍCH BẢO VỆ VƯƠNG QUỐC!" : "TIẾP TỤC CỐT TRUYỆN";
+
+            ctx.fillStyle = "#2ecc71";
+            ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(`👉 NHẤN [ENTER] ĐỂ ${promptText} 👈`, boxX + boxW - 24, footY + 1);
+        }
+    }
+
+    _getTextLines(ctx, text, maxWidth) {
+        const words = text.split(" ");
+        const lines = [];
+        let curLine = "";
+        for (let i = 0; i < words.length; i++) {
+            const testLine = curLine ? (curLine + " " + words[i]) : words[i];
+            if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+                lines.push(curLine);
+                curLine = words[i];
+            } else {
+                curLine = testLine;
+            }
+        }
+        if (curLine) lines.push(curLine);
+        return lines;
+    }
+
     _renderStartScreen(ctx, w, h) {
         ctx.fillStyle = "rgba(20, 15, 35, 0.92)";
         ctx.fillRect(w * 0.15, h * 0.1, w * 0.7, h * 0.78);
@@ -970,10 +1359,10 @@ class CyberSecGame {
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CUỘC PHIÊU LƯU", w / 2, h * 0.81);
-            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 340, h * 0.81 - 18, 22);
+            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.81);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 370, h * 0.81 - 18, 22);
             ctx.save();
-            ctx.translate(w / 2 + 340, h * 0.81 - 8);
+            ctx.translate(w / 2 + 370, h * 0.81 - 8);
             ctx.scale(-1, 1);
             window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -10, 22);
             ctx.restore();
