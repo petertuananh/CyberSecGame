@@ -107,6 +107,96 @@ class SoundEngine {
         osc.stop(ctx.currentTime + 0.3);
     }
 
+    // 3b. Jumpscare rùng rợn khi trả lời sai (Tiếng gầm thét quỷ dữ + tiếng nổ giật mình + glitch)
+    jumpscare() {
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        // 1. Sub-bass slam / Thud cực mạnh (va đập tức thì rung chuyển lồng ngực)
+        try {
+            const boomOsc = ctx.createOscillator();
+            const boomGain = ctx.createGain();
+            boomOsc.type = "sawtooth";
+            boomOsc.frequency.setValueAtTime(180, now);
+            boomOsc.frequency.exponentialRampToValueAtTime(32, now + 0.6);
+
+            boomGain.gain.setValueAtTime(0.7, now);
+            boomGain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+            boomOsc.connect(boomGain);
+            boomGain.connect(ctx.destination);
+            boomOsc.start(now);
+            boomOsc.stop(now + 0.6);
+        } catch (e) {}
+
+        // 2. High horror dissonant screech (Tiếng thét chói tai ác mộng - hợp âm nghịch)
+        const freqs = [740, 810, 1150, 1720, 2300]; // Minor 2nd & tritone dissonance
+        freqs.forEach((freq, idx) => {
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = idx % 2 === 0 ? "sawtooth" : "square";
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.linearRampToValueAtTime(freq * (1.1 + (idx * 0.05)), now + 0.08);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.45, now + 0.75);
+
+                const peakGain = (0.24 / freqs.length) * (idx === 0 ? 1.5 : 1.0);
+                gain.gain.setValueAtTime(peakGain, now);
+                gain.gain.linearRampToValueAtTime(peakGain * 1.3, now + 0.07);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.75);
+            } catch (e) {}
+        });
+
+        // 3. Glitch / White noise static burst (Nhiễu sóng kinh dị)
+        try {
+            const bufferSize = Math.floor(ctx.sampleRate * 0.45);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.15));
+            }
+            const whiteNoise = ctx.createBufferSource();
+            whiteNoise.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = "bandpass";
+            filter.frequency.setValueAtTime(2400, now);
+            filter.Q.setValueAtTime(2.5, now);
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.35, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+
+            whiteNoise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(ctx.destination);
+            whiteNoise.start(now);
+            whiteNoise.stop(now + 0.45);
+        } catch (e) {}
+
+        // 4. Demonic growl / low rumble (Tiếng gầm gừ quỷ quyệt)
+        try {
+            const growl = ctx.createOscillator();
+            const growlGain = ctx.createGain();
+            growl.type = "sawtooth";
+            growl.frequency.setValueAtTime(95, now);
+            growl.frequency.linearRampToValueAtTime(42, now + 0.85);
+
+            growlGain.gain.setValueAtTime(0.35, now);
+            growlGain.gain.exponentialRampToValueAtTime(0.01, now + 0.85);
+
+            growl.connect(growlGain);
+            growlGain.connect(ctx.destination);
+            growl.start(now);
+            growl.stop(now + 0.85);
+        } catch (e) {}
+    }
+
     // 4. Lắc xúc xắc (Tiếng lách cách gieo hạt xúc xắc)
     dice() {
         const ctx = this.ctx;

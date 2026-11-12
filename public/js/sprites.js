@@ -1523,6 +1523,255 @@ const PixelSprites = {
         } catch (e) {
             return "";
         }
+    },
+
+    // ========================================================
+    // 16. QUỶ DỮ / MALWARE CYBER-DEMON CHO HIỆU ỨNG JUMPSCARE
+    // ========================================================
+    drawJumpscareDemon(ctx, cx, cy, scale = 1.0, time = 0) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+
+        // Hàm vẽ một lượt đầu lâu quỷ (dùng vẽ Chromatic Aberration & Core)
+        const drawSkullPass = (colorMain, colorGlow, colorTeeth, colorEyes, offsetX = 0, offsetY = 0) => {
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+
+            // 1. Cặp sừng quỷ dữ nhọn hoắt uốn cong (Demon Horns)
+            ctx.fillStyle = colorMain;
+            // Sừng trái
+            ctx.beginPath();
+            ctx.moveTo(-40, -50);
+            ctx.lineTo(-70, -110);
+            ctx.lineTo(-115, -140);
+            ctx.lineTo(-90, -90);
+            ctx.lineTo(-50, -40);
+            ctx.closePath();
+            ctx.fill();
+
+            // Sừng phải
+            ctx.beginPath();
+            ctx.moveTo(40, -50);
+            ctx.lineTo(70, -110);
+            ctx.lineTo(115, -140);
+            ctx.lineTo(90, -90);
+            ctx.lineTo(50, -40);
+            ctx.closePath();
+            ctx.fill();
+
+            // Đầu ngọn sừng vấy máu / tà khí
+            ctx.fillStyle = colorGlow;
+            ctx.beginPath();
+            ctx.moveTo(-115, -140);
+            ctx.lineTo(-98, -120);
+            ctx.lineTo(-80, -125);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(115, -140);
+            ctx.lineTo(98, -120);
+            ctx.lineTo(80, -125);
+            ctx.closePath();
+            ctx.fill();
+
+            // 2. Vòm sọ quỷ vỡ nứt (Cracked Cranium)
+            ctx.fillStyle = colorMain;
+            ctx.beginPath();
+            ctx.ellipse(0, -30, 85, 75, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gò má quỷ góc cạnh nhọn hoắt hung ác
+            ctx.beginPath();
+            ctx.moveTo(-82, -20);
+            ctx.lineTo(-98, 30);
+            ctx.lineTo(-58, 62);
+            ctx.lineTo(0, 78);
+            ctx.lineTo(58, 62);
+            ctx.lineTo(98, 30);
+            ctx.lineTo(82, -20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Vết nứt sọ kinh dị
+            ctx.strokeStyle = colorGlow;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-10, -95);
+            ctx.lineTo(-5, -65);
+            ctx.lineTo(-25, -45);
+            ctx.lineTo(-20, -25);
+            ctx.stroke();
+
+            // 3. Hốc mắt sâu hoắm đen ngòm
+            ctx.fillStyle = "#050005";
+            ctx.beginPath();
+            // Mắt trái xếch hung tợn
+            ctx.moveTo(-62, -25);
+            ctx.lineTo(-20, -15);
+            ctx.lineTo(-30, 16);
+            ctx.lineTo(-68, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // Mắt phải xếch hung tợn
+            ctx.beginPath();
+            ctx.moveTo(62, -25);
+            ctx.lineTo(20, -15);
+            ctx.lineTo(30, 16);
+            ctx.lineTo(68, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Tròng mắt quỷ đỏ rực phát sáng (Blazing Demon Eyes)
+            const eyePulse = 1.0 + Math.sin(time * 25) * 0.2;
+            ctx.fillStyle = colorEyes;
+            ctx.beginPath();
+            ctx.arc(-42, -5, 11 * eyePulse, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(42, -5, 11 * eyePulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Đồng tử quỷ trắng sáng rực tâm
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(-42, -5, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(42, -5, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hốc mũi quỷ (Hốc tam giác nhọn)
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.moveTo(0, 10);
+            ctx.lineTo(-10, 32);
+            ctx.lineTo(10, 32);
+            ctx.closePath();
+            ctx.fill();
+
+            // 5. Hàm răng sắc nhọn ngoác rộng (Gaping Horror Jaw & Razor Teeth)
+            ctx.fillStyle = "#050005";
+            ctx.beginPath();
+            ctx.moveTo(-65, 40);
+            ctx.quadraticCurveTo(0, 24, 65, 40);
+            ctx.lineTo(55, 96);
+            ctx.quadraticCurveTo(0, 116, -55, 96);
+            ctx.closePath();
+            ctx.fill();
+
+            // Các hàng răng nanh nhọn lởm chởm
+            ctx.fillStyle = colorTeeth;
+            // Răng hàm trên chúc xuống
+            for (let i = -50; i <= 50; i += 14) {
+                const toothLen = (Math.abs(i) === 22 || Math.abs(i) === 36) ? 26 : 18;
+                ctx.beginPath();
+                ctx.moveTo(i - 6, 40);
+                ctx.lineTo(i + 6, 40);
+                ctx.lineTo(i, 40 + toothLen);
+                ctx.closePath();
+                ctx.fill();
+            }
+            // Răng hàm dưới nhô ngược lên
+            for (let i = -44; i <= 44; i += 14) {
+                const toothLen = (Math.abs(i) === 16 || Math.abs(i) === 30) ? 24 : 16;
+                ctx.beginPath();
+                ctx.moveTo(i - 6, 94);
+                ctx.lineTo(i + 6, 94);
+                ctx.lineTo(i, 94 - toothLen);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Máu độc nhỏ giọt từ miệng quỷ
+            ctx.fillStyle = colorGlow;
+            ctx.fillRect(-52, 94, 4, 18);
+            ctx.fillRect(-50, 112, 6, 12);
+            ctx.fillRect(48, 94, 4, 22);
+            ctx.fillRect(46, 116, 6, 10);
+            ctx.fillRect(-8, 96, 5, 26);
+            ctx.fillRect(12, 96, 4, 16);
+
+            ctx.restore();
+        };
+
+        // Lớp 1: Bóng ma Chromatic Aberration Đỏ lệch trái (Glitched Red Phantom)
+        ctx.globalAlpha = 0.45;
+        drawSkullPass("#8b0000", "#ff0033", "#ff6b81", "#ff0055", -14 + Math.sin(time * 40) * 4, 0);
+
+        // Lớp 2: Bóng ma Chromatic Aberration Xanh Cyan lệch phải (Glitched Cyan Phantom)
+        ctx.globalAlpha = 0.45;
+        drawSkullPass("#003344", "#00d2d3", "#00f0ff", "#54a0ff", 14 - Math.sin(time * 40) * 4, 0);
+
+        // Lớp 3: Đầu lâu thực thể chính diện (Obsidian Horror Demon Core)
+        ctx.globalAlpha = 1.0;
+        drawSkullPass("#130206", "#e74c3c", "#f5f6fa", "#ff0033", 0, 0);
+
+        // Lớp 4: Tia sáng chói lóa từ mắt quỷ (Horror Eye Radial Flares)
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        const flareGrad1 = ctx.createRadialGradient(-42, -5, 2, -42, -5, 48);
+        flareGrad1.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+        flareGrad1.addColorStop(0.3, "rgba(255, 0, 50, 0.8)");
+        flareGrad1.addColorStop(1, "rgba(255, 0, 0, 0)");
+        ctx.fillStyle = flareGrad1;
+        ctx.beginPath();
+        ctx.arc(-42, -5, 48, 0, Math.PI * 2);
+        ctx.fill();
+
+        const flareGrad2 = ctx.createRadialGradient(42, -5, 2, 42, -5, 48);
+        flareGrad2.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+        flareGrad2.addColorStop(0.3, "rgba(255, 0, 50, 0.8)");
+        flareGrad2.addColorStop(1, "rgba(255, 0, 0, 0)");
+        ctx.fillStyle = flareGrad2;
+        ctx.beginPath();
+        ctx.arc(42, -5, 48, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore();
+    },
+
+    // Vết cào móng vuốt máu xé rách màn hình (Horror Claw Slashes)
+    drawHorrorClawSlashes(ctx, w, h, time = 0) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(220, 20, 60, 0.85)";
+        ctx.fillStyle = "rgba(255, 0, 0, 0.9)";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+
+        const slashes = [
+            { x1: w * 0.12, y1: h * 0.1, x2: w * 0.85, y2: h * 0.85 },
+            { x1: w * 0.20, y1: h * 0.08, x2: w * 0.92, y2: h * 0.82 },
+            { x1: w * 0.06, y1: h * 0.15, x2: w * 0.78, y2: h * 0.9 },
+            { x1: w * 0.28, y1: h * 0.05, x2: w * 0.98, y2: h * 0.76 }
+        ];
+
+        slashes.forEach((s, idx) => {
+            // Vệt cào chính
+            ctx.beginPath();
+            ctx.moveTo(s.x1, s.y1);
+            const midX = (s.x1 + s.x2) / 2 + (Math.sin(idx + time * 10) * 12);
+            const midY = (s.y1 + s.y2) / 2 + (Math.cos(idx + time * 10) * 12);
+            ctx.quadraticCurveTo(midX, midY, s.x2, s.y2);
+            ctx.stroke();
+
+            // Máu bắn tóe / giọt máu nhỏ giọt xuống
+            for (let d = 0.2; d <= 0.8; d += 0.2) {
+                const bx = s.x1 + (s.x2 - s.x1) * d + (idx % 2 === 0 ? 12 : -12);
+                const by = s.y1 + (s.y2 - s.y1) * d + 8;
+                ctx.beginPath();
+                ctx.arc(bx, by, 3.5 + (idx % 3), 0, Math.PI * 2);
+                ctx.fill();
+
+                // Vệt máu chảy xuống
+                ctx.fillRect(bx - 2, by, 3, 14 + (idx * 5));
+            }
+        });
+
+        ctx.restore();
     }
 };
 

@@ -112,6 +112,11 @@ class CyberSecGame {
         this.storyTextDone = false;
         this.storySlides = this._initStorySlides();
 
+        // Jumpscare Horror FX khi trả lời sai câu hỏi
+        this.jumpscareActive = false;
+        this.jumpscareTimer = 0;
+        this.screenShake = 0;
+
         this._initParticles();
         this._initEntities();
         this._bindInputs();
@@ -430,6 +435,10 @@ class CyberSecGame {
 
     _bindInputs() {
         window.addEventListener("keydown", (e) => {
+            if (this.jumpscareActive) {
+                this.skipJumpscare();
+                return;
+            }
             let key = e.key.toUpperCase();
             if (key === "ENTER" || key === " ") {
                 this.handleInput("ENTER");
@@ -444,8 +453,12 @@ class CyberSecGame {
             }
         });
 
-        // Nhấp chuột vào Canvas tương tác chuyển cốt truyện
+        // Nhấp chuột vào Canvas tương tác chuyển cốt truyện hoặc bỏ qua jumpscare
         this.canvas.addEventListener("click", (e) => {
+            if (this.jumpscareActive) {
+                this.skipJumpscare();
+                return;
+            }
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
@@ -489,6 +502,11 @@ class CyberSecGame {
     }
 
     handleInput(button) {
+        if (this.jumpscareActive) {
+            this.skipJumpscare();
+            return;
+        }
+
         this.activeButtons[button] = true;
         setTimeout(() => { this.activeButtons[button] = false; }, 200);
 
@@ -757,12 +775,32 @@ class CyberSecGame {
             if (window.CursorFX && window.CursorFX.burst) {
                 window.CursorFX.burst(this.canvas.width / 2, this.canvas.height / 2, 24);
             }
+            this.resultExplanation = q.explanation;
+            this.state = "QUESTION_RESULT";
         } else {
             this.isAnswerCorrect = false;
             this.resultTitle = "CHƯA CHÍNH XÁC! (0 BÔNG HỒNG)";
-            window.SoundEngine.play("wrong");
+            this.resultExplanation = q.explanation;
+            this.triggerJumpscare();
         }
-        this.resultExplanation = q.explanation;
+    }
+
+    // Kích hoạt hiệu ứng Jumpscare kinh dị khi trả lời sai
+    triggerJumpscare() {
+        this.jumpscareActive = true;
+        this.jumpscareTimer = 1.35; // Thời lượng jumpscare kinh hoàng (khoảng 1.35 giây)
+        this.screenShake = 35;      // Rung lắc màn hình dữ dội
+        window.SoundEngine.play("jumpscare");
+        if (window.CursorFX && window.CursorFX.burst) {
+            window.CursorFX.burst(this.canvas.width / 2, this.canvas.height / 2, 40);
+        }
+    }
+
+    // Bỏ qua hoặc hoàn tất jumpscare chuyển sang màn giải thích
+    skipJumpscare() {
+        this.jumpscareActive = false;
+        this.jumpscareTimer = 0;
+        this.screenShake = 0;
         this.state = "QUESTION_RESULT";
     }
 
@@ -936,6 +974,19 @@ class CyberSecGame {
 
         this.heroWalkFrame += dt;
 
+        // Cập nhật rung lắc màn hình (Screen Shake)
+        if (this.screenShake > 0) {
+            this.screenShake = Math.max(0, this.screenShake - dt * 28);
+        }
+
+        // Cập nhật hiệu ứng Jumpscare đếm ngược
+        if (this.jumpscareActive) {
+            this.jumpscareTimer -= dt;
+            if (this.jumpscareTimer <= 0) {
+                this.skipJumpscare();
+            }
+        }
+
         // Cập nhật gõ chữ cốt truyện (Typewriter cho Story Mode)
         if (this.state === "STORY" && this.storySlides) {
             const slide = this.storySlides[this.storySlideIndex];
@@ -1058,6 +1109,15 @@ class CyberSecGame {
 
         ctx.clearRect(0, 0, w, h);
 
+        ctx.save();
+
+        // Hiệu ứng rung lắc màn hình dữ dội (Screen Shake)
+        if (this.screenShake > 0) {
+            const shakeX = (Math.random() - 0.5) * this.screenShake;
+            const shakeY = (Math.random() - 0.5) * this.screenShake;
+            ctx.translate(shakeX, shakeY);
+        }
+
         // 1. Vẽ phông nền thế giới tự nhiên sống động
         this._renderWorldBackground(ctx, w, h, time);
 
@@ -1124,6 +1184,13 @@ class CyberSecGame {
 
         // 7. Thông báo thời tiết Pixel nổi bật (Weather Toast)
         this._renderWeatherToast(ctx, w, h);
+
+        // 8. Nếu đang kích hoạt Jumpscare, vẽ hiệu ứng quỷ dữ ghê rợn đè lên toàn màn hình
+        if (this.jumpscareActive) {
+            this._renderJumpscare(ctx, w, h, time);
+        }
+
+        ctx.restore();
     }
 
     _renderWeatherToast(ctx, w, h) {
@@ -1784,6 +1851,87 @@ class CyberSecGame {
         ctx.font = "bold 25px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("👉 NHẤN [ENTER] ĐỂ TIẾP TỤC 👈", w / 2, h * 0.82);
+    }
+
+    // Render hiệu ứng Jumpscare kinh dị chớp nháy toàn màn hình
+    _renderJumpscare(ctx, w, h, time) {
+        ctx.save();
+
+        // 1. Phông nền chớp giật kinh hoàng (Đen - Đỏ thẫm - Tím tăm tối)
+        const flashCycle = Math.floor(time * 30) % 4;
+        let bgFill = "#000000";
+        if (flashCycle === 1) bgFill = "#3a0005";
+        else if (flashCycle === 2) bgFill = "#6b000a";
+        else if (flashCycle === 3) bgFill = "#15001f";
+
+        ctx.fillStyle = bgFill;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. Lưới quét scanline nhiễu sóng kỹ thuật số
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        for (let y = 0; y < h; y += 4) {
+            ctx.fillRect(0, y, w, 2);
+        }
+
+        // 3. Glitch sọc ngang đứt gãy màn hình
+        const glitchSlices = 6;
+        for (let i = 0; i < glitchSlices; i++) {
+            const gy = (Math.sin(time * 15 + i * 2) * 0.5 + 0.5) * h;
+            const gh = 8 + (i * 4);
+            const gxOffset = (Math.sin(time * 40 + i) * 20);
+            ctx.fillStyle = i % 2 === 0 ? "rgba(255, 0, 50, 0.25)" : "rgba(0, 240, 255, 0.2)";
+            ctx.fillRect(gxOffset, gy, w, gh);
+        }
+
+        // 4. Vết cào móng vuốt máu xé toạc màn hình
+        window.PixelSprites.drawHorrorClawSlashes(ctx, w, h, time);
+
+        // 5. Quỷ dữ Malware / Cyber Demon lao thẳng vào mặt (Jumpscare Lunge)
+        const progress = Math.max(0, 1.0 - (this.jumpscareTimer / 1.35));
+        const lungeScale = 1.3 + Math.min(progress * 1.8, 1.3) + Math.sin(time * 45) * 0.08;
+        const demonX = w / 2 + (Math.random() - 0.5) * 16;
+        const demonY = h * 0.46 + (Math.random() - 0.5) * 16;
+
+        window.PixelSprites.drawJumpscareDemon(ctx, demonX, demonY, lungeScale, time);
+
+        // 6. Dải cảnh báo Hacker màu máu nguy hiểm cực độ
+        const bannerY = h * 0.08;
+        ctx.fillStyle = "rgba(180, 0, 0, 0.88)";
+        ctx.fillRect(0, bannerY - 30, w, 68);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, bannerY + 38, w, 3);
+        ctx.fillRect(0, bannerY - 30, w, 3);
+
+        ctx.font = "bold 32px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // Chữ bóng đổ đỏ rực
+        ctx.fillStyle = "#000000";
+        ctx.fillText("💀 MẬT MÃ BẺ KHÓA! HACKER ĐỘT NHẬP! 💀", w / 2 + 3, bannerY + 6);
+        ctx.fillStyle = "#ff0033";
+        ctx.fillText("💀 MẬT MÃ BẺ KHÓA! HACKER ĐỘT NHẬP! 💀", w / 2 - 2, bannerY + 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("💀 MẬT MÃ BẺ KHÓA! HACKER ĐỘT NHẬP! 💀", w / 2, bannerY + 4);
+
+        // Cảnh báo phụ bên dưới
+        const subY = h * 0.86;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
+        ctx.fillRect(w * 0.1, subY - 24, w * 0.8, 48);
+        ctx.strokeStyle = "#e74c3c";
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(w * 0.1, subY - 24, w * 0.8, 48);
+
+        ctx.font = "bold 21px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillStyle = "#ff4757";
+        ctx.fillText("⚠️ CẢNH BÁO NGUY HIỂM: HỆ THỐNG BẢO MẬT BỊ XÂM NHẬP TOÀN DIỆN! ⚠️", w / 2, subY);
+
+        // Gợi ý bấm phím bỏ qua / tiếp tục
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillStyle = (Math.floor(time * 4) % 2 === 0) ? "#f1c40f" : "#ffffff";
+        ctx.fillText(">> BẤM ENTER HOẶC PHÍM BẤT KỲ ĐỂ TIẾP TỤC <<", w / 2, h * 0.94);
+
+        ctx.restore();
     }
 
     _renderStageClearScreen(ctx, w, h) {
