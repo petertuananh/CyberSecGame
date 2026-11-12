@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#090714">
+    <title>Tay Cầm Điện Thoại - Vệ Binh Mật Khẩu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #090714;
+            color: #ffffff;
+            font-family: 'Press Start 2P', monospace, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 50% 100%, rgba(236, 72, 153, 0.12) 0%, transparent 60%);
+        }
+
+        /* HEADER */
+        .header {
+            background: rgba(22, 16, 48, 0.85);
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .brand-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand-title {
+            font-size: 11px;
+            color: #fbbf24;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #78350f;
+        }
+
+        .device-badge {
+            font-size: 8px;
+            color: #94a3b8;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 8px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            background: #1e1b4b;
+            border: 1px solid #4338ca;
+            transition: all 0.3s;
+        }
+
+        .status-pill.connected {
+            border-color: #10b981;
+            color: #34d399;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .status-pill.disconnected {
+            border-color: #ef4444;
+            color: #f87171;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-pill.connected .dot {
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        /* ACTION NOTIFICATION BANNER */
+        .toast-banner {
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #38bdf8;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: all 0.15s ease-out;
+            text-align: center;
+        }
+
+        .toast-banner.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* CONTROLLER BODY */
+        .controller-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+            justify-content: center;
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* NÚT ENTER */
+        .enter-section {
+            width: 100%;
+        }
+
+        .btn-enter {
+            width: 100%;
+            height: 72px;
+            background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%);
+            border: 3px solid #e9d5ff;
+            border-radius: 12px;
+            color: #ffffff;
+            font-family: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #581c87, 0 10px 15px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            transition: all 0.08s ease;
+        }
+
+        .btn-enter:active, .btn-enter.active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #581c87, 0 3px 6px rgba(0, 0, 0, 0.6), inset 0 2px 6px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(180deg, #7e22ce 0%, #581c87 100%);
+        }
+
+        .btn-enter .key-title {
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0 #3b0764;
+        }
+
+        .btn-enter .key-sub {
+            font-size: 7px;
+            color: #f3e8ff;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+
+        /* 4 NÚT A, B, C, D (2x2 GRID) */
+        .choices-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .arcade-btn {
+            height: 110px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.08s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arcade-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 100%);
+            border-radius: 12px 12px 0 0;
+            pointer-events: none;
+        }
+
+        .arcade-btn .btn-letter {
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .arcade-btn .btn-desc {
+            font-size: 8px;
+            letter-spacing: 0.5px;
+            text-align: center;
+            opacity: 0.95;
+        }
+
+        /* NÚT A: ĐỎ */
+        .btn-a {
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            border: 3px solid #fecaca;
+            box-shadow: 0 6px 0 #7f1d1d, 0 10px 15px rgba(239, 68, 68, 0.3);
+        }
+        .btn-a:active, .btn-a.active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #7f1d1d, 0 3px 6px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+        }
+        .btn-a .btn-letter { text-shadow: 2px 2px 0 #450a0a; }
+
+        /* NÚT B: LAM */
+        .btn-b {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border: 3px solid #bfdbfe;
+            box-shadow: 0 6px 0 #1e3a8a, 0 10px 15px rgba(59, 130, 246, 0.3);
+        }
+        .btn-b:active, .btn-b.active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #1e3a8a, 0 3px 6px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 100%);
+        }
+        .btn-b .btn-letter { text-shadow: 2px 2px 0 #0f172a; }
+
+        /* NÚT C: VÀNG */
+        .btn-c {
+            background: linear-gradient(180deg, #eab308 0%, #a16207 100%);
+            border: 3px solid #fef08a;
+            box-shadow: 0 6px 0 #713f12, 0 10px 15px rgba(234, 179, 8, 0.3);
+            color: #ffffff;
+        }
+        .btn-c:active, .btn-c.active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #713f12, 0 3px 6px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(180deg, #a16207 0%, #713f12 100%);
+        }
+        .btn-c .btn-letter { text-shadow: 2px 2px 0 #422006; }
+
+        /* NÚT D: LỤC */
+        .btn-d {
+            background: linear-gradient(180deg, #10b981 0%, #047857 100%);
+            border: 3px solid #a7f3d0;
+            box-shadow: 0 6px 0 #064e3b, 0 10px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-d:active, .btn-d.active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #064e3b, 0 3px 6px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(180deg, #047857 0%, #064e3b 100%);
+        }
+        .btn-d .btn-letter { text-shadow: 2px 2px 0 #022c22; }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            font-size: 7px;
+            color: #64748b;
+            padding: 8px;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER STATUS -->
+    <header class="header">
+        <div class="brand-info">
+            <div class="brand-title">🛡️ VỆ BINH MẬT KHẨU</div>
+            <div id="deviceBadge" class="device-badge">📱 TAY CẦM #...</div>
+        </div>
+        <div id="statusPill" class="status-pill disconnected">
+            <span class="dot"></span>
+            <span id="statusText">KẾT NỐI...</span>
+        </div>
+    </header>
+
+    <!-- THÔNG BÁO TÍN HIỆU VỪA BẤM -->
+    <div id="toastBanner" class="toast-banner">⚡ SẴN SÀNG ĐIỀU KHIỂN</div>
+
+    <!-- MAIN CONTROLLER BUTTONS -->
+    <main class="controller-container">
+
+        <!-- NÚT ENTER -->
+        <div class="enter-section">
+            <button id="btnEnter" class="btn-enter" data-key="ENTER">
+                <span class="key-title">ENTER ↵</span>
+                <span class="key-sub">MỞ RƯƠNG / LẮC XÚC XẮC / BỐC THẺ / BẮT ĐẦU</span>
+            </button>
+        </div>
+
+        <!-- 4 NÚT A, B, C, D -->
+        <div class="choices-grid">
+            <button id="btnA" class="arcade-btn btn-a" data-key="A">
+                <span class="btn-letter">A</span>
+                <span class="btn-desc">ĐỎ • TRÊN TRÁI</span>
+            </button>
+
+            <button id="btnB" class="arcade-btn btn-b" data-key="B">
+                <span class="btn-letter">B</span>
+                <span class="btn-desc">LAM • TRÊN PHẢI</span>
+            </button>
+
+            <button id="btnC" class="arcade-btn btn-c" data-key="C">
+                <span class="btn-letter">C</span>
+                <span class="btn-desc">VÀNG • DƯỚI TRÁI</span>
+            </button>
+
+            <button id="btnD" class="arcade-btn btn-d" data-key="D">
+                <span class="btn-letter">D</span>
+                <span class="btn-desc">LỤC • DƯỚI PHẢI</span>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        ĐỒNG HÀNH: THCS NGUYỄN BỈNH KHIÊM × SOFTLAB
+    </footer>
+
+    <!-- LOGIC WEBSOCKET & HAPTIC FEEDBACK -->
+    <script>
+        (function() {
+            // Định danh thiết bị ngẫu nhiên duy nhất cho mỗi điện thoại
+            const controllerId = 'MB-' + Math.floor(1000 + Math.random() * 9000);
+            const deviceBadge = document.getElementById('deviceBadge');
+            const statusPill = document.getElementById('statusPill');
+            const statusText = document.getElementById('statusText');
+            const toastBanner = document.getElementById('toastBanner');
+
+            if (deviceBadge) deviceBadge.innerText = '📱 TAY CẦM #' + controllerId;
+
+            let ws = null;
+            let reconnectTimer = null;
+            let audioCtx = null;
+            let toastTimer = null;
+
+            // Âm thanh phản hồi ngắn giả lập nút Arcade
+            function playBeep(freq = 600, duration = 0.04) {
+                try {
+                    if (!audioCtx) {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContext) audioCtx = new AudioContext();
+                    }
+                    if (audioCtx && audioCtx.state === 'suspended') {
+                        audioCtx.resume();
+                    }
+                    if (audioCtx) {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + duration);
+                    }
+                } catch (e) {}
+            }
+
+            // Rung phản hồi vật lý (Haptic Feedback)
+            function triggerHaptic() {
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(35);
+                }
+            }
+
+            function showToast(msg) {
+                if (!toastBanner) return;
+                toastBanner.innerText = msg;
+                toastBanner.classList.add('show');
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    toastBanner.classList.remove('show');
+                }, 600);
+            }
+
+            // Khởi tạo kết nối WebSocket với Server Game
+            function connectWebSocket() {
+                if (reconnectTimer) clearTimeout(reconnectTimer);
+
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+
+                try {
+                    ws = new WebSocket(wsUrl);
+
+                    ws.onopen = () => {
+                        console.log('[Controller] Đã kết nối với Server Game!');
+                        statusPill.classList.remove('disconnected');
+                        statusPill.classList.add('connected');
+                        statusText.innerText = 'ONLINE';
+                        showToast('🟢 ĐÃ KẾT NỐI VỚI GAME!');
+
+                        // Đăng ký vai trò Controller
+                        ws.send(JSON.stringify({
+                            type: 'REGISTER',
+                            role: 'CONTROLLER',
+                            id: controllerId,
+                            device: navigator.userAgent
+                        }));
+                    };
+
+                    ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            // Có thể nhận thêm thông báo từ Game (như round, state) nếu cần
+                        } catch (e) {}
+                    };
+
+                    ws.onclose = () => {
+                        statusPill.classList.remove('connected');
+                        statusPill.classList.add('disconnected');
+                        statusText.innerText = 'MẤT KẾT NỐI';
+                        reconnectTimer = setTimeout(connectWebSocket, 1500);
+                    };
+
+                    ws.onerror = () => {
+                        try { ws.close(); } catch(e) {}
+                    };
+
+                } catch (e) {
+                    reconnectTimer = setTimeout(connectWebSocket, 2000);
+                }
+            }
+
+            // Gửi sự kiện bấm nút tới Server
+            function sendButton(buttonKey) {
+                triggerHaptic();
+                playBeep(buttonKey === 'ENTER' ? 750 : 520, 0.05);
+
+                const nameMap = {
+                    'A': 'A (ĐỎ)',
+                    'B': 'B (LAM)',
+                    'C': 'C (VÀNG)',
+                    'D': 'D (LỤC)',
+                    'ENTER': 'ENTER ↵'
+                };
+                showToast(`⚡ ĐÃ BẤM: [ ${nameMap[buttonKey] || buttonKey} ]`);
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'BUTTON_PRESS',
+                        button: buttonKey,
+                        source: 'MOBILE',
+                        sender: controllerId
+                    }));
+                } else {
+                    showToast('⚠️ MẤT KẾT NỐI - ĐANG THỬ LẠI...');
+                    connectWebSocket();
+                }
+            }
+
+            // Gắn sự kiện touch & click cho các nút
+            const buttons = document.querySelectorAll('[data-key]');
+            buttons.forEach(btn => {
+                const key = btn.getAttribute('data-key');
+
+                const handlePress = (e) => {
+                    e.preventDefault();
+                    btn.classList.add('active');
+                    sendButton(key);
+                };
+
+                const handleRelease = (e) => {
+                    e.preventDefault();
+                    btn.classList.remove('active');
+                };
+
+                btn.addEventListener('touchstart', handlePress, { passive: false });
+                btn.addEventListener('touchend', handleRelease, { passive: false });
+                btn.addEventListener('touchcancel', handleRelease, { passive: false });
+                btn.addEventListener('mousedown', handlePress);
+                btn.addEventListener('mouseup', handleRelease);
+                btn.addEventListener('mouseleave', handleRelease);
+            });
+
+            // Ngăn chặn cuộn trang hoặc phóng to màn hình ngoài ý muốn
+            document.addEventListener('touchmove', (e) => {
+                if (e.scale !== 1) e.preventDefault();
+            }, { passive: false });
+
+            // Bắt đầu kết nối
+            connectWebSocket();
+
+        })();
+    </script>
+</body>
+</html>

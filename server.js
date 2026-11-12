@@ -1,6 +1,9 @@
 /**
  * CyberSec Password Guardian - Node.js Server
- * Tích hợp Express + WebSocket + SerialPort (Arduino 5 nút bấm)
+ * - Tích hợp Express + WebSocket
+ * - Kết nối phần cứng SerialPort (Arduino 5 nút bấm: A, B, C, D, ENTER)
+ * - Tích hợp Live Tunnel & QR Code cho tay cầm điện thoại (Smartphone Controller)
+ * - Hỗ trợ nhiều điện thoại kết nối song song với Arduino và Bàn phím PC
  */
 
 const express = require('express');
@@ -9,22 +12,33 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
+const TunnelManager = require('./tunnel_manager');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 3000;
+const tunnelManager = new TunnelManager(PORT);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Định tuyến đường dẫn ngắn cho điện thoại
+app.get('/controller', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'controller.html'));
+});
+
+app.get('/mobile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'controller.html'));
+});
 
 // Trạng thái kết nối Serial
 let currentSerialPort = null;
 let currentParser = null;
 let connectedPortName = null;
 
-// Gửi thông điệp tới tất cả các client đang mở game
+// Gửi thông điệp tới tất cả các client đang mở (Game và Controllers)
 function broadcast(msgObj) {
     const data = JSON.stringify(msgObj);
     wss.clients.forEach(client => {
@@ -34,7 +48,7 @@ function broadcast(msgObj) {
     });
 }
 
-// Xử lý nút bấm từ Serial và chuyển tiếp vào Game
+// Xử lý nút bấm từ Serial (Arduino) và chuyển tiếp vào Game
 function handleSerialButton(rawLine) {
     const clean = rawLine.trim().toUpperCase();
     if (!clean) return;
@@ -50,7 +64,8 @@ function handleSerialButton(rawLine) {
         console.log(`[Arduino] Nhận tín hiệu nút bấm: ${button}`);
         broadcast({
             type: 'BUTTON_PRESS',
-            button: button
+            button: button,
+            source: 'ARDUINO'
         });
     }
 }
@@ -104,11 +119,10 @@ async function autoDetectArduino() {
         const ports = await SerialPort.list();
         console.log(`[SerialPort] Phát hiện ${ports.length} cổng:`, ports.map(p => p.path));
 
-        // Ưu tiên tìm thiết bị có thông tin Arduino / CH340 / FTDI / USB Serial
         const arduinoPort = ports.find(p => {
             const str = `${p.manufacturer || ''} ${p.friendlyName || ''} ${p.vendorId || ''}`.toLowerCase();
             return str.includes('arduino') || str.includes('ch340') || str.includes('ftdi') || str.includes('usb');
-        }) || ports[0]; // Hoặc lấy cổng đầu tiên nếu có
+        }) || ports[0];
 
         if (arduinoPort) {
             console.log(`[SerialPort] Tự động thử kết nối cổng: ${arduinoPort.path}`);
@@ -119,7 +133,7 @@ async function autoDetectArduino() {
                 });
             });
         } else {
-            console.log("[SerialPort] Chưa cắm Arduino. Game vẫn hoạt động bình thường bằng bàn phím PC!");
+            console.log("[SerialPort] Chưa cắm Arduino. Game vẫn hoạt động bình thường bằng bàn phím PC và Điện thoại!");
         }
     } catch (e) {
         console.error("[SerialPort] Lỗi quét cổng:", e);
@@ -156,18 +170,101 @@ app.post('/api/connect', async (req, res) => {
     }
 });
 
-// Quản lý WebSocket kết nối từ trình duyệt
+// API: Lấy thông tin Live Tunnel và QR Code
+app.get('/api/tunnel', (req, res) => {
+    res.json(tunnelManager.getInfo());
+});
+
+// Lắng nghe sự kiện cập nhật từ TunnelManager và phát tới các client
+tunnelManager.on('update', (info) => {
+    broadcast({
+        type: 'TUNNEL_INFO',
+        info: info
+    });
+});
+
+tunnelManager.on('controller_change', (count) => {
+    broadcast({
+        type: 'CONTROLLER_COUNT',
+        count: count
+    });
+});
+
+let socketCounter = 0;
+
+// Quản lý WebSocket kết nối từ trình duyệt PC & Tay cầm Điện Thoại
 wss.on('connection', (ws) => {
-    console.log('[WebSocket] Game client đã kết nối vào server!');
-    // Gửi trạng thái cổng hiện tại cho client vừa vào
+    const socketId = ++socketCounter;
+    ws.socketId = socketId;
+    ws.isController = false;
+
+    // Gửi trạng thái ban đầu cho client vừa vào
     ws.send(JSON.stringify({
         type: 'PORT_STATUS',
         connected: !!connectedPortName,
         port: connectedPortName
     }));
+
+    ws.send(JSON.stringify({
+        type: 'TUNNEL_INFO',
+        info: tunnelManager.getInfo()
+    }));
+
+    ws.send(JSON.stringify({
+        type: 'CONTROLLER_COUNT',
+        count: tunnelManager.getControllerCount()
+    }));
+
+    ws.on('message', (raw) => {
+        try {
+            const data = JSON.parse(raw);
+
+            // Đăng ký điện thoại làm Controller
+            if (data.type === 'REGISTER' && data.role === 'CONTROLLER') {
+                ws.isController = true;
+                ws.controllerId = data.id || `MB-${socketId}`;
+                tunnelManager.registerController(socketId, {
+                    name: ws.controllerId,
+                    device: data.device
+                });
+                console.log(`[WebSocket] 📱 Điện thoại đã kết nối: ${ws.controllerId} (Tổng tay cầm: ${tunnelManager.getControllerCount()})`);
+            }
+
+            // Nhận tín hiệu nút bấm từ Điện thoại song song với Arduino
+            else if (data.type === 'BUTTON_PRESS') {
+                const button = (data.button || '').toUpperCase();
+                if (['A', 'B', 'C', 'D', 'ENTER'].includes(button)) {
+                    console.log(`[Mobile Controller] 🕹️ Nút: ${button} từ ${data.sender || ws.controllerId || 'Mobile'}`);
+                    broadcast({
+                        type: 'BUTTON_PRESS',
+                        button: button,
+                        source: 'MOBILE',
+                        sender: data.sender || ws.controllerId
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('[WebSocket] Lỗi xử lý message:', e.message);
+        }
+    });
+
+    ws.on('close', () => {
+        if (ws.isController) {
+            tunnelManager.unregisterController(socketId);
+            console.log(`[WebSocket] 📱 Điện thoại đã ngắt kết nối: ${ws.controllerId} (Còn lại: ${tunnelManager.getControllerCount()})`);
+        }
+    });
 });
 
 // Khởi động server
+wss.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.warn(`[WebSocket] Cổng ${PORT} đã được sử dụng.`);
+    } else {
+        console.error(`[WebSocket] Lỗi:`, err);
+    }
+});
+
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
         console.warn(`[Server] Cổng ${PORT} hiện đang được sử dụng bởi tiến trình khác. Giữ nguyên server đang chạy.`);
@@ -180,10 +277,15 @@ server.listen(PORT, () => {
     console.log(`================================================================`);
     console.log(`🚀 CYBERSEC PASSWORD GUARDIAN (Pixel Style Game)`);
     console.log(`🌐 Server đang chạy tại: http://localhost:${PORT}`);
-    console.log(`🎮 Mở trình duyệt và truy cập link trên để chơi game!`);
-    console.log(`🕹️ Hỗ trợ 5 nút Arduino (A, B, C, D, ENTER) & Bàn phím máy tính!`);
+    console.log(`🕹️ Hỗ trợ đồng thời 3 kênh điều khiển song song:`);
+    console.log(`   1. Bo mạch Arduino (5 nút bấm A, B, C, D, ENTER)`);
+    console.log(`   2. Tay cầm Điện Thoại qua Live Tunnel / Wi-Fi QR Code`);
+    console.log(`   3. Bàn phím máy tính PC (Phím A, B, C, D, ENTER)`);
     console.log(`================================================================`);
 
     // Quét và kết nối Arduino
     autoDetectArduino();
+
+    // Khởi tạo Live Tunnel và tạo QR Code
+    tunnelManager.init();
 });

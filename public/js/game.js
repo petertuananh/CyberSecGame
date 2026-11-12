@@ -112,6 +112,7 @@ class CyberSecGame {
         this._initEntities();
         this._bindInputs();
         this._connectWebSocket();
+        this._initQrModal();
 
         // Start Loop
         requestAnimationFrame((t) => this.gameLoop(t));
@@ -199,12 +200,17 @@ class CyberSecGame {
                 const data = JSON.parse(event.data);
                 if (data.type === "BUTTON_PRESS") {
                     this.handleInput(data.button);
+                    this.highlightDockButton(data.button);
                 } else if (data.type === "PORT_STATUS") {
                     const statusEl = document.getElementById("arduinoStatus");
                     if (statusEl) {
-                        statusEl.innerText = data.connected ? `Arduino: ${data.port}` : "Arduino: Chưa kết nối (Dùng bàn phím)";
+                        statusEl.innerText = data.connected ? `Arduino: ${data.port}` : "Arduino: Chưa kết nối (Bàn phím/ĐT)";
                         statusEl.className = data.connected ? "connected" : "disconnected";
                     }
+                } else if (data.type === "TUNNEL_INFO") {
+                    this.updateQrModal(data.info);
+                } else if (data.type === "CONTROLLER_COUNT") {
+                    this.updateControllerCount(data.count);
                 }
             } catch (e) {
                 console.error("WS Parse error:", e);
@@ -214,6 +220,161 @@ class CyberSecGame {
         this.ws.onclose = () => {
             setTimeout(() => this._connectWebSocket(), 2000);
         };
+    }
+
+    highlightDockButton(button) {
+        const btn = document.querySelector(`.arcade-btn[data-key="${button}"]`);
+        if (btn) {
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 200);
+        }
+    }
+
+    _initQrModal() {
+        this.tunnelInfo = null;
+        this.controllerCount = 0;
+        this.activeQrTab = 'tunnel';
+
+        const btnOpen = document.getElementById('btnOpenQrModal');
+        const btnClose = document.getElementById('btnCloseQrModal');
+        const modal = document.getElementById('qrModal');
+        const tabTunnel = document.getElementById('tabTunnel');
+        const tabLocal = document.getElementById('tabLocal');
+        const btnCopy = document.getElementById('btnCopyQrUrl');
+
+        if (btnOpen && modal) {
+            btnOpen.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                this.renderQrData();
+            });
+        }
+
+        if (btnClose && modal) {
+            btnClose.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+        }
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        }
+
+        if (tabTunnel) {
+            tabTunnel.addEventListener('click', () => {
+                this.activeQrTab = 'tunnel';
+                if (tabLocal) tabLocal.classList.remove('active');
+                tabTunnel.classList.add('active');
+                this.renderQrData();
+            });
+        }
+
+        if (tabLocal) {
+            tabLocal.addEventListener('click', () => {
+                this.activeQrTab = 'local';
+                if (tabTunnel) tabTunnel.classList.remove('active');
+                tabLocal.classList.add('active');
+                this.renderQrData();
+            });
+        }
+
+        if (btnCopy) {
+            btnCopy.addEventListener('click', () => {
+                const urlField = document.getElementById('qrUrlInput');
+                if (urlField && urlField.value && urlField.value !== 'Đang kết nối...') {
+                    navigator.clipboard.writeText(urlField.value).then(() => {
+                        const originalText = btnCopy.innerText;
+                        btnCopy.innerText = 'ĐÃ CHÉP! ✓';
+                        btnCopy.style.background = '#10b981';
+                        setTimeout(() => {
+                            btnCopy.innerText = originalText;
+                            btnCopy.style.background = '';
+                        }, 1200);
+                    }).catch(() => {
+                        urlField.select();
+                        document.execCommand('copy');
+                    });
+                }
+            });
+        }
+
+        // Tải thông tin tunnel ban đầu qua HTTP API
+        fetch('/api/tunnel')
+            .then(res => res.json())
+            .then(info => {
+                this.updateQrModal(info);
+            })
+            .catch(() => {});
+    }
+
+    updateQrModal(info) {
+        if (!info) return;
+        this.tunnelInfo = info;
+        this.renderQrData();
+    }
+
+    renderQrData() {
+        const qrImg = document.getElementById('qrCodeImg');
+        const spinner = document.getElementById('qrSpinner');
+        const urlInput = document.getElementById('qrUrlInput');
+
+        if (!this.tunnelInfo) return;
+
+        let activeUrl = '';
+        let activeQr = '';
+
+        if (this.activeQrTab === 'tunnel') {
+            activeUrl = this.tunnelInfo.tunnelUrl;
+            activeQr = this.tunnelInfo.tunnelQr;
+        } else {
+            activeUrl = this.tunnelInfo.localUrl;
+            activeQr = this.tunnelInfo.localQr;
+        }
+
+        if (activeQr) {
+            if (qrImg) {
+                qrImg.src = activeQr;
+                qrImg.style.display = 'block';
+            }
+            if (spinner) spinner.style.display = 'none';
+        } else {
+            if (qrImg) qrImg.style.display = 'none';
+            if (spinner) {
+                spinner.style.display = 'block';
+                spinner.innerText = this.activeQrTab === 'tunnel' 
+                    ? '⏳ Đang tạo Live Tunnel (4G)...' 
+                    : '⏳ Đang lấy địa chỉ Wi-Fi...';
+            }
+        }
+
+        if (urlInput) {
+            urlInput.value = activeUrl || 'Đang kết nối...';
+        }
+    }
+
+    updateControllerCount(count) {
+        this.controllerCount = count || 0;
+        const badge = document.getElementById('mobileCountBadge');
+        if (badge) {
+            badge.innerText = `📱 ${this.controllerCount} ĐT`;
+            if (this.controllerCount > 0) {
+                badge.style.background = '#047857';
+                badge.style.borderColor = '#34d399';
+                badge.style.color = '#ffffff';
+            } else {
+                badge.style.background = '#2e1065';
+                badge.style.borderColor = '#a78bfa';
+                badge.style.color = '#f5d0fe';
+            }
+        }
+
+        const countText = document.getElementById('qrConnectedCountText');
+        if (countText) {
+            countText.innerText = this.controllerCount > 0 
+                ? `Đang có ${this.controllerCount} điện thoại kết nối` 
+                : 'Đang có 0 điện thoại kết nối';
+        }
     }
 
     _bindInputs() {
@@ -1345,7 +1506,8 @@ class CyberSecGame {
             { icon: "sword", text: "Vệ Binh thích ứng thời tiết: Đội nón che nắng, che dù đi mưa, mặc áo ấm quàng khăn len" },
             { icon: "rose", text: "Mỗi câu trả lời đúng được thưởng 1 Bông Hồng (cần đúng cả 3 câu để pass vòng)" },
             { icon: "dice", text: "Sau mỗi vòng: Lắc xúc xắc (Lẻ: đi tiếp bình thường | Chẵn: bốc thẻ may rủi tặng hoa)" },
-            { icon: "dragon", text: "Boss Cuối: Cần >= 9 bông hồng để bắn hạ Rồng ở 4 vị trí ngẫu nhiên A, B, C, D!" }
+            { icon: "dragon", text: "Boss Cuối: Cần >= 9 bông hồng để bắn hạ Rồng ở 4 vị trí ngẫu nhiên A, B, C, D!" },
+            { icon: "phone", text: "Tay Cầm ĐT: Quét mã QR góc phải để bấm nút A, B, C, D, ENTER song song với Arduino!" }
         ];
 
         infoItems.forEach(item => {

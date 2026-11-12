@@ -1126,6 +1126,21 @@ const PixelSprites = {
         const key = (iconName || '').toLowerCase().trim();
 
         switch (key) {
+            case 'phone':
+            case 'mobile': {
+                ctx.fillStyle = "#334155";
+                ctx.fillRect(x + 4 * s, y + 1 * s, 8 * s, 14 * s);
+                ctx.fillStyle = "#38bdf8";
+                ctx.fillRect(x + 5 * s, y + 3 * s, 6 * s, 9 * s);
+                ctx.fillStyle = "#e2e8f0";
+                ctx.fillRect(x + 7 * s, y + 2 * s, 2 * s, 0.8 * s);
+                ctx.fillRect(x + 7 * s, y + 13 * s, 2 * s, 1 * s);
+                ctx.fillStyle = "#a855f7";
+                ctx.fillRect(x + 13 * s, y + 4 * s, 1.5 * s, 1.5 * s);
+                ctx.fillRect(x + 14 * s, y + 6 * s, 1.5 * s, 4 * s);
+                break;
+            }
+
             case 'tree':
             case 'forest': {
                 // Thân cây gỗ

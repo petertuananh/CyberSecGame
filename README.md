@@ -15,8 +15,10 @@ Tích hợp logo thương hiệu pixel của **Trường THCS Nguyễn Bỉnh Kh
 - **Thời tiết Động (Dynamic Weather)**: Nắng vàng, mưa rào, tuyết rơi, bão tố tự động luân chuyển; nhân vật tự thay đổi trang phục (áo ấm, che dù, nón rơm) và cây cối, mặt nước, tầng mây phản ứng theo thời tiết.
 - **Giao diện Tối ưu Fullscreen FHD**: Chế độ phóng to toàn màn hình pixel-perfect cho màn hình laptop Full HD (1920x1080), con trỏ chuột hiệu ứng sao lấp lánh (particle trail).
 - **Câu hỏi & Dữ liệu Random 100%**: Mỗi lượt chơi đều sinh câu hỏi ngẫu nhiên và **dữ liệu mật khẩu hoàn toàn ngẫu nhiên** (độ dài, ký tự đặc biệt, tên người dùng, kịch bản Phishing, Passphrase...).
-- **Hỗ trợ 5 nút bấm vật lý Arduino**: Nút **A**, **B**, **C**, **D** và **ENTER**.
-- **Hỗ trợ song song Bàn phím máy tính**: Phím `A`, `B`, `C`, `D`, `ENTER`, `SPACE`, `F` (Fullscreen), `ESC` (Bỏ qua truyện).
+- **Hỗ trợ 3 kênh điều khiển song song**:
+  - **1. Bo mạch Arduino**: 5 nút bấm vật lý Arcade **A**, **B**, **C**, **D** và **ENTER**.
+  - **2. Tay Cầm Điện Thoại (Live Tunnel & QR Code)**: Tự động tạo Live Tunnel (Internet / 4G) và mạng LAN (Wi-Fi), quét mã QR trên màn hình bằng điện thoại để điều khiển ngay. Nhiều người có thể quét và bấm song song cùng lúc!
+  - **3. Bàn phím máy tính PC**: Phím `A`, `B`, `C`, `D`, `ENTER`, `SPACE`, `F` (Fullscreen), `ESC` (Bỏ qua truyện), `W` (Đổi thời tiết).
 
 ---
 
