@@ -950,18 +950,18 @@ const PixelSprites = {
             }
 
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 18px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText(cardData ? cardData.title : "THẺ BÍ ẨN", width / 2, 140);
+            ctx.fillText(cardData ? cardData.title : "THẺ BÍ ẨN", width / 2, 138);
 
             ctx.fillStyle = isBonus ? "#f1c40f" : "#ff7675";
-            ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 26px 'Segoe UI', Tahoma, sans-serif";
             const effectText = isBonus ? `+${cardData.roses} HOA HỒNG!` : `${cardData.roses} HOA HỒNG!`;
-            ctx.fillText(effectText, width / 2, 180);
+            ctx.fillText(effectText, width / 2, 178);
 
-            ctx.fillStyle = "#ecf0f1";
-            ctx.font = "12px 'Segoe UI', Tahoma, sans-serif";
-            this._wrapText(ctx, cardData ? cardData.description : "", width / 2, 215, width - 30, 16);
+            ctx.fillStyle = "#f1f2f6";
+            ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+            this._wrapText(ctx, cardData ? cardData.description : "", width / 2, 214, width - 30, 21);
         }
 
         ctx.restore();

@@ -40,8 +40,8 @@ html, body {
 .top-bar {
     width: 100%;
     max-width: 1320px;
-    height: 38px;
-    min-height: 38px;
+    height: 42px;
+    min-height: 42px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -49,7 +49,7 @@ html, body {
     background: var(--panel-bg);
     border: 2px solid var(--border-color);
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 14px;
     gap: 12px;
     z-index: 100;
 }
@@ -63,23 +63,23 @@ html, body {
 .logo-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 3px 8px;
+    gap: 7px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 4px 9px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    opacity: 0.75;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    opacity: 0.85;
     transition: opacity 0.2s, background 0.2s;
 }
 
 .logo-item:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .logo-img-pixel {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     image-rendering: pixelated;
     object-fit: contain;
     border-radius: 3px;
@@ -87,9 +87,9 @@ html, body {
 }
 
 .logo-text {
-    font-size: 11px;
-    font-weight: 500;
-    color: #a4b0be;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ced6e0;
     letter-spacing: 0.5px;
     white-space: nowrap;
 }
@@ -97,17 +97,18 @@ html, body {
 .brand-title {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     font-family: 'Press Start 2P', monospace;
-    font-size: 12px;
+    font-size: 13.5px;
     color: var(--accent-gold);
     letter-spacing: 1px;
     white-space: nowrap;
+    text-shadow: 1px 1px 0 #78350f;
 }
 
 .brand-title .pixel-badge-icon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     image-rendering: pixelated;
     vertical-align: middle;
 }
@@ -122,10 +123,10 @@ html, body {
 .weather-btn {
     background: #23193d;
     color: var(--accent-gold);
-    border: 1px solid #574b90;
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 11px;
+    border: 1.5px solid #574b90;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     display: flex;
@@ -141,8 +142,8 @@ html, body {
 }
 
 .weather-btn img.pixel-icon-btn {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     image-rendering: pixelated;
 }
 
@@ -150,15 +151,15 @@ html, body {
 .btn-fullscreen {
     background: #1e272e;
     color: var(--accent-cyan);
-    border: 1px solid #00d2d3;
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 11px;
+    border: 1.5px solid #00d2d3;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     transition: 0.2s;
 }
 
@@ -170,10 +171,10 @@ html, body {
 }
 
 #arduinoStatus {
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 4px 9px;
+    border-radius: 5px;
     font-weight: bold;
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -197,21 +198,21 @@ select#portSelect {
     background: #23193d;
     color: var(--accent-gold);
     border: 1px solid #574b90;
-    padding: 2px 6px;
+    padding: 3px 7px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
-    max-width: 140px;
+    max-width: 145px;
 }
 
 button.btn-connect {
     background: #3498db;
     color: white;
     border: none;
-    padding: 3px 10px;
+    padding: 4px 11px;
     border-radius: 4px;
     font-weight: bold;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     transition: 0.2s;
     white-space: nowrap;
@@ -290,38 +291,39 @@ button.btn-connect:hover {
 }
 
 .dock-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
-    color: #a4b0be;
+    color: #cbd5e1;
     text-transform: uppercase;
     letter-spacing: 0.8px;
 }
 
 /* Arcade Buttons A, B, C, D */
 .arcade-btn {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-family: 'Press Start 2P', monospace;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     color: white;
     cursor: pointer;
     transition: transform 0.06s, box-shadow 0.06s;
     position: relative;
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
 .arcade-btn .sub-text {
     font-family: 'Segoe UI', sans-serif;
-    font-size: 8px;
-    margin-top: 1px;
-    opacity: 0.95;
-    font-weight: 600;
+    font-size: 9.5px;
+    margin-top: 2px;
+    opacity: 1;
+    font-weight: bold;
+    letter-spacing: 0.5px;
 }
 
 .arcade-btn[data-key="A"] {
@@ -343,12 +345,12 @@ button.btn-connect:hover {
 
 /* Nút ENTER */
 .arcade-btn-enter {
-    width: 125px;
-    height: 48px;
+    width: 142px;
+    height: 52px;
     border-radius: 10px;
     background: radial-gradient(circle at 35% 35%, #9b59b6, #6c3483);
     box-shadow: 0 4px 0 #4a235a, 0 6px 12px rgba(155, 89, 182, 0.4);
-    font-size: 11px;
+    font-size: 13px;
 }
 
 .arcade-btn:active, .arcade-btn.active {
@@ -358,11 +360,12 @@ button.btn-connect:hover {
 }
 
 .hint-text {
-    font-size: 11px;
-    color: #747d8c;
-    margin-top: 2px;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 3px;
     margin-bottom: 2px;
     text-align: center;
+    font-weight: 500;
 }
 
 /* ========================================================
