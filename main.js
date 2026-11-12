@@ -1,7 +1,8 @@
 /**
  * Electron Main Process - Vệ Binh Mật Khẩu (CyberSec Password Guardian)
- * - Mở cửa sổ Desktop riêng biệt (Dedicated Window) không thanh địa chỉ/tab
+ * - Mở duy nhất 1 cửa sổ Desktop riêng biệt (Single Window Instance)
  * - Khởi động kèm Server Node.js nội hợp (Express + SerialPort + WebSocket)
+ * - Ngăn chặn triệt để hiện tượng mở trùng lặp / spam nhiều cửa sổ
  * - Xử lý trường hợp lỗi không mở được cửa sổ riêng -> Hỏi người dùng mở trên trình duyệt
  */
 
@@ -9,57 +10,53 @@ const { app, BrowserWindow, dialog, shell } = require('electron');
 const path = require('path');
 const http = require('http');
 
+// Đảm bảo chỉ chạy duy nhất 1 phiên bản của ứng dụng
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    console.log("[Electron] Một phiên bản khác của game đang chạy. Tiến trình này sẽ dừng ngay lập tức.");
+    app.quit();
+    process.exit(0);
+}
+
 let mainWindow = null;
+let isStartingServer = false;
+let isWindowOpening = false;
 const PORT = process.env.PORT || 3000;
 const APP_URL = `http://localhost:${PORT}`;
 
-// Đảm bảo chỉ chạy 1 phiên bản duy nhất
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-    app.quit();
-} else {
-    app.on('second-instance', () => {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-            mainWindow.focus();
-        }
-    });
-}
+app.on('second-instance', () => {
+    // Khi người dùng bấm mở thêm lần nữa, chỉ focus lại cửa sổ đã có
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    }
+});
 
-// Kiểm tra xem Server Node đã chạy chưa, nếu chưa thì tự import / khởi động server
-function ensureServerRunning(callback) {
-    checkServerReady((isReady) => {
-        if (isReady) {
-            callback();
-        } else {
-            try {
-                // Khởi động server nội bộ trong cùng tiến trình
-                require(path.join(__dirname, 'server.js'));
-                waitForServer(callback);
-            } catch (err) {
-                console.error("Lỗi khởi động server nội bộ:", err);
-                waitForServer(callback);
-            }
-        }
-    });
-}
-
+// Kiểm tra xem Server Node đã chạy chưa (đảm bảo cb chỉ được gọi đúng 1 lần duy nhất)
 function checkServerReady(cb) {
-    const req = http.get(APP_URL, (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-            cb(true);
-        } else {
-            cb(false);
+    let responded = false;
+    const finish = (val) => {
+        if (!responded) {
+            responded = true;
+            cb(val);
         }
+    };
+
+    const req = http.get(APP_URL, (res) => {
+        finish(res.statusCode >= 200 && res.statusCode < 400);
     });
-    req.on('error', () => cb(false));
-    req.setTimeout(800, () => {
-        req.destroy();
-        cb(false);
+
+    req.on('error', () => {
+        finish(false);
+    });
+
+    req.setTimeout(600, () => {
+        try { req.destroy(); } catch (e) {}
+        finish(false);
     });
 }
 
-function waitForServer(callback, retries = 25) {
+function waitForServer(callback, retries = 30) {
     if (retries <= 0) {
         callback();
         return;
@@ -73,8 +70,40 @@ function waitForServer(callback, retries = 25) {
     });
 }
 
-// Tạo cửa sổ Desktop riêng biệt
+function ensureServerRunning(callback) {
+    checkServerReady((isReady) => {
+        if (isReady) {
+            callback();
+            return;
+        }
+
+        if (!isStartingServer) {
+            isStartingServer = true;
+            try {
+                // Khởi động server nội bộ trong cùng tiến trình
+                require(path.join(__dirname, 'server.js'));
+            } catch (err) {
+                console.error("[Electron] Lỗi khởi động server nội bộ:", err);
+            }
+        }
+        waitForServer(callback);
+    });
+}
+
+// Tạo cửa sổ Desktop riêng biệt (Bảo đảm Singleton tuyệt đối)
 function createGameWindow() {
+    // Nếu cửa sổ đã tồn tại và chưa bị destroy -> chỉ focus, KHÔNG BAO GIỜ tạo mới
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        return;
+    }
+
+    if (isWindowOpening) {
+        return;
+    }
+    isWindowOpening = true;
+
     try {
         const iconPath = path.join(__dirname, 'icon.ico');
         mainWindow = new BrowserWindow({
@@ -86,29 +115,42 @@ function createGameWindow() {
             icon: iconPath,
             backgroundColor: '#090714',
             autoHideMenuBar: true,
+            show: false, // Ẩn cửa sổ cho đến khi sẵn sàng để tránh chớp giật
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true
             }
         });
 
+        mainWindow.once('ready-to-show', () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.show();
+                mainWindow.focus();
+            }
+            isWindowOpening = false;
+        });
+
         mainWindow.loadURL(APP_URL).catch((err) => {
-            console.error("Lỗi khi tải URL vào cửa sổ riêng:", err);
+            isWindowOpening = false;
+            console.error("[Electron] Lỗi khi tải URL vào cửa sổ riêng:", err);
             handleWindowFailure(err);
         });
 
         mainWindow.on('closed', () => {
             mainWindow = null;
+            isWindowOpening = false;
         });
 
         // Xử lý sự kiện nếu renderer process crash
         mainWindow.webContents.on('render-process-gone', (event, details) => {
-            console.warn("Cửa sổ bị đóng hoặc crash:", details);
+            console.warn("[Electron] Renderer process gone:", details);
+            isWindowOpening = false;
             handleWindowFailure(new Error("Tiến trình đồ họa bị gián đoạn."));
         });
 
     } catch (err) {
-        console.error("Không thể khởi tạo cửa sổ riêng:", err);
+        isWindowOpening = false;
+        console.error("[Electron] Không thể khởi tạo cửa sổ riêng:", err);
         handleWindowFailure(err);
     }
 }
@@ -132,12 +174,11 @@ function handleWindowFailure(err) {
             detail: 'Bạn có muốn tiếp tục trải nghiệm trò chơi trên trình duyệt web mặc định của máy tính không?'
         });
     } catch (dialogErr) {
-        console.error("Lỗi hiển thị hộp thoại thông báo:", dialogErr);
-        choice = 0; // Mặc định mở trình duyệt nếu không bật được dialog
+        console.error("[Electron] Lỗi hiển thị hộp thoại thông báo:", dialogErr);
+        choice = 0;
     }
 
     if (choice === 0) {
-        // Mở URL trên trình duyệt web mặc định của người dùng
         shell.openExternal(APP_URL);
     } else {
         app.quit();

@@ -15,50 +15,62 @@ namespace CyberSecGame
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-
-            // 1. Kiểm tra nếu có bản phân phối Electron đóng gói trong dist
-            string packagedExe = Path.Combine(baseDir, "dist", "CyberSecGame-win32-x64", "CyberSecGame.exe");
-            if (File.Exists(packagedExe))
+            // Sử dụng Mutex hệ thống để chống spam khi người dùng nhấp đúp nhiều lần
+            bool createdNew;
+            using (Mutex mutex = new Mutex(true, "Global\\CyberSecPasswordGuardian_Launcher_Mutex", out createdNew))
             {
-                try
+                if (!createdNew)
                 {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = packagedExe,
-                        WorkingDirectory = Path.GetDirectoryName(packagedExe),
-                        UseShellExecute = true
-                    });
+                    // Ứng dụng đã được khởi chạy, thoát tiến trình phụ này ngay lập tức
                     return;
                 }
-                catch (Exception ex)
+
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+                // 1. Kiểm tra nếu có bản phân phối Electron đóng gói trong dist
+                string packagedExe = Path.Combine(baseDir, "dist", "CyberSecGame-win32-x64", "CyberSecGame.exe");
+                if (File.Exists(packagedExe))
                 {
-                    Console.WriteLine("Packaged exe error: " + ex.Message);
+                    try
+                    {
+                        var psi = new ProcessStartInfo
+                        {
+                            FileName = packagedExe,
+                            WorkingDirectory = Path.GetDirectoryName(packagedExe),
+                            UseShellExecute = true
+                        };
+                        Process.Start(psi);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Packaged exe error: " + ex.Message);
+                    }
                 }
-            }
 
-            // 2. Khởi động Server Node.js nếu chưa chạy
-            EnsureServerRunning(baseDir);
+                // 2. Khởi động Server Node.js nếu chưa chạy
+                EnsureServerRunning(baseDir);
 
-            // 3. Thử mở cửa sổ riêng biệt bằng Electron
-            bool openedDedicated = TryOpenElectronWindow(baseDir);
+                // 3. Thử mở cửa sổ riêng biệt bằng Electron
+                bool openedDedicated = TryOpenElectronWindow(baseDir);
 
-            // 4. Nếu không mở được cửa sổ riêng biệt -> Hỏi người dùng mở trên trình duyệt
-            if (!openedDedicated)
-            {
-                DialogResult result = MessageBox.Show(
-                    "Không thể mở cửa sổ ứng dụng riêng biệt.\n\nBạn có muốn tiếp tục trải nghiệm trò chơi trên trình duyệt web mặc định của máy tính không?",
-                    "Vệ Binh Mật Khẩu - CyberSec Password Guardian",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                );
-
-                if (result == DialogResult.Yes)
+                // 4. Nếu không mở được cửa sổ riêng biệt -> Hỏi người dùng mở trên trình duyệt
+                if (!openedDedicated)
                 {
-                    OpenInBrowser(AppUrl);
+                    DialogResult result = MessageBox.Show(
+                        "Không thể mở cửa sổ ứng dụng riêng biệt.\n\nBạn có muốn tiếp tục trải nghiệm trò chơi trên trình duyệt web mặc định của máy tính không?",
+                        "Vệ Binh Mật Khẩu - CyberSec Password Guardian",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+
+                    if (result == DialogResult.Yes)
+                    {
+                        OpenInBrowser(AppUrl);
+                    }
                 }
             }
         }
@@ -68,7 +80,7 @@ namespace CyberSecGame
             try
             {
                 var req = (HttpWebRequest)WebRequest.Create(AppUrl);
-                req.Timeout = 1200;
+                req.Timeout = 800;
                 using (var res = (HttpWebResponse)req.GetResponse())
                 {
                     return (int)res.StatusCode >= 200 && (int)res.StatusCode < 400;
@@ -102,7 +114,6 @@ namespace CyberSecGame
                 }
                 catch
                 {
-                    // Fallback sang cmd node
                     try
                     {
                         Process.Start(new ProcessStartInfo
@@ -118,10 +129,9 @@ namespace CyberSecGame
                     catch {}
                 }
 
-                // Đợi tối đa 6 giây để server khởi động
                 for (int i = 0; i < 20; i++)
                 {
-                    Thread.Sleep(300);
+                    Thread.Sleep(250);
                     if (IsServerReady()) break;
                 }
             }
@@ -142,6 +152,10 @@ namespace CyberSecGame
                         WorkingDirectory = baseDir,
                         UseShellExecute = false
                     };
+                    if (psi.EnvironmentVariables.ContainsKey("ELECTRON_RUN_AS_NODE"))
+                    {
+                        psi.EnvironmentVariables.Remove("ELECTRON_RUN_AS_NODE");
+                    }
                     var p = Process.Start(psi);
                     if (p != null) return true;
                 }
@@ -160,6 +174,10 @@ namespace CyberSecGame
                     CreateNoWindow = true,
                     UseShellExecute = false
                 };
+                if (psi.EnvironmentVariables.ContainsKey("ELECTRON_RUN_AS_NODE"))
+                {
+                    psi.EnvironmentVariables.Remove("ELECTRON_RUN_AS_NODE");
+                }
                 var p = Process.Start(psi);
                 if (p != null) return true;
             }
@@ -172,7 +190,6 @@ namespace CyberSecGame
         {
             try
             {
-                // Thử mở Chrome/Edge App Mode để có giao diện cửa sổ độc lập nếu có
                 string[] browserPaths = new string[]
                 {
                     @"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -195,7 +212,6 @@ namespace CyberSecGame
                     }
                 }
 
-                // Mở trình duyệt mặc định hệ thống
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = url,

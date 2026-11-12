@@ -168,6 +168,14 @@ wss.on('connection', (ws) => {
 });
 
 // Khởi động server
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.warn(`[Server] Cổng ${PORT} hiện đang được sử dụng bởi tiến trình khác. Giữ nguyên server đang chạy.`);
+    } else {
+        console.error(`[Server] Lỗi server:`, err);
+    }
+});
+
 server.listen(PORT, () => {
     console.log(`================================================================`);
     console.log(`🚀 CYBERSEC PASSWORD GUARDIAN (Pixel Style Game)`);
