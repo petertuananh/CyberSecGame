@@ -1,0 +1,25 @@
+{
+  "name": "cybersec-password-guardian",
+  "version": "1.0.0",
+  "description": "Game Pixel về Độ Mạnh Mật Khẩu với 5 nút bấm Arduino và NodeJS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"console.log('OK')\""
+  },
+  "keywords": [
+    "cybersecurity",
+    "password-strength",
+    "arduino",
+    "pixel-game",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.3.0",
+    "serialport": "^13.0.0",
+    "ws": "^8.22.2"
+  }
+}
