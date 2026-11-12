@@ -1,10 +1,12 @@
 # 🎮 VỆ BINH MẬT KHẨU - CYBERSEC PASSWORD GUARDIAN
-> **Game Pixel về Độ Mạnh Mật Khẩu (Password Strength) chạy trên NodeJS kết nối 5 nút bấm Arduino**
+> **Game Pixel về Độ Mạnh Mật Khẩu (Password Strength) chạy trên NodeJS kết nối 5 nút bấm Arduino**  
+> *Đồng hành và phát triển: **Trường THCS Nguyễn Bỉnh Khiêm** × **SoftLab***
 
 ---
 
 ## 🌟 TỔNG QUAN DỰ ÁN
 Dự án được xây dựng theo phong cách **Retro Pixel Art 16-bit Arcade** kết hợp hiệu ứng âm thanh 8-bit sống động, phục vụ cho việc học tập, triển lãm hoặc sự kiện an ninh mạng tương tác với phần cứng vật lý qua Arduino.
+Tích hợp logo thương hiệu pixel của **Trường THCS Nguyễn Bỉnh Khiêm** và **SoftLab**.
 
 ### 🎯 Điểm nổi bật:
 - **Công nghệ**: Chạy hoàn toàn bằng **NodeJS** (Express + WebSocket + SerialPort) và HTML5 Canvas Pixel Engine.
