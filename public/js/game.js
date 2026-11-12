@@ -652,6 +652,9 @@ class CyberSecGame {
 
         // 5. Vẽ bông hồng đang bay
         this._renderProjectiles(ctx);
+
+        // 6. Watermark chìm tinh tế ở góc dưới màn hình
+        this._renderWatermark(ctx, w, h);
     }
 
     _renderWorldBackground(ctx, w, h, time) {
@@ -740,26 +743,6 @@ class CyberSecGame {
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, w, 56);
 
-        // Vẽ 2 logo đối tác thu nhỏ trên HUD
-        if (this.logoNBK && this.logoNBK.complete) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(16, 13, 30, 30);
-            ctx.strokeStyle = "#e74c3c";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(16, 13, 30, 30);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(this.logoNBK, 17, 14, 28, 28);
-        }
-        if (this.logoSoftLab && this.logoSoftLab.complete) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(52, 13, 30, 30);
-            ctx.strokeStyle = "#3498db";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(52, 13, 30, 30);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(this.logoSoftLab, 53, 14, 28, 28);
-        }
-
         let stageName = "";
         if (this.state.startsWith("BOSS")) stageName = "⚔️ TRẬN ĐÁNH BOSS CUỐI: RỒNG HẮC ÁM";
         else if (this.stage === 1) stageName = "🌲 VÒNG 1: KHU RỪNG MẬT MÃ (Cây & Chim chóc)";
@@ -767,13 +750,13 @@ class CyberSecGame {
         else stageName = "☁️ VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH (Mây & Đảo bay)";
 
         ctx.fillStyle = "#f1c40f";
-        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(stageName, 94, 34);
+        ctx.fillText(stageName, 24, 34);
 
         if (this.state === "QUESTION" || this.state === "QUESTION_RESULT") {
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 480, 34);
+            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 440, 34);
         }
 
         window.PixelSprites.drawRose(ctx, w - 240, 14, 28);
@@ -788,62 +771,57 @@ class CyberSecGame {
         ctx.fillText("Bấm [A, B, C, D] hoặc [ENTER]", w - 20, 36);
     }
 
-    // Vẽ thẻ Logo Pixel có viền và nhãn
-    _drawPixelLogoBadge(ctx, img, x, y, size, label, borderColor = "#f1c40f") {
+    // Watermark chìm, tinh tế ở góc màn hình
+    _renderWatermark(ctx, w, h) {
         ctx.save();
-        // Nền trắng cho logo nổi bật
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(x, y, size, size);
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, size, size);
+        ctx.globalAlpha = 0.35; // Làm mờ chìm tinh tế
 
-        if (img && img.complete && img.naturalWidth > 0) {
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(img, x + 3, y + 3, size - 6, size - 6);
+        const wmY = h - 22;
+        const iconSize = 18;
+
+        // Vẽ logo NBK mờ
+        if (this.logoNBK && this.logoNBK.complete) {
+            ctx.drawImage(this.logoNBK, w - 275, wmY - 14, iconSize, iconSize);
         }
 
-        if (label) {
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(label, x + size / 2, y + size + 15);
+        // Vẽ logo SoftLab mờ
+        if (this.logoSoftLab && this.logoSoftLab.complete) {
+            ctx.drawImage(this.logoSoftLab, w - 250, wmY - 14, iconSize, iconSize);
         }
+
+        // Chữ watermark nhẹ nhàng
+        ctx.fillStyle = "#dfe4ea";
+        ctx.font = "11px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("THCS Nguyễn Bỉnh Khiêm × SoftLab", w - 225, wmY);
+
         ctx.restore();
     }
 
     _renderStartScreen(ctx, w, h) {
-        ctx.fillStyle = "rgba(20, 15, 35, 0.9)";
-        ctx.fillRect(w * 0.15, h * 0.08, w * 0.7, h * 0.82);
+        ctx.fillStyle = "rgba(20, 15, 35, 0.92)";
+        ctx.fillRect(w * 0.15, h * 0.1, w * 0.7, h * 0.78);
         ctx.strokeStyle = "#f1c40f";
         ctx.lineWidth = 4;
-        ctx.strokeRect(w * 0.15, h * 0.08, w * 0.7, h * 0.82);
-
-        // Vẽ 2 logo đối tác ở 2 góc trên Start Screen
-        this._drawPixelLogoBadge(ctx, this.logoNBK, w * 0.18, h * 0.11, 56, "THCS NGUYỄN BỈNH KHIÊM", "#e74c3c");
-        this._drawPixelLogoBadge(ctx, this.logoSoftLab, w * 0.75, h * 0.11, 56, "SOFTLAB", "#3498db");
+        ctx.strokeRect(w * 0.15, h * 0.1, w * 0.7, h * 0.78);
 
         ctx.fillStyle = "#f1c40f";
-        ctx.font = "bold 34px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 36px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("VỆ BINH MẬT KHẨU", w / 2, h * 0.19);
+        ctx.fillText("VỆ BINH MẬT KHẨU", w / 2, h * 0.22);
 
         ctx.fillStyle = "#00d2d3";
-        ctx.font = "bold 16px 'Courier New', monospace";
-        ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.24);
-
-        ctx.fillStyle = "#f39c12";
-        ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("⭐ ĐỒNG HÀNH: TRƯỜNG THCS NGUYỄN BỈNH KHIÊM × SOFTLAB ⭐", w / 2, h * 0.29);
+        ctx.font = "bold 18px 'Courier New', monospace";
+        ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.28);
 
         // Hiển thị Vệ Binh bước đi dũng cảm ở trung tâm
-        window.PixelSprites.drawAdventurer(ctx, w / 2 - 25, h * 0.32, 60, performance.now() / 150, 1, true, 1);
+        window.PixelSprites.drawAdventurer(ctx, w / 2 - 25, h * 0.29, 65, performance.now() / 150, 1, true, 1);
 
         ctx.fillStyle = "#ecf0f1";
-        ctx.font = "15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
         const startX = w * 0.22;
-        let startY = h * 0.45;
+        let startY = h * 0.44;
         const lines = [
             "🛡️ 3 Thế giới phiêu lưu: Rừng Mật Mã 🌲, Biển Dữ Liệu 🌊, Tầng Mây ☁️",
             "🌿 Cảnh quan sinh động: Cây cối lay động, chim hót, rong rêu uốn lượn, đàn cá bơi lội",
@@ -854,16 +832,32 @@ class CyberSecGame {
         ];
         lines.forEach(l => {
             ctx.fillText(l, startX, startY);
-            startY += 28;
+            startY += 30;
         });
 
         const blink = Math.sin(performance.now() / 250) > 0;
         if (blink) {
             ctx.fillStyle = "#2ecc71";
-            ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 24px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("👉 NHẤN [ENTER] ĐỂ BẮT ĐẦU CUỘC PHIÊU LƯU 👈", w / 2, h * 0.83);
+            ctx.fillText("👉 NHẤN [ENTER] ĐỂ BẮT ĐẦU CUỘC PHIÊU LƯU 👈", w / 2, h * 0.81);
         }
+
+        // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        const subY = h * 0.855;
+        if (this.logoNBK && this.logoNBK.complete) {
+            ctx.drawImage(this.logoNBK, w / 2 - 165, subY - 12, 16, 16);
+        }
+        if (this.logoSoftLab && this.logoSoftLab.complete) {
+            ctx.drawImage(this.logoSoftLab, w / 2 + 148, subY - 12, 16, 16);
+        }
+        ctx.fillStyle = "#a4b0be";
+        ctx.font = "11px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Đồng hành phát triển: THCS Nguyễn Bỉnh Khiêm  •  SoftLab", w / 2, subY);
+        ctx.restore();
     }
 
     _renderStageIntro(ctx, w, h) {
@@ -1272,9 +1266,21 @@ class CyberSecGame {
         ctx.fillStyle = "#00d2d3";
         ctx.fillText("Và đạt danh hiệu cao quý: BẬC THẦY VỆ BINH AN NINH MẠNG!", w / 2, h * 0.67);
 
-        // Logo 2 đơn vị đồng hành chúc mừng
-        this._drawPixelLogoBadge(ctx, this.logoNBK, w / 2 - 90, h * 0.70, 40, "THCS NBK", "#e74c3c");
-        this._drawPixelLogoBadge(ctx, this.logoSoftLab, w / 2 + 50, h * 0.70, 40, "SOFTLAB", "#3498db");
+        // Logo 2 đơn vị đồng hành chìm tinh tế
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        const vCreditY = h * 0.74;
+        if (this.logoNBK && this.logoNBK.complete) {
+            ctx.drawImage(this.logoNBK, w / 2 - 160, vCreditY - 12, 18, 18);
+        }
+        if (this.logoSoftLab && this.logoSoftLab.complete) {
+            ctx.drawImage(this.logoSoftLab, w / 2 + 145, vCreditY - 12, 18, 18);
+        }
+        ctx.fillStyle = "#dfe4ea";
+        ctx.font = "12px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Trường THCS Nguyễn Bỉnh Khiêm  •  SoftLab", w / 2, vCreditY);
+        ctx.restore();
 
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";

@@ -43,33 +43,33 @@ body {
 .logo-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.08);
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
     padding: 3px 8px;
-    border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    transition: 0.2s;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0.7;
+    transition: opacity 0.2s, background 0.2s;
 }
 
 .logo-item:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: #f1c40f;
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .logo-img-pixel {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     image-rendering: pixelated;
     object-fit: contain;
-    background: #ffffff;
-    border-radius: 4px;
-    padding: 1px;
+    border-radius: 3px;
+    background: transparent;
 }
 
 .logo-text {
     font-size: 11px;
-    font-weight: bold;
-    color: #ecf0f1;
+    font-weight: 500;
+    color: #95a5a6;
     letter-spacing: 0.5px;
     white-space: nowrap;
 }
