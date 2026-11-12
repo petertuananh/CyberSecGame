@@ -170,6 +170,32 @@ html, body {
     box-shadow: 0 0 10px rgba(0, 210, 211, 0.5);
 }
 
+/* Nút Mở Helper & Quản Lý Câu Hỏi */
+.btn-helper {
+    background: #2c1a4d;
+    color: var(--accent-gold);
+    border: 1.5px solid #8e44ad;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+.btn-helper:hover {
+    background: #4a235a;
+    border-color: var(--accent-gold);
+    color: #ffffff;
+    transform: scale(1.04);
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+}
+
 #arduinoStatus {
     padding: 4px 9px;
     border-radius: 5px;

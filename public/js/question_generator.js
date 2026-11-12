@@ -357,10 +357,55 @@
     ];
 
     // ==========================================
-    // HÀM CHÍNH SINH 3 CÂU HỎI CHO MỖI VÒNG
-    // Đảm bảo không trùng lặp và mỗi câu hỏi đều mang dữ liệu random mới
+    // HÀM CHÍNH SINH CÂU HỎI CHO MỖI VÒNG
+    // Hỗ trợ đọc trực tiếp từ cấu hình JSON/Helper hoặc fallback sang Procedural Generator
     // ==========================================
-    function generateStageQuestions(stageNumber) {
+    function generateStageQuestions(stageNumber, config) {
+        // 1. ƯU TIÊN SỬ DỤNG DỮ LIỆU TỪ FILE CẤU HÌNH JSON (CỦA HELPER)
+        if (config && Array.isArray(config.sections)) {
+            const sec = config.sections.find(s => s.id === stageNumber);
+            if (sec && Array.isArray(sec.questions) && sec.questions.length > 0) {
+                const settings = config.settings || {};
+                const shouldShuffleQ = settings.shuffleQuestions !== false;
+                const shouldShuffleOpt = settings.shuffleOptions !== false;
+
+                let qPool = [...sec.questions];
+                if (shouldShuffleQ) {
+                    qPool = shuffle(qPool);
+                }
+
+                const count = Math.min(qPool.length, sec.questionsPerRound || 3);
+                const selected = qPool.slice(0, count);
+
+                const finalQuestions = selected.map(rawQ => {
+                    const rawOpts = (rawQ.options || []).map(o => o.replace(/^[A-D]\.\s*/, ""));
+                    const origCorrect = (typeof rawQ.correctIndex === "number") ? rawQ.correctIndex : 0;
+                    const items = rawOpts.map((opt, idx) => ({ text: opt, isCorrect: idx === origCorrect }));
+
+                    let finalItems = items;
+                    if (shouldShuffleOpt) {
+                        finalItems = shuffle(items);
+                    }
+
+                    const correctPos = finalItems.findIndex(item => item.isCorrect);
+                    const prefixes = ["A. ", "B. ", "C. ", "D. "];
+                    const finalOptions = finalItems.map((item, idx) => (prefixes[idx] || "") + item.text);
+
+                    return {
+                        id: rawQ.id,
+                        question: rawQ.question,
+                        options: finalOptions,
+                        correct: Math.max(0, correctPos),
+                        rosesReward: (typeof rawQ.rosesReward === "number") ? rawQ.rosesReward : 1,
+                        explanation: rawQ.explanation || ""
+                    };
+                });
+
+                return finalQuestions;
+            }
+        }
+
+        // 2. FALLBACK VỀ MÃ SINH THỦ TỤC NGẪU NHIÊN (PROCEDURAL GENERATOR)
         let generators = [];
         if (stageNumber === 1) generators = [...stage1Generators];
         else if (stageNumber === 2) generators = [...stage2Generators];
@@ -370,7 +415,9 @@
         const shuffledGen = shuffle(generators);
         const questions = [];
         for (let i = 0; i < 3; i++) {
-            questions.push(shuffledGen[i]());
+            const q = shuffledGen[i]();
+            q.rosesReward = 1;
+            questions.push(q);
         }
         return questions;
     }

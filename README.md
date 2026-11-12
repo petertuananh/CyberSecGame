@@ -79,15 +79,48 @@ flowchart TD
     - *Bão Mã Độc*: Rơi mất **-1** hoa hồng.
 
 ### 3. Trận Đánh Boss Rồng (Final Boss Battle)
-- Boss Rồng có **9 Máu (HP)**. Người chơi cần tích lũy tối thiểu **$\ge 9$ bông hồng** để có đủ hỏa lực tiêu diệt Boss!
+- Boss Rồng có **9 Máu (HP)** (có thể chỉnh trong Helper). Người chơi cần tích lũy tối thiểu **$\ge 9$ bông hồng** để có đủ hỏa lực tiêu diệt Boss!
 - Rồng xuất hiện ngẫu nhiên ở 1 trong 4 cổng tương ứng với 4 nút:
   - **Vị trí [A]**: Cổng trên bên trái
   - **Vị trí [B]**: Cổng trên bên phải
   - **Vị trí [C]**: Cổng dưới bên trái
   - **Vị trí [D]**: Cổng dưới bên phải
 - Mỗi lần Rồng xuất hiện, thanh thời gian phản xạ giảm dần. Người chơi phải bấm nhanh nút tương ứng (A, B, C, D) để phóng hoa hồng bắn trúng Rồng (cơ chế bắn bia / whack-a-mole).
-- **Nếu bắn trúng 9 lần**: Rồng tan biến, mở bung **Rương Kho Báu Mật Mã Hoàng Kim** rực rỡ $\rightarrow$ **CHIẾN THẮNG!**
+- **Nếu bắn trúng đủ máu**: Rồng tan biến, mở bung **Rương Kho Báu Mật Mã Hoàng Kim** rực rỡ $\rightarrow$ **CHIẾN THẮNG!**
 - **Nếu hết hoa hồng mà Rồng chưa chết**: Rồng khạc lửa hất tung người chơi rơi thẳng xuống **Thung Lũng vực thẳm** $\rightarrow$ **GAME OVER!**
+
+---
+
+## 🛠️ TRÌNH QUẢN LÝ CÂU HỎI & CẤU HÌNH SÂU (HELPER / JSON CONFIGURATOR)
+
+Hệ thống tích hợp một **Dashboard quản trị và cấu hình sâu (Helper)** trực quan, tiện lợi dành cho giáo viên và ban tổ chức:
+
+- **Cách mở Helper**:
+  - Nhấp vào nút **`⚙️ HELPER`** trên thanh Top Bar của game.
+  - Hoặc mở trình duyệt truy cập: **`http://localhost:3000/helper`** (hoặc `http://localhost:3000/editor`).
+
+### Các tính năng cốt lõi của Helper:
+1. **🌐 Quản lý Sections (Vòng chơi / Thế giới)**:
+   - Thêm, sửa, xóa các vòng chơi (tạo thêm Vòng 4, Vòng 5 dễ dàng).
+   - Tùy biến Tên vòng, Icon pixel (Rừng, Sóng, Mây, Khiên, Kiếm...), Thời tiết đặc trưng (Nắng, Mưa, Tuyết).
+   - Thiết lập số câu hỏi bốc ra mỗi lượt chơi (`questionsPerRound`) và số câu đúng tối thiểu cần đạt để pass vòng (`passThreshold`).
+2. **❓ Ngân hàng Câu hỏi & Hoa Hồng từng câu**:
+   - Soạn thảo đề bài, 4 phương án lựa chọn A, B, C, D.
+   - Chọn trực quan đáp án đúng chỉ bằng một cú nhấp chuột.
+   - **Tùy chỉnh số hoa hồng thưởng riêng cho từng câu** (`rosesReward`): Đặt 1, 2, 3 hoa hồng... tùy theo độ khó của câu hỏi!
+   - Biên soạn Lời giải thích / Bí kíp bảo mật hiển thị sau mỗi câu trả lời.
+   - Thao tác nhanh: Thêm mới, Sửa, Nhân bản (Duplicate), Xóa câu hỏi.
+3. **🎲 Cài đặt Ngẫu nhiên & Minigame**:
+   - Bật/tắt xáo trộn câu hỏi mỗi lượt chơi (`shuffleQuestions`).
+   - Bật/tắt xáo trộn vị trí đáp án A/B/C/D (`shuffleOptions`) để chống học vẹt vị trí nút.
+   - Cấu hình máu Boss Rồng (`bossHP`), số hoa hồng cần có, tốc độ di chuyển của Rồng.
+   - Tùy chỉnh bộ Thẻ Bài Ma Thuật (Tên thẻ, Thưởng/Phạt hoa hồng, Nội dung).
+4. **💾 Lưu & Đồng bộ qua File JSON**:
+   - Dữ liệu lưu an toàn vào file **`data/game_config.json`**.
+   - **Lưu trực tiếp vào Game**: Cập nhật tức thì vào màn hình game đang chạy qua WebSocket (Realtime Sync) mà không cần tải lại trang.
+   - **Tải File JSON (Export)**: Tải file `.json` về máy tính để sao lưu hoặc chia sẻ cho các máy khác.
+   - **Nạp File JSON (Import)**: Chọn file `.json` từ máy tính nạp vào Helper để tiếp tục chỉnh sửa.
+   - **Khôi phục mặc định (Reset)**: Khôi phục về bộ câu hỏi chuẩn ban đầu bất kỳ lúc nào.
 
 ---
 

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Quản Lý & Cấu Hình Câu Hỏi - Vệ Binh Mật Khẩu</title>
+    <link rel="icon" type="image/x-icon" href="/images/logo_nbk_pixel.png">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Segoe+UI:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/helper.css">
+</head>
+<body>
+    <div class="helper-app">
+        <!-- TOP NAVIGATION BAR -->
+        <header class="helper-header">
+            <div class="header-left">
+                <a href="/" class="brand-link" title="Quay lại Game">
+                    <img src="/images/logo_nbk_pixel.png" class="brand-logo" alt="Logo">
+                    <div class="brand-info">
+                        <h1 class="brand-name">CYBERSEC HELPER</h1>
+                        <span class="brand-desc">TRÌNH QUẢN LÝ CÂU HỎI & CẤU HÌNH SÂU GAME</span>
+                    </div>
+                </a>
+                <div id="syncStatus" class="status-pill status-online">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Đã kết nối Server</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button id="btnSaveConfig" class="action-btn btn-save" title="Lưu dữ liệu vào server và áp dụng ngay vào game">
+                    💾 LƯU VÀO GAME
+                </button>
+                <button id="btnExportJson" class="action-btn btn-export" title="Tải file game_config.json về máy tính">
+                    📥 TẢI FILE JSON
+                </button>
+                <label class="action-btn btn-import" title="Chọn file .json từ máy tính để nạp vào Helper">
+                    📤 NẠP FILE JSON
+                    <input type="file" id="fileInputJson" accept=".json" style="display:none">
+                </label>
+                <button id="btnResetConfig" class="action-btn btn-reset" title="Khôi phục về bộ câu hỏi mặc định ban đầu">
+                    🔄 MẶC ĐỊNH
+                </button>
+                <a href="/" target="_blank" class="action-btn btn-play" title="Mở cửa sổ chơi Game">
+                    🎮 VÀO CHƠI GAME
+                </a>
+            </div>
+        </header>
+
+        <!-- MAIN NAVIGATION TABS -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="tab-sections">
+                <span class="tab-icon">🌐</span>
+                <span class="tab-text">1. Vòng Chơi (Sections)</span>
+                <span id="badgeSectionsCount" class="tab-badge">3</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-questions">
+                <span class="tab-icon">❓</span>
+                <span class="tab-text">2. Ngân Hàng Câu Hỏi & Hoa Hồng</span>
+                <span id="badgeQuestionsCount" class="tab-badge">15</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-random">
+                <span class="tab-icon">🎲</span>
+                <span class="tab-text">3. Cài Đặt Ngẫu Nhiên & Boss</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-json">
+                <span class="tab-icon">📄</span>
+                <span class="tab-text">4. Trình Xem Mã JSON</span>
+            </button>
+        </nav>
+
+        <!-- TAB CONTENT CONTAINER -->
+        <main class="tab-content-container">
+
+            <!-- TAB 1: SECTIONS (VÒNG CHƠI) -->
+            <section id="tab-sections" class="tab-pane active">
+                <div class="pane-header">
+                    <div class="pane-intro">
+                        <h2>CẤU HÌNH CÁC VÒNG CHƠI (SECTIONS / THẾ GIỚI)</h2>
+                        <p>Quản lý tên thế giới, biểu tượng, thời tiết đặc trưng, số câu hỏi mỗi lượt chơi và số câu đúng cần thiết để pass vòng.</p>
+                    </div>
+                    <button id="btnAddSection" class="btn-create">
+                        ➕ THÊM VÒNG MỚI
+                    </button>
+                </div>
+
+                <div id="sectionsList" class="sections-grid">
+                    <!-- Dynamic Section Cards Rendered via JS -->
+                </div>
+            </section>
+
+            <!-- TAB 2: QUESTIONS (NGÂN HÀNG CÂU HỎI & HOA HỒNG) -->
+            <section id="tab-questions" class="tab-pane">
+                <div class="pane-header filter-bar">
+                    <div class="filter-group">
+                        <label for="selectStageFilter" class="filter-label">CHỌN VÒNG ĐANG QUẢN LÝ:</label>
+                        <select id="selectStageFilter" class="custom-select">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div class="pane-actions">
+                        <span id="qCountText" class="count-indicator">5 câu hỏi</span>
+                        <button id="btnAddQuestion" class="btn-create">
+                            ➕ THÊM CÂU HỎI MỚI
+                        </button>
+                    </div>
+                </div>
+
+                <div id="questionsList" class="questions-list">
+                    <!-- Dynamic Question Cards Rendered via JS -->
+                </div>
+            </section>
+
+            <!-- TAB 3: RANDOM SETTINGS & MINIGAMES -->
+            <section id="tab-random" class="tab-pane">
+                <div class="settings-grid">
+                    <!-- Box 1: Cấu hình Random -->
+                    <div class="settings-card">
+                        <div class="card-head">
+                            <h3>🎲 CẤU HÌNH TÍNH NGẪU NHIÊN (RANDOMIZATION)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>Xáo Trộn Câu Hỏi Mỗi Vòng</strong>
+                                    <span>Tự động chọn ngẫu nhiên các câu hỏi trong ngân hàng cho mỗi lượt chơi, không bị lặp thứ tự.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="chkShuffleQuestions" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>Xáo Trộn Vị Trí Đáp Án (A, B, C, D)</strong>
+                                    <span>Đảo ngẫu nhiên vị trí các lựa chọn để người chơi không học vẹt vị trí nút bấm.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="chkShuffleOptions" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>Cho Phép Nhấn Phím B Để Bỏ Qua Lời Thoại Cốt Truyện</strong>
+                                    <span>Người chơi có thể bấm nút B để tua nhanh đến vòng chơi đầu tiên.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="chkAllowSkipStory" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Box 2: Cấu hình Trận Đánh Boss Rồng -->
+                    <div class="settings-card">
+                        <div class="card-head">
+                            <h3>🐉 CẤU HÌNH BOSS CUỐI (RỒNG HẮC ÁM)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <label for="inputBossHP">Máu Của Rồng (HP):</label>
+                                <input type="number" id="inputBossHP" class="form-input" min="1" max="50" value="9">
+                                <small>Số lần người chơi cần bắn trúng Rồng để chiến thắng.</small>
+                            </div>
+
+                            <div class="form-row">
+                                <label for="inputRequiredRoses">Số Hoa Hồng Tối Thiểu Để Chiến Đấu:</label>
+                                <input type="number" id="inputRequiredRoses" class="form-input" min="1" max="50" value="9">
+                                <small>Nếu có ít hơn số hoa này, người chơi sẽ bị cảnh báo nguy hiểm thiếu hỏa lực.</small>
+                            </div>
+
+                            <div class="form-row">
+                                <label for="inputBossSpeed">Thời Gian Đổi Cổng Của Rồng (mili-giây):</label>
+                                <input type="number" id="inputBossSpeed" class="form-input" min="500" max="5000" step="100" value="1400">
+                                <small>Thời gian Rồng dừng lại ở mỗi cổng A, B, C, D trước khi bay sang cổng khác (1400ms = 1.4 giây).</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Box 3: Thẻ Bài Ma Thuật Minigame -->
+                    <div class="settings-card full-width">
+                        <div class="card-head">
+                            <h3>🃏 DANH SÁCH THẺ BÀI MA THUẬT (MINIGAME BỐC THẺ)</h3>
+                            <button id="btnAddCard" class="btn-create btn-small">➕ THÊM THẺ MỚI</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="cardsList" class="cards-table-container">
+                                <!-- Cards rendered via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: RAW JSON CODE EDITOR -->
+            <section id="tab-json" class="tab-pane">
+                <div class="pane-header">
+                    <div class="pane-intro">
+                        <h2>TRÌNH SOẠN THẢO TRỰC TIẾP MÃ NGUỒN JSON</h2>
+                        <p>Xem, sao chép hoặc dán toàn bộ cấu hình JSON để chỉnh sửa nâng cao hoặc chuyển đổi giữa các phòng máy.</p>
+                    </div>
+                    <div class="pane-actions">
+                        <button id="btnFormatJson" class="btn-secondary">🧹 CĂN CHỈNH ĐẸP</button>
+                        <button id="btnApplyRawJson" class="btn-create">⚡ ÁP DỤNG MÃ JSON</button>
+                    </div>
+                </div>
+
+                <div class="raw-json-wrapper">
+                    <textarea id="rawJsonEditor" class="json-textarea" spellcheck="false"></textarea>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL SOẠN THẢO SECTION -->
+    <div id="modalSection" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modalSectionTitle">CHỈNH SỬA VÒNG CHƠI</h3>
+                <button class="modal-close" data-close="modalSection">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>Mã ID Vòng:</label>
+                    <input type="number" id="secInputId" class="form-input" min="1" max="10" readonly>
+                </div>
+                <div class="form-row">
+                    <label>Tên Vòng Chơi:</label>
+                    <input type="text" id="secInputName" class="form-input" placeholder="VD: VÒNG 1: KHU RỪNG MẬT MÃ">
+                </div>
+                <div class="form-row form-cols-2">
+                    <div>
+                        <label>Biểu Tượng (Icon Pixel):</label>
+                        <select id="secSelectIcon" class="custom-select">
+                            <option value="tree">🌲 Khu Rừng (tree)</option>
+                            <option value="wave">🌊 Đại Dương (wave)</option>
+                            <option value="cloud">☁️ Tầng Mây (cloud)</option>
+                            <option value="shield">🛡️ Khiên Chắn (shield)</option>
+                            <option value="sword">⚔️ Gươm Hiệp Sĩ (sword)</option>
+                            <option value="star">⭐ Ngôi Sao (star)</option>
+                            <option value="dice">🎲 Xúc Xắc (dice)</option>
+                            <option value="dragon">🐉 Rồng Lửa (dragon)</option>
+                            <option value="lightbulb">💡 Ý Tưởng (lightbulb)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Thời Tiết Đặc Trưng:</label>
+                        <select id="secSelectWeather" class="custom-select">
+                            <option value="SUNNY">☀️ Nắng Ấm (SUNNY)</option>
+                            <option value="RAIN">🌧️ Mưa Rơi (RAIN)</option>
+                            <option value="SNOW">❄️ Tuyết Trắng (SNOW)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row form-cols-2">
+                    <div>
+                        <label>Số Câu Hỏi Mỗi Lượt Chơi:</label>
+                        <input type="number" id="secInputQPerRound" class="form-input" min="1" max="20" value="3">
+                    </div>
+                    <div>
+                        <label>Số Câu Đúng Cần Để Pass Vòng:</label>
+                        <input type="number" id="secInputPassThreshold" class="form-input" min="1" max="20" value="3">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Mô Tả Vòng Chơi (Hiển thị đầu vòng):</label>
+                    <textarea id="secInputDesc" class="form-textarea" rows="2" placeholder="Mô tả bối cảnh thế giới..."></textarea>
+                </div>
+                <div class="form-row">
+                    <label>Lời Dẫn Hướng Dẫn:</label>
+                    <input type="text" id="secInputSubDesc" class="form-input" placeholder="VD: Hãy trả lời đúng các câu để tích lũy hoa hồng...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalSection">HỦY BỎ</button>
+                <button id="btnSaveSectionModal" class="btn-create">LƯU VÒNG CHƠI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SOẠN THẢO CÂU HỎI & HOA HỒNG -->
+    <div id="modalQuestion" class="modal-overlay">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3 id="modalQuestionTitle">CHỈNH SỬA CÂU HỎI</h3>
+                <button class="modal-close" data-close="modalQuestion">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>Vòng Chơi Chứa Câu Hỏi:</label>
+                    <select id="qSelectStage" class="custom-select"></select>
+                </div>
+
+                <div class="form-row">
+                    <label>Nội Dung Đề Bài Câu Hỏi: <span class="required">*</span></label>
+                    <textarea id="qInputText" class="form-textarea" rows="3" placeholder="Nhập câu hỏi an ninh mạng hoặc tình huống tại đây..."></textarea>
+                </div>
+
+                <!-- 4 ĐÁP ÁN A, B, C, D -->
+                <div class="options-container">
+                    <label class="section-label">4 ĐÁP ÁN LỰA CHỌN & CHỌN ĐÁP ÁN ĐÚNG: <span class="required">*</span></label>
+
+                    <div class="option-edit-row">
+                        <label class="opt-label opt-a">
+                            <input type="radio" name="optCorrect" value="0"> A
+                        </label>
+                        <input type="text" id="qInputOpt0" class="form-input opt-input" placeholder="Nội dung đáp án A...">
+                    </div>
+
+                    <div class="option-edit-row">
+                        <label class="opt-label opt-b">
+                            <input type="radio" name="optCorrect" value="1"> B
+                        </label>
+                        <input type="text" id="qInputOpt1" class="form-input opt-input" placeholder="Nội dung đáp án B...">
+                    </div>
+
+                    <div class="option-edit-row">
+                        <label class="opt-label opt-c">
+                            <input type="radio" name="optCorrect" value="2"> C
+                        </label>
+                        <input type="text" id="qInputOpt2" class="form-input opt-input" placeholder="Nội dung đáp án C...">
+                    </div>
+
+                    <div class="option-edit-row">
+                        <label class="opt-label opt-d">
+                            <input type="radio" name="optCorrect" value="3"> D
+                        </label>
+                        <input type="text" id="qInputOpt3" class="form-input opt-input" placeholder="Nội dung đáp án D...">
+                    </div>
+                </div>
+
+                <!-- CẤU HÌNH HOA HỒNG THƯỞNG CHO CÂU NÀY -->
+                <div class="reward-box">
+                    <div class="reward-row">
+                        <span class="reward-icon">🌹</span>
+                        <div class="reward-input-group">
+                            <label for="qInputRoses"><strong>SỐ HOA HỒNG THƯỞNG KHI TRẢ LỜI ĐÚNG CÂU NÀY:</strong></label>
+                            <input type="number" id="qInputRoses" class="form-input reward-input" min="1" max="10" value="1">
+                        </div>
+                        <span class="reward-tip">Cộng ngay vào kho hoa hồng để tích lũy tiêu diệt Boss Rồng</span>
+                    </div>
+                </div>
+
+                <!-- BÍ KÍP BẢO MẬT -->
+                <div class="form-row">
+                    <label>Bí Kíp Bảo Mật (Giải thích hiển thị sau khi trả lời): <span class="required">*</span></label>
+                    <textarea id="qInputExplanation" class="form-textarea" rows="2" placeholder="Giải thích lý do đúng/sai và kiến thức an toàn thông tin cốt lõi..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalQuestion">HỦY BỎ</button>
+                <button id="btnSaveQuestionModal" class="btn-create">LƯU CÂU HỎI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SOẠN THẢO THẺ BÀI MA THUẬT -->
+    <div id="modalCard" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modalCardTitle">CHỈNH SỬA THẺ BÀI MA THUẬT</h3>
+                <button class="modal-close" data-close="modalCard">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>Tên Thẻ Bài:</label>
+                    <input type="text" id="cardInputTitle" class="form-input" placeholder="VD: KHO BÁU MŨ TRẮNG">
+                </div>
+                <div class="form-row form-cols-2">
+                    <div>
+                        <label>Loại Thẻ:</label>
+                        <select id="cardSelectType" class="custom-select">
+                            <option value="bonus">Thưởng Hoa Hồng (bonus)</option>
+                            <option value="penalty">Phạt / Trừ Hoa Hồng (penalty)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Số Hoa Hồng Thay Đổi (+ hoặc -):</label>
+                        <input type="number" id="cardInputRoses" class="form-input" value="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Mô Tả Hiệu Ứng Thẻ:</label>
+                    <textarea id="cardInputDesc" class="form-textarea" rows="2" placeholder="Mô tả thông điệp an ninh mạng của thẻ..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalCard">HỦY BỎ</button>
+                <button id="btnSaveCardModal" class="btn-create">LƯU THẺ BÀI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="toast"></div>
+
+    <script src="/js/helper.js"></script>
+</body>
+</html>

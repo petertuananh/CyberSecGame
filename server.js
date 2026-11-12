@@ -9,6 +9,7 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const { WebSocketServer } = require('ws');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
@@ -21,7 +22,41 @@ const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3000;
 const tunnelManager = new TunnelManager(PORT);
 
-app.use(express.json());
+// Quản lý file cấu hình game (Sections, Questions, Roses, Random)
+const DATA_DIR = path.join(__dirname, 'data');
+const CONFIG_FILE = path.join(DATA_DIR, 'game_config.json');
+const DEFAULT_CONFIG_FILE = path.join(DATA_DIR, 'default_config.json');
+
+function loadGameConfig() {
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
+            return JSON.parse(raw);
+        }
+    } catch (e) {
+        console.warn('[Config] Lỗi đọc game_config.json, thử đọc default_config.json:', e.message);
+    }
+    try {
+        if (fs.existsSync(DEFAULT_CONFIG_FILE)) {
+            const raw = fs.readFileSync(DEFAULT_CONFIG_FILE, 'utf8');
+            const def = JSON.parse(raw);
+            saveGameConfig(def);
+            return def;
+        }
+    } catch (e) {
+        console.error('[Config] Lỗi đọc default_config.json:', e.message);
+    }
+    return null;
+}
+
+function saveGameConfig(cfg) {
+    if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
+}
+
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Định tuyến đường dẫn ngắn cho điện thoại
@@ -31,6 +66,69 @@ app.get('/controller', (req, res) => {
 
 app.get('/mobile', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'controller.html'));
+});
+
+// Định tuyến đường dẫn trang Helper & Editor quản lý câu hỏi
+app.get('/helper', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'helper.html'));
+});
+
+app.get('/editor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'helper.html'));
+});
+
+// API lấy cấu hình game hiện tại
+app.get('/api/config', (req, res) => {
+    const cfg = loadGameConfig();
+    if (!cfg) {
+        return res.status(500).json({ error: 'Không thể tải cấu hình game' });
+    }
+    res.json(cfg);
+});
+
+// API lưu cấu hình game mới từ Helper
+app.post('/api/config', (req, res) => {
+    try {
+        const newConfig = req.body;
+        if (!newConfig || !Array.isArray(newConfig.sections)) {
+            return res.status(400).json({ error: 'Dữ liệu cấu hình không hợp lệ (phải có danh sách sections)' });
+        }
+        saveGameConfig(newConfig);
+        const totalQ = newConfig.sections.reduce((acc, s) => acc + (s.questions ? s.questions.length : 0), 0);
+        console.log(`[Config] 💾 Đã lưu cấu hình mới (${newConfig.sections.length} sections, ${totalQ} câu hỏi)!`);
+
+        // Phát sự kiện cập nhật cấu hình cho tất cả game client đang mở
+        broadcast({
+            type: 'CONFIG_UPDATED',
+            config: newConfig
+        });
+
+        res.json({ success: true, message: 'Đã lưu cấu hình vào game thành công!' });
+    } catch (e) {
+        console.error('[Config] Lỗi lưu cấu hình:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// API khôi phục cấu hình mặc định
+app.post('/api/config/reset', (req, res) => {
+    try {
+        if (fs.existsSync(DEFAULT_CONFIG_FILE)) {
+            const raw = fs.readFileSync(DEFAULT_CONFIG_FILE, 'utf8');
+            const def = JSON.parse(raw);
+            saveGameConfig(def);
+            console.log('[Config] 🔄 Đã khôi phục cấu hình game về mặc định!');
+            broadcast({
+                type: 'CONFIG_UPDATED',
+                config: def
+            });
+            return res.json({ success: true, config: def, message: 'Đã khôi phục cấu hình mặc định!' });
+        }
+        res.status(404).json({ error: 'Không tìm thấy file default_config.json' });
+    } catch (e) {
+        console.error('[Config] Lỗi reset cấu hình:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Trạng thái kết nối Serial
@@ -214,6 +312,15 @@ wss.on('connection', (ws) => {
         type: 'CONTROLLER_COUNT',
         count: tunnelManager.getControllerCount()
     }));
+
+    // Gửi cấu hình game hiện tại
+    const currentCfg = loadGameConfig();
+    if (currentCfg) {
+        ws.send(JSON.stringify({
+            type: 'CONFIG_SYNC',
+            config: currentCfg
+        }));
+    }
 
     ws.on('message', (raw) => {
         try {

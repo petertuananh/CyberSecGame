@@ -14,6 +14,10 @@ class CyberSecGame {
         // START -> STAGE_INTRO -> QUESTION -> QUESTION_RESULT -> STAGE_CLEAR -> DICE -> CARD -> TRAVELING -> BOSS_INTRO -> BOSS_BATTLE -> VICTORY -> GAME_OVER
         this.state = "START";
 
+        // Cấu hình game nạp từ JSON / Helper
+        this.config = null;
+        this.currentStageConfig = null;
+
         // Tiến trình chơi
         this.stage = 1; // 1: Rừng, 2: Nước, 3: Mây
         this.stageQuestions = [];
@@ -113,6 +117,7 @@ class CyberSecGame {
         this._bindInputs();
         this._connectWebSocket();
         this._initQrModal();
+        this.loadConfig();
 
         // Start Loop
         requestAnimationFrame((t) => this.gameLoop(t));
@@ -211,6 +216,13 @@ class CyberSecGame {
                     this.updateQrModal(data.info);
                 } else if (data.type === "CONTROLLER_COUNT") {
                     this.updateControllerCount(data.count);
+                } else if (data.type === "CONFIG_SYNC" || data.type === "CONFIG_UPDATED") {
+                    if (data.config) {
+                        this.applyConfig(data.config);
+                        if (data.type === "CONFIG_UPDATED") {
+                            this._showToast("🔔 Cấu hình & câu hỏi đã cập nhật từ Helper!", "lightbulb");
+                        }
+                    }
                 }
             } catch (e) {
                 console.error("WS Parse error:", e);
@@ -220,6 +232,45 @@ class CyberSecGame {
         this.ws.onclose = () => {
             setTimeout(() => this._connectWebSocket(), 2000);
         };
+    }
+
+    async loadConfig() {
+        try {
+            const res = await fetch("/api/config");
+            if (res.ok) {
+                const data = await res.json();
+                this.applyConfig(data);
+                console.log("[Game] Đã nạp thành công cấu hình từ server (/api/config)!");
+            }
+        } catch (e) {
+            console.warn("[Game] Không thể tải /api/config, dùng cấu hình mặc định:", e.message);
+        }
+    }
+
+    applyConfig(cfg) {
+        if (!cfg) return;
+        this.config = cfg;
+
+        // Cập nhật thẻ bài ma thuật từ cấu hình
+        if (Array.isArray(cfg.magicCards) && cfg.magicCards.length > 0) {
+            this.cards = cfg.magicCards;
+        }
+
+        // Cập nhật cài đặt Boss & Minigame
+        if (cfg.settings) {
+            if (typeof cfg.settings.bossHP === "number") {
+                this.bossMaxHP = cfg.settings.bossHP;
+                if (this.state !== "BOSS_BATTLE") this.bossHP = this.bossMaxHP;
+            }
+            if (typeof cfg.settings.bossSpeedMs === "number") {
+                this.bossMaxTime = cfg.settings.bossSpeedMs / 1000;
+            }
+        }
+
+        // Cập nhật cấu hình vòng chơi hiện tại nếu có
+        if (cfg.sections) {
+            this.currentStageConfig = cfg.sections.find(s => s.id === this.stage) || null;
+        }
     }
 
     highlightDockButton(button) {
@@ -662,13 +713,26 @@ class CyberSecGame {
         this.stage = stageNum;
         this.currentQIndex = 0;
         this.stageCorrectCount = 0;
-        this.stageQuestions = window.QuestionGenerator.generateStageQuestions(stageNum);
+
+        if (this.config && Array.isArray(this.config.sections)) {
+            this.currentStageConfig = this.config.sections.find(s => s.id === stageNum) || null;
+        } else {
+            this.currentStageConfig = null;
+        }
+
+        this.stageQuestions = window.QuestionGenerator.generateStageQuestions(stageNum, this.config);
 
         // Đổi thời tiết tự nhiên theo vòng chơi
         if (this.weather) {
-            if (stageNum === 1) this.weather.setWeather('SUNNY'); // Vòng 1: Rừng nắng ấm
-            else if (stageNum === 2) this.weather.setWeather('RAIN'); // Vòng 2: Biển mưa bão
-            else if (stageNum === 3) this.weather.setWeather('SNOW'); // Vòng 3: Tầng mây tuyết trắng
+            let targetWeather = 'SUNNY';
+            if (this.currentStageConfig && this.currentStageConfig.themeWeather) {
+                targetWeather = this.currentStageConfig.themeWeather;
+            } else {
+                if (stageNum === 1) targetWeather = 'SUNNY';
+                else if (stageNum === 2) targetWeather = 'RAIN';
+                else if (stageNum === 3) targetWeather = 'SNOW';
+            }
+            this.weather.setWeather(targetWeather);
 
             if (window.updateWeatherButtonIcon) {
                 window.updateWeatherButtonIcon(this.weather.currentType);
@@ -686,8 +750,9 @@ class CyberSecGame {
         if (selectedIdx === q.correct) {
             this.isAnswerCorrect = true;
             this.stageCorrectCount++;
-            this.roses++;
-            this.resultTitle = "CHÍNH XÁC! (+1 BÔNG HỒNG)";
+            const reward = (typeof q.rosesReward === 'number') ? q.rosesReward : 1;
+            this.roses += reward;
+            this.resultTitle = reward > 1 ? `CHÍNH XÁC! (+${reward} BÔNG HỒNG)` : (reward === 1 ? "CHÍNH XÁC! (+1 BÔNG HỒNG)" : "CHÍNH XÁC!");
             window.SoundEngine.play("correct");
             if (window.CursorFX && window.CursorFX.burst) {
                 window.CursorFX.burst(this.canvas.width / 2, this.canvas.height / 2, 24);
@@ -703,10 +768,15 @@ class CyberSecGame {
 
     nextQuestion() {
         this.currentQIndex++;
-        if (this.currentQIndex < 3) {
+        const totalQ = this.stageQuestions.length || 3;
+        const passThreshold = (this.currentStageConfig && typeof this.currentStageConfig.passThreshold === 'number')
+            ? this.currentStageConfig.passThreshold
+            : totalQ;
+
+        if (this.currentQIndex < totalQ) {
             this.state = "QUESTION";
         } else {
-            if (this.stageCorrectCount === 3) {
+            if (this.stageCorrectCount >= passThreshold) {
                 this.state = "STAGE_CLEAR";
                 window.SoundEngine.play("correct");
             } else {
@@ -736,11 +806,15 @@ class CyberSecGame {
 
     // Bắt đầu hành trình phiêu lưu bước đi từ thế giới này sang thế giới khác
     proceedAfterDice() {
-        if (this.stage < 3) {
+        const maxStages = (this.config && Array.isArray(this.config.sections) && this.config.sections.length > 0)
+            ? this.config.sections.length
+            : 3;
+
+        if (this.stage < maxStages) {
             this.startTravel(this.stage, this.stage + 1);
         } else {
-            // Sau Vòng 3 (Mây) -> Phiêu lưu tiến vào Hang Boss Rồng!
-            this.startTravel(3, 4);
+            // Sau Vòng cuối -> Phiêu lưu tiến vào Hang Boss Rồng!
+            this.startTravel(this.stage, maxStages + 1);
         }
     }
 
@@ -752,7 +826,11 @@ class CyberSecGame {
     }
 
     _finishTravel() {
-        if (this.travelTo <= 3) {
+        const maxStages = (this.config && Array.isArray(this.config.sections) && this.config.sections.length > 0)
+            ? this.config.sections.length
+            : 3;
+
+        if (this.travelTo <= maxStages) {
             this.startStage(this.travelTo);
         } else {
             this.state = "BOSS_INTRO";
@@ -761,7 +839,7 @@ class CyberSecGame {
 
     startBossFight() {
         this.state = "BOSS_BATTLE";
-        this.bossHP = 9;
+        this.bossHP = this.bossMaxHP || 9;
         this.bossHitsLanded = 0;
         this.bossTimer = 0;
         this._pickNewBossPosition();
@@ -1176,6 +1254,9 @@ class CyberSecGame {
         if (this.state.startsWith("BOSS")) {
             stageName = "BOSS CUỐI: RỒNG HẮC ÁM";
             stageIcon = "dragon";
+        } else if (this.currentStageConfig) {
+            stageName = this.currentStageConfig.name;
+            stageIcon = this.currentStageConfig.icon || "shield";
         } else if (this.stage === 1) {
             stageName = "VÒNG 1: KHU RỪNG MẬT MÃ";
             stageIcon = "tree";
@@ -1194,9 +1275,14 @@ class CyberSecGame {
         ctx.fillText(stageName, 52, 38);
 
         if (this.state === "QUESTION" || this.state === "QUESTION_RESULT") {
+            const totalQ = this.stageQuestions.length || 3;
+            const passThresh = (this.currentStageConfig && typeof this.currentStageConfig.passThreshold === 'number')
+                ? this.currentStageConfig.passThreshold
+                : totalQ;
+
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 19px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(`Câu: ${this.currentQIndex + 1}/3  |  Đúng: ${this.stageCorrectCount}/3`, 440, 38);
+            ctx.fillText(`Câu: ${this.currentQIndex + 1}/${totalQ}  |  Đúng: ${this.stageCorrectCount}/${passThresh}`, 440, 38);
 
             // Chỉ báo thời tiết hiện tại bằng Pixel Icon
             const wType = this.weather ? this.weather.currentType : 'SUNNY';
@@ -1562,7 +1648,13 @@ class CyberSecGame {
         let title = "";
         let stageIcon = "tree";
         let desc = "";
-        if (this.stage === 1) {
+        let subDesc = "Hãy trả lời đúng cả các câu hỏi để bảo vệ thế giới và tích lũy hoa hồng!";
+        if (this.currentStageConfig) {
+            title = this.currentStageConfig.name;
+            stageIcon = this.currentStageConfig.icon || "tree";
+            desc = this.currentStageConfig.description || "";
+            subDesc = this.currentStageConfig.subDescription || subDesc;
+        } else if (this.stage === 1) {
             title = "VÒNG 1: KHU RỪNG MẬT MÃ";
             stageIcon = "tree";
             desc = "Cây cối rợp bóng và chim chóc ríu rít! Khám phá độ dài & cấu trúc mật khẩu!";
@@ -1586,7 +1678,7 @@ class CyberSecGame {
 
         ctx.fillStyle = "#cbd5e1";
         ctx.font = "bold 18px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("Hãy trả lời đúng cả 3 câu hỏi để bảo vệ thế giới và tích lũy hoa hồng!", w / 2, h * 0.54);
+        ctx.fillText(subDesc, w / 2, h * 0.54);
 
         ctx.fillStyle = "#2ecc71";
         ctx.font = "bold 25px 'Segoe UI', Tahoma, sans-serif";
@@ -1709,9 +1801,10 @@ class CyberSecGame {
         ctx.textAlign = "center";
         ctx.fillText("CHÚC MỪNG BẠN ĐÃ PASS VÒNG!", w / 2, h * 0.25);
 
+        const totalQ = this.stageQuestions.length || 3;
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`Bạn đã trả lời chính xác cả 3/3 câu hỏi của Vòng ${this.stage}!`, w / 2, h * 0.38);
+        ctx.fillText(`Bạn đã trả lời chính xác cả ${this.stageCorrectCount}/${totalQ} câu hỏi của Vòng ${this.stage}!`, w / 2, h * 0.38);
 
         window.PixelSprites.drawPixelIcon(ctx, "rose", w / 2 - 160, h * 0.48 - 22, 28);
         ctx.fillStyle = "#f1c40f";
@@ -1743,9 +1836,14 @@ class CyberSecGame {
         ctx.textAlign = "center";
         ctx.fillText("CHƯA ĐẠT ĐIỀU KIỆN PASS VÒNG!", w / 2, h * 0.25);
 
+        const totalQ = this.stageQuestions.length || 3;
+        const passThresh = (this.currentStageConfig && typeof this.currentStageConfig.passThreshold === 'number')
+            ? this.currentStageConfig.passThreshold
+            : totalQ;
+
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`Bạn chỉ đúng ${this.stageCorrectCount}/3 câu. Cần đúng cả 3 câu để vượt qua!`, w / 2, h * 0.38);
+        ctx.fillText(`Bạn chỉ đúng ${this.stageCorrectCount}/${totalQ} câu. Cần đúng ${passThresh} câu để vượt qua!`, w / 2, h * 0.38);
 
         ctx.fillStyle = "#cbd5e1";
         ctx.font = "bold 19px 'Segoe UI', Tahoma, sans-serif";
@@ -1853,17 +1951,22 @@ class CyberSecGame {
 
         window.PixelSprites.drawDragon(ctx, w / 2 - 75, h * 0.24, 150, 130, false, performance.now() / 200);
 
+        const reqRoses = (this.config && this.config.settings && typeof this.config.settings.requiredRosesForBoss === 'number')
+            ? this.config.settings.requiredRosesForBoss
+            : 9;
+        const bossHPDisplay = this.bossMaxHP || 9;
+
         window.PixelSprites.drawPixelIcon(ctx, "rose", w / 2 - 230, h * 0.48 - 20, 26);
         window.PixelSprites.drawPixelIcon(ctx, "dragon", w / 2 + 180, h * 0.48 - 20, 26);
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`Bạn đang có: ${this.roses} Bông Hồng   |   Máu Boss Rồng: 9 HP`, w / 2, h * 0.48);
+        ctx.fillText(`Bạn đang có: ${this.roses} Bông Hồng   |   Máu Boss Rồng: ${bossHPDisplay} HP`, w / 2, h * 0.48);
 
-        if (this.roses >= 9) {
+        if (this.roses >= reqRoses) {
             window.PixelSprites.drawPixelIcon(ctx, "check", w / 2 - 310, h * 0.56 - 20, 26);
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("BẠN ĐÃ CÓ ĐỦ >= 9 HOA HỒNG ĐỂ TIÊU DIỆT RỒNG!", w / 2 + 15, h * 0.56);
+            ctx.fillText(`BẠN ĐÃ CÓ ĐỦ >= ${reqRoses} HOA HỒNG ĐỂ TIÊU DIỆT RỒNG!`, w / 2 + 15, h * 0.56);
             ctx.fillStyle = "#ecf0f1";
             ctx.font = "bold 18.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("Cách chơi: Rồng sẽ xuất hiện ngẫu nhiên ở 4 vị trí A, B, C, D.", w / 2, h * 0.62);
@@ -1872,7 +1975,7 @@ class CyberSecGame {
             window.PixelSprites.drawPixelIcon(ctx, "cross", w / 2 - 330, h * 0.56 - 20, 26);
             ctx.fillStyle = "#e74c3c";
             ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(`NGUY HIỂM! Bạn chỉ có ${this.roses} hoa hồng (cần 9 hoa để tiêu diệt Rồng)!`, w / 2 + 15, h * 0.56);
+            ctx.fillText(`NGUY HIỂM! Bạn chỉ có ${this.roses} hoa hồng (cần ${reqRoses} hoa để tiêu diệt Rồng)!`, w / 2 + 15, h * 0.56);
             ctx.fillStyle = "#ecf0f1";
             ctx.font = "bold 18.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("Nếu hết hoa hồng mà Rồng chưa chết, bạn sẽ bị ném xuống thung lũng!", w / 2, h * 0.63);

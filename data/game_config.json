@@ -1,0 +1,299 @@
+{
+  "version": "1.0.0",
+  "gameTitle": "VỆ BINH MẬT KHẨU",
+  "gameSubtitle": "CYBERSEC PASSWORD GUARDIAN",
+  "settings": {
+    "shuffleQuestions": true,
+    "shuffleOptions": true,
+    "allowSkipStory": true,
+    "bossHP": 9,
+    "requiredRosesForBoss": 9,
+    "bossSpeedMs": 1400,
+    "diceRules": {
+      "evenAction": "CARD",
+      "oddAction": "TRAVEL",
+      "description": "Số LẺ (1,3,5): Đi tiếp | Số CHẴN (2,4,6): Bốc thẻ may rủi"
+    }
+  },
+  "sections": [
+    {
+      "id": 1,
+      "name": "VÒNG 1: KHU RỪNG MẬT MÃ",
+      "icon": "tree",
+      "themeWeather": "SUNNY",
+      "description": "Cây cối rợp bóng và chim chóc ríu rít! Khám phá độ dài & cấu trúc mật khẩu!",
+      "subDescription": "Hãy trả lời đúng cả 3 câu hỏi để bảo vệ thế giới và tích lũy hoa hồng!",
+      "questionsPerRound": 3,
+      "passThreshold": 3,
+      "questions": [
+        {
+          "id": "q1_1",
+          "question": "Trong các mật khẩu sau đây, mật khẩu nào MẠNH NHẤT để bảo vệ dữ liệu cá nhân chống lại hacker?",
+          "options": [
+            "Hk9#mP2$xL5!vQ8@",
+            "12345678",
+            "password2026",
+            "nguyenvanan123"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 1,
+          "explanation": "Mật khẩu dài trên 14 ký tự kết hợp ngẫu nhiên đầy đủ chữ hoa, thường, số và ký tự đặc biệt có độ an toàn tối đa!"
+        },
+        {
+          "id": "q1_2",
+          "question": "Trong các mật khẩu sau, mật khẩu nào YẾU NHẤT và có nguy cơ bị máy tính hacker bẻ khóa trong chưa đầy 1 giây?",
+          "options": [
+            "iloveyou",
+            "P#9kX!mQ2$vL",
+            "MatTroi-RungXanh-88!",
+            "K9$xL2#pM7!a"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 1,
+          "explanation": "Mật khẩu 'iloveyou' quá ngắn và là từ thông dụng nằm trong từ điển tấn công Brute-force hàng đầu của hacker!"
+        },
+        {
+          "id": "q1_3",
+          "question": "Bạn tên là Hoàng sinh năm 2008 và đặt mật khẩu là 'Hoang2008'. Nhược điểm chí mạng của mật khẩu này là gì?",
+          "options": [
+            "Chứa thông tin cá nhân công khai, kẻ quen biết hoặc hacker dùng mạng xã hội đoán ra ngay",
+            "Mật khẩu này quá dài làm máy tính xử lý chậm",
+            "Có quá nhiều ký tự đặc biệt gây khó gõ",
+            "Đây là mật khẩu an toàn tuyệt đối không có lỗi nào"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Tuyệt đối không dùng tên, ngày sinh, trường lớp làm mật khẩu vì kẻ xấu dễ dàng tra cứu từ Facebook hay Zalo!"
+        },
+        {
+          "id": "q1_4",
+          "question": "Theo tiêu chuẩn an toàn an ninh mạng quốc tế (NIST), độ dài tối thiểu được khuyến nghị cho mật khẩu người dùng hiện nay là:",
+          "options": [
+            "Tối thiểu từ 12 đến 16 ký tự trở lên",
+            "Chỉ cần 4 đến 6 ký tự cho nhanh nhớ",
+            "Đúng 8 ký tự là đủ an toàn vĩnh viễn",
+            "Càng ngắn càng tốt để tiết kiệm bộ nhớ"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 1,
+          "explanation": "Độ dài là yếu tố then chốt số 1! Mỗi ký tự thêm vào sẽ nhân số phép thử của hacker lên hàng chục lần."
+        },
+        {
+          "id": "q1_5",
+          "question": "Tại sao việc thay thế chữ cái bằng số đơn giản (ví dụ: 'E' thành '3', 'A' thành '4' như 'P4ssw0rd') không còn thực sự an toàn?",
+          "options": [
+            "Các công cụ bẻ khóa hiện đại đều đã tích hợp sẵn bảng quy đổi Leet-speak thông dụng này",
+            "Máy chủ web từ chối tất cả các ký tự số",
+            "Làm mật khẩu bị ngắn đi so với ban đầu",
+            "Ký tự số làm tăng nguy cơ bị nhiễm virus"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Leet-speak (thay O bằng 0, A bằng 4...) đã quá phổ biến và được các bộ từ điển tấn công của hacker thử nghiệm đầu tiên!"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "VÒNG 2: VÙNG BIỂN DỮ LIỆU",
+      "icon": "wave",
+      "themeWeather": "RAIN",
+      "description": "Rong rêu uốn lượn và đàn cá tung tăng! Quản lý mật khẩu, xác thực 2FA & chống Phishing!",
+      "subDescription": "Vượt qua thử thách biển sâu để tích lũy thêm hoa hồng ma thuật!",
+      "questionsPerRound": 3,
+      "passThreshold": 3,
+      "questions": [
+        {
+          "id": "q2_1",
+          "question": "Bạn nhận được email cảnh báo: 'Tài khoản Ngân hàng bị KHÓA sau 24h! Bấm vào link http://vietcombank-xacminh-khancap.xyz để nhập mật khẩu'. Bạn nên xử lý thế nào?",
+          "options": [
+            "Bình tĩnh, tuyệt đối KHÔNG bấm link lạ, tự mở trình duyệt truy cập website chính thức của ngân hàng để kiểm tra",
+            "Bấm vào link ngay lập tức và điền mật khẩu để tránh bị khóa tài khoản",
+            "Chuyển tiếp email này cho bạn bè nhờ họ đăng nhập xác nhận hộ",
+            "Gửi lại email kèm ảnh chụp Căn cước công dân để ngân hàng đối soát"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Tên miền lạ chứa đuôi .xyz là bẫy Phishing! Kẻ gian đánh vào tâm lý hoảng loạn để lừa nạn nhân tự tay dâng mật khẩu."
+        },
+        {
+          "id": "q2_2",
+          "question": "Một người dùng có 10 tài khoản trực tuyến (Email, Facebook, Steam, Ngân hàng) và dùng CHUNG 1 mật khẩu. Hậu quả nguy hiểm nhất là gì?",
+          "options": [
+            "Chỉ cần 1 trang web kém bảo mật bị hack làm lộ mật khẩu, kẻ gian sẽ chiếm quyền toàn bộ 9 tài khoản còn lại!",
+            "Không có nguy hiểm gì vì dùng chung 1 mật khẩu rất tiện lợi và không bao giờ quên",
+            "Hệ điều hành máy tính của bạn sẽ bị xóa sạch toàn bộ tập tin",
+            "Tốc độ mạng Wi-Fi tại nhà sẽ bị suy giảm"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 1,
+          "explanation": "Hiệu ứng domino sụp đổ dây chuyền! Hacker sau khi có mật khẩu từ 1 diễn đàn nhỏ sẽ dùng bot thử đăng nhập tự động vào ngân hàng và email."
+        },
+        {
+          "id": "q2_3",
+          "question": "Kẻ gian bằng cách nào đó đã nhìn trộm được mật khẩu Facebook của bạn. Lớp phòng vệ nào sau đây sẽ CHẶN ĐỨNG kẻ gian đăng nhập thành công?",
+          "options": [
+            "Xác thực 2 yếu tố (2FA) yêu cầu mã OTP từ ứng dụng xác thực (Google Authenticator) hoặc khóa bảo mật phần cứng",
+            "Tắt màn hình máy tính ngay lập tức",
+            "Giảm độ sáng màn hình điện thoại về mức thấp nhất",
+            "Nhấn phím F5 liên tục trên bàn phím"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Có 2FA, kẻ gian dù biết chính xác mật khẩu vẫn không thể đăng nhập vì thiếu mã xác thực thứ 2 gửi về thiết bị cá nhân của bạn!"
+        },
+        {
+          "id": "q2_4",
+          "question": "Để mỗi tài khoản đều có một mật khẩu dài, ngẫu nhiên và không trùng lặp mà không lo bị quên, giải pháp an toàn chuẩn mực nhất là gì?",
+          "options": [
+            "Sử dụng phần mềm Trình quản lý mật khẩu (Password Manager) có mã hóa chuẩn quốc tế như Bitwarden, 1Password",
+            "Viết tất cả mật khẩu vào mẩu giấy rồi dán sau màn hình máy tính",
+            "Lưu toàn bộ mật khẩu vào một file Word không đặt khóa trên màn hình Desktop",
+            "Nhắn tin danh sách mật khẩu cho người quen nhờ giữ hộ"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 1,
+          "explanation": "Password Manager chỉ yêu cầu bạn nhớ 1 Master Password duy nhất, hệ thống tự động sinh và điền mật khẩu mã hóa cực mạnh cho mọi tài khoản."
+        },
+        {
+          "id": "q2_5",
+          "question": "Khi kết nối vào Wi-Fi công cộng miễn phí tại quán cà phê hoặc sân bay, biện pháp nào giúp bảo vệ mật khẩu không bị nghe lén?",
+          "options": [
+            "Bật mạng riêng ảo (VPN), chỉ truy cập các trang có chứng chỉ HTTPS và không thực hiện giao dịch tài chính nhạy cảm",
+            "Tắt phần mềm diệt virus trên máy",
+            "Chia sẻ mật khẩu tài khoản cho người cùng dùng Wi-Fi",
+            "Đổi mật khẩu tài khoản thành chuỗi số 111111"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Wi-Fi công cộng tiềm ẩn nguy cơ bị kẻ xấu dựng bẫy nghe lén dữ liệu (Man-in-the-Middle). Bật VPN và HTTPS sẽ mã hóa toàn bộ dữ liệu truyền tải."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "VÒNG 3: TẦNG MÂY THƯỢNG ĐỈNH",
+      "icon": "cloud",
+      "themeWeather": "SNOW",
+      "description": "Bay cùng những hòn đảo bồng bềnh! Cụm mật khẩu Passphrase & chống Brute-force!",
+      "subDescription": "Chinh phục đỉnh trời trước khi đối đầu với Rồng Hắc Ám!",
+      "questionsPerRound": 3,
+      "passThreshold": 3,
+      "questions": [
+        {
+          "id": "q3_1",
+          "question": "Khái niệm 'Passphrase' (Cụm mật khẩu) kết hợp nhiều từ ngẫu nhiên tạo độ dài vượt trội. Đâu là một Passphrase chuẩn mực sau đây?",
+          "options": [
+            "MatTroi-BienRong-CanhDieu-2026!",
+            "1234567890",
+            "P@ssw0rd",
+            "Abcdef123"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Passphrase gồm 3-4 từ tiếng Việt ngẫu nhiên kèm số và ký tự đặc biệt: cực kỳ dễ nhớ với con người nhưng tạo không gian tổ hợp khổng lồ khiến siêu máy tính hacker bó tay!"
+        },
+        {
+          "id": "q3_2",
+          "question": "Một mã PIN chỉ gồm 4 chữ số (0-9) có tổng cộng bao nhiêu tổ hợp, và máy tính bẻ khóa tự động (Brute Force) mất bao lâu?",
+          "options": [
+            "Tổng cộng 10.000 tổ hợp, máy tính thử hết trong chưa đầy 0,01 giây",
+            "Tổng cộng 100 tỷ tổ hợp, cần máy tính chạy liên tục 50 năm",
+            "Không thể bẻ khóa được vì chữ số được mã hóa lượng tử",
+            "Chỉ có đúng 10 tổ hợp duy nhất"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Mã PIN 4 số chỉ có 10^4 = 10.000 khả năng. Máy tính hiện đại thử hàng triệu phép tính/giây nên giải mã trong chớp mắt nếu không có giới hạn số lần nhập sai!"
+        },
+        {
+          "id": "q3_3",
+          "question": "Dịch vụ mạng xã hội vừa bị rò rỉ 50 triệu tài khoản. Kỹ thuật 'Credential Stuffing' mà hacker sẽ thực hiện tiếp theo là gì?",
+          "options": [
+            "Dùng danh sách mật khẩu vừa lộ để thử đăng nhập tự động hàng loạt vào Ngân hàng, Email và các dịch vụ khác",
+            "Cắt đứt toàn bộ hệ thống cáp quang biển quốc tế",
+            "Gửi email xin lỗi và hoàn tiền cho người bị lộ",
+            "Tự động nạp thêm tiền vào tài khoản của nạn nhân"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 3,
+          "explanation": "Credential Stuffing là chiêu thức dùng bot thử cặp tài khoản/mật khẩu bị lộ trên hàng ngàn trang web khác, khai thác thói quen dùng chung mật khẩu của người dùng!"
+        },
+        {
+          "id": "q3_4",
+          "question": "Trong các hệ thống máy chủ bảo mật chuẩn, mật khẩu của người dùng được lưu trữ dưới dạng mã băm (Hash) kèm 'Salt' để làm gì?",
+          "options": [
+            "Để ngay cả khi cơ sở dữ liệu bị đánh cắp, hacker cũng không thể đọc được mật khẩu gốc hay tra bảng Rainbow Table",
+            "Để máy chủ tự động đăng bài lên mạng xã hội thay cho người dùng",
+            "Để nén dung lượng mật khẩu về đúng 1 byte",
+            "Để người dùng không cần nhập mật khẩu khi đăng nhập"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 3,
+          "explanation": "Kỹ thuật Hashing một chiều + Thêm chuỗi ngẫu nhiên Salt đảm bảo quản trị viên hệ thống lẫn kẻ tấn công đều không thể khôi phục trực tiếp mật khẩu gốc."
+        },
+        {
+          "id": "q3_5",
+          "question": "So sánh giữa mật khẩu ngắn 8 ký tự phức tạp ('P@s1#x8!') và một Cụm mật khẩu 22 ký tự ('Ngua-Phi-Duong-Xa-2026!'), loại nào chống Brute-force tốt hơn?",
+          "options": [
+            "Cụm mật khẩu 22 ký tự vượt trội hơn hàng triệu lần vì số lượng tổ hợp tăng theo hàm mũ của độ dài",
+            "Mật khẩu 8 ký tự an toàn hơn vì càng ngắn máy tính càng khó đoán",
+            "Hai loại này hoàn toàn giống nhau về độ bảo mật",
+            "Cả hai đều bị giải trong đúng 1 giây như nhau"
+          ],
+          "correctIndex": 0,
+          "rosesReward": 2,
+          "explanation": "Độ dài là VUA! Mỗi ký tự thêm vào nhân số tổ hợp lên hàng chục lần, biến thời gian giải từ vài giờ thành hàng triệu năm."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "VÒNG 4: THẾ GIỚI MỚI",
+      "icon": "star",
+      "themeWeather": "SUNNY",
+      "description": "Mô tả bối cảnh thế giới an ninh mạng...",
+      "subDescription": "Hãy trả lời đúng để bảo vệ thế giới và tích lũy hoa hồng!",
+      "questionsPerRound": 3,
+      "passThreshold": 3,
+      "questions": []
+    }
+  ],
+  "magicCards": [
+    {
+      "id": "c1",
+      "title": "KHO BÁU MŨ TRẮNG",
+      "type": "bonus",
+      "roses": 1,
+      "description": "Chuyên gia an ninh mạng tặng bạn 1 bông hồng viện trợ!"
+    },
+    {
+      "id": "c2",
+      "title": "TƯỜNG LỬA HOÀNG KIM",
+      "type": "bonus",
+      "roses": 2,
+      "description": "Hệ thống tường lửa vững chắc thưởng bạn 2 bông hồng rực rỡ!"
+    },
+    {
+      "id": "c3",
+      "title": "THẦN HỘ MỆNH 2FA",
+      "type": "bonus",
+      "roses": 3,
+      "description": "Xác thực 2 yếu tố phát quang! Tặng ngay 3 bông hồng tối thượng!"
+    },
+    {
+      "id": "c4",
+      "title": "BÃO MÃ ĐỘC PHISHING",
+      "type": "penalty",
+      "roses": -1,
+      "description": "Mã độc quét qua làm rơi mất 1 bông hồng! Hãy cẩn trọng hơn!"
+    },
+    {
+      "id": "c5",
+      "title": "KHIÊN MÃ HÓA AES-256",
+      "type": "bonus",
+      "roses": 1,
+      "description": "Mã hóa cấp quân sự bảo vệ bạn! Tặng 1 bông hồng chiến đấu!"
+    }
+  ]
+}
