@@ -2,17 +2,19 @@
   "name": "cybersec-password-guardian",
   "version": "1.0.0",
   "description": "Game Pixel về Độ Mạnh Mật Khẩu với 5 nút bấm Arduino và NodeJS",
-  "main": "server.js",
+  "main": "main.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node -e \"console.log('OK')\""
+    "app": "electron .",
+    "dist": "electron-packager . CyberSecGame --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon.ico --prune=true"
   },
   "keywords": [
     "cybersecurity",
     "password-strength",
     "arduino",
     "pixel-game",
-    "nodejs"
+    "nodejs",
+    "electron"
   ],
   "author": "",
   "license": "MIT",
@@ -21,5 +23,9 @@
     "express": "^5.3.0",
     "serialport": "^13.0.0",
     "ws": "^8.22.2"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-packager": "^17.1.2"
   }
 }
