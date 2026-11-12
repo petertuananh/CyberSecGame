@@ -110,20 +110,25 @@ Bạn chỉ cần nối trực tiếp 5 nút bấm cơ (nút bấm arcade hoặc
 
 ## 🚀 HƯỚNG DẪN CÀI ĐẶT & CHẠY GAME
 
-### Cách 1: Chạy file `.exe` trực tiếp (Nhanh nhất)
+### Cách 1: Cài đặt vào máy tính bằng File Cài Đặt Setup (Khuyên dùng)
+1. Tải hoặc gửi file **`dist/CyberSecGame_Setup.exe`** (dung lượng ~79MB).
+2. Nhấp đúp vào file setup để mở trình cài đặt Windows:
+   - Tự động tạo biểu tượng ngoài màn hình Desktop (**Vệ Binh Mật Khẩu**).
+   - Tự động thêm vào Menu Start của Windows.
+   - Có thể gỡ cài đặt sạch sẽ bất kỳ lúc nào trong `Windows Settings > Apps`.
+3. Nhấp đúp vào icon ngoài Desktop là vào chơi ngay!
+
+### Cách 2: Chạy file `.exe` trực tiếp (Nhanh nhất khi chạy từ mã nguồn)
 1. Nhấp đúp vào file [CyberSecGame.exe](file:///c:/Users/peter/Downloads/CyberSecGame/CyberSecGame.exe) ngay tại thư mục gốc.
 2. Ứng dụng sẽ tự động kích hoạt server và mở cửa sổ game riêng biệt (không thanh địa chỉ trình duyệt).
 3. Nếu máy không hỗ trợ cửa sổ riêng, ứng dụng sẽ hiện hộp thoại hỏi người dùng và tự động chuyển hướng mở trên trình duyệt mặc định.
 
-### Cách 2: Chạy bản đóng gói Desktop Standalone (Để gửi tặng người khác)
+### Cách 3: Chạy bản đóng gói Portable ZIP (Để chép USB mang đi)
 - Bản đã đóng gói sẵn: `dist/CyberSecGame-win32-x64/CyberSecGame.exe`
-- File nén gửi tặng: `dist/CyberSecGame-Windows-x64.zip` (giải nén ra là chạy ngay, không cần cài đặt Node.js).
-- Để đóng gói lại bất kỳ lúc nào: Nhấp đúp file [build_exe.bat](file:///c:/Users/peter/Downloads/CyberSecGame/build_exe.bat) hoặc chạy lệnh:
-  ```bash
-  npm run dist
-  ```
+- File nén gửi tặng: `dist/CyberSecGame-Windows-x64.zip` (giải nén ra là chạy ngay, không cần cài đặt Node.js hay quyền Administrator).
+- Để đóng gói lại toàn bộ bất kỳ lúc nào: Nhấp đúp file [build_exe.bat](file:///c:/Users/peter/Downloads/CyberSecGame/build_exe.bat).
 
-### Cách 3: Chạy bằng dòng lệnh truyền thống
+### Cách 4: Chạy bằng dòng lệnh truyền thống
 1. Mở Terminal / PowerShell:
    ```bash
    npm start

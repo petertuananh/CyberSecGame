@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "app": "electron .",
-    "dist": "electron-packager . CyberSecGame --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon.ico --prune=true"
+    "dist": "electron-packager . CyberSecGame --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon.ico --prune=true",
+    "setup": "\"C:\\Users\\peter\\AppData\\Local\\Programs\\Inno Setup 6\\ISCC.exe\" installer.iss"
   },
   "keywords": [
     "cybersecurity",
