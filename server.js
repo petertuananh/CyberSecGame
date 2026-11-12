@@ -157,7 +157,9 @@ app.post('/api/config', (req, res) => {
             config: targetConfig,
             revision: serverRevision,
             savedBy: editorName,
-            savedAt: lastSavedMeta.savedAt
+            savedAt: lastSavedMeta.savedAt,
+            savedSummary: (body && body.savedSummary) || 'Cấu hình game',
+            savedTargetId: (body && body.savedTargetId) || null
         });
 
         res.json({
@@ -165,6 +167,7 @@ app.post('/api/config', (req, res) => {
             revision: serverRevision,
             savedBy: editorName,
             savedAt: lastSavedMeta.savedAt,
+            savedSummary: (body && body.savedSummary) || 'Cấu hình game',
             message: 'Đã lưu cấu hình vào game thành công!'
         });
     } catch (e) {
@@ -464,6 +467,68 @@ wss.on('connection', (ws) => {
                     collab.lastActive = Date.now();
                     broadcastHelperCollaborators();
                 }
+            }
+
+            // Sự kiện đang gõ trực tiếp vào 1 ô (Live Edit Field Typing & Sync: ô nào, chữ nào)
+            else if (data.type === 'HELPER_FIELD_EDIT') {
+                let senderInfo = null;
+                if (helperCollaborators.has(socketId)) {
+                    const collab = helperCollaborators.get(socketId);
+                    collab.lastActive = Date.now();
+                    collab.editingField = {
+                        targetType: data.targetType,
+                        targetId: data.targetId,
+                        fieldId: data.fieldId,
+                        fieldLabel: data.fieldLabel,
+                        value: data.value,
+                        updatedAt: Date.now()
+                    };
+                    collab.location = {
+                        type: data.targetType || 'editing',
+                        targetId: data.targetId,
+                        fieldId: data.fieldId,
+                        fieldLabel: data.fieldLabel,
+                        label: `Đang sửa [${data.fieldLabel || data.fieldId}]`
+                    };
+                    senderInfo = {
+                        socketId: socketId,
+                        clientId: collab.clientId,
+                        name: collab.name,
+                        color: collab.color,
+                        device: collab.device
+                    };
+                }
+
+                // Phát trực tiếp cho TẤT CẢ các client khác để hiển thị ô nào, chữ nào trong thời gian thực
+                broadcast({
+                    type: 'HELPER_FIELD_EDIT',
+                    socketId: socketId,
+                    clientId: (senderInfo && senderInfo.clientId) || data.clientId,
+                    sender: senderInfo || data.sender || { name: 'Đồng nghiệp', color: '#3498db' },
+                    targetType: data.targetType,
+                    targetId: data.targetId,
+                    fieldId: data.fieldId,
+                    fieldLabel: data.fieldLabel,
+                    value: data.value,
+                    selectionStart: data.selectionStart
+                });
+            }
+
+            // Rời khỏi ô đang nhập (Blur)
+            else if (data.type === 'HELPER_FIELD_BLUR') {
+                if (helperCollaborators.has(socketId)) {
+                    const collab = helperCollaborators.get(socketId);
+                    collab.lastActive = Date.now();
+                    delete collab.editingField;
+                }
+                broadcast({
+                    type: 'HELPER_FIELD_BLUR',
+                    socketId: socketId,
+                    clientId: ws.helperClientId || data.clientId,
+                    targetType: data.targetType,
+                    targetId: data.targetId,
+                    fieldId: data.fieldId
+                });
             }
 
             // Nhận tín hiệu nút bấm từ Điện thoại song song với Arduino

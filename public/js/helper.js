@@ -53,6 +53,73 @@
     let activeWs = null;
     let currentLocation = { type: 'viewing', label: 'Xem trang tổng quan' };
 
+    // Bảng theo dõi các ô đang được gõ trực tiếp (Live Field Typing Map)
+    // Key: `${targetType}_${targetId}_${fieldId}` -> msg
+    const peerFieldEdits = new Map();
+
+    // Ánh xạ tên gọi tiếng Việt thân thiện cho từng ô input
+    const FIELD_LABELS = {
+        'qInputText': 'Đề bài câu hỏi',
+        'qInputOpt0': 'Đáp án A',
+        'qInputOpt1': 'Đáp án B',
+        'qInputOpt2': 'Đáp án C',
+        'qInputOpt3': 'Đáp án D',
+        'optCorrect': 'Đáp án đúng (A/B/C/D)',
+        'qInputRoses': 'Số hoa hồng thưởng',
+        'qInputExplanation': 'Bí kíp bảo mật',
+        'qSelectStage': 'Vòng chơi chứa câu hỏi',
+        'secInputName': 'Tên vòng chơi',
+        'secInputBossName': 'Tên quái vật/Boss',
+        'secSelectIcon': 'Biểu tượng vòng',
+        'secSelectWeather': 'Thời tiết vòng',
+        'secInputQPerRound': 'Số câu mỗi lượt',
+        'secInputPassThreshold': 'Số câu đúng cần để pass',
+        'secInputDesc': 'Mô tả bối cảnh vòng',
+        'secInputSubDesc': 'Lời dẫn hướng dẫn',
+        'cardInputTitle': 'Tên thẻ bài',
+        'cardSelectType': 'Loại thẻ bài',
+        'cardInputRoses': 'Hoa hồng thẻ bài',
+        'cardInputDesc': 'Mô tả thẻ bài',
+        'chkShuffleQuestions': 'Xáo trộn câu hỏi',
+        'chkShuffleOptions': 'Xáo trộn đáp án',
+        'chkAllowSkipStory': 'Cho phép bỏ qua cốt truyện',
+        'inputBossHP': 'Máu Boss (HP)',
+        'inputRequiredRoses': 'Hoa hồng đánh Boss',
+        'inputBossSpeed': 'Tốc độ Boss'
+    };
+
+    let fieldEditThrottleTimer = null;
+    let lastFieldEditSentTime = 0;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function playSyncChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+            gain.gain.setValueAtTime(0.06, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.25);
+        } catch (e) {}
+    }
+
     // DOM Elements
     const syncStatusEl = document.getElementById("syncStatus");
     const btnSaveConfig = document.getElementById("btnSaveConfig");
@@ -108,13 +175,15 @@
 
     // Toast
     const toastEl = document.getElementById("toastNotification");
+    let toastTimer = null;
 
-    function showToast(message, isError = false) {
+    function showToast(message, isError = false, duration = 3200) {
         toastEl.textContent = message;
         toastEl.className = "toast show" + (isError ? " error" : "");
-        setTimeout(() => {
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
             toastEl.className = "toast";
-        }, 3200);
+        }, duration);
     }
 
     // ==========================================
@@ -188,9 +257,9 @@
     }
 
     // ==========================================
-    // 2. LƯU CẤU HÌNH LÊN SERVER (CÓ CHECK CONFLICT)
+    // 2. LƯU CẤU HÌNH LÊN SERVER (CÓ CHECK CONFLICT & TỰ ĐỘNG PHÁT CHO TẤT CẢ MỌI NGƯỜI)
     // ==========================================
-    async function saveConfigToServer(force = false) {
+    async function saveConfigToServer(force = false, summary = 'Cấu hình game', targetId = null) {
         // Thu thập cài đặt chung
         syncFormToState();
 
@@ -202,7 +271,9 @@
                     config: currentConfig,
                     baseRevision: baseRevision,
                     editorName: currentProfile.name,
-                    force: force
+                    force: force,
+                    savedSummary: summary,
+                    savedTargetId: targetId
                 }, null, 2)
             });
 
@@ -211,7 +282,7 @@
             // PHÁT HIỆN XUNG ĐỘT (409 CONFLICT)
             if (res.status === 409 && result.conflict) {
                 openConflictModal(result);
-                return;
+                return false;
             }
 
             if (!res.ok) throw new Error(result.error || "Lỗi lưu cấu hình");
@@ -220,10 +291,12 @@
             if (modalConflict.classList.contains("active")) {
                 modalConflict.classList.remove("active");
             }
-            showToast(`💾 Đã lưu cấu hình vào Game thành công! (Phiên bản #${baseRevision})`);
+            showToast(`💾 Đã lưu ${summary} & áp dụng ngay cho tất cả mọi người! (Bản #${baseRevision})`);
+            return true;
         } catch (e) {
             console.error("Lỗi lưu cấu hình:", e);
             showToast("❌ Lỗi khi lưu cấu hình: " + e.message, true);
+            return false;
         }
     }
 
@@ -433,16 +506,17 @@
         sec.questions.forEach((q, idx) => {
             const card = document.createElement("div");
             card.className = "question-card";
+            card.id = `qcard_${q.id}`;
             card.setAttribute("data-qid", q.id);
 
             const optKeys = ["A", "B", "C", "D"];
             const optsHtml = (q.options || []).map((opt, oIdx) => {
                 const isCorrect = (oIdx === q.correctIndex);
-                const optClean = opt.replace(/^[A-D]\.\s*/, "");
+                const optClean = (opt || "").replace(/^[A-D]\.\s*/, "");
                 return `
-                    <div class="opt-preview-item ${isCorrect ? 'correct' : ''}">
+                    <div class="opt-preview-item ${isCorrect ? 'correct' : ''}" data-opt-idx="${oIdx}">
                         <span class="opt-key opt-key-${optKeys[oIdx]}">${optKeys[oIdx]}</span>
-                        <span style="flex:1;">${optClean}</span>
+                        <span style="flex:1;">${escapeHtml(optClean)}</span>
                         ${isCorrect ? '<span style="font-size:11px; color:#2ecc71;">[ĐÚNG]</span>' : ''}
                     </div>
                 `;
@@ -452,10 +526,11 @@
 
             card.innerHTML = `
                 <div class="collab-lock-slot"></div>
+                <div class="card-live-banner-slot" id="qcard_banner_${q.id}"></div>
                 <div class="question-header">
                     <div style="display:flex; align-items:flex-start; flex:1;">
                         <span class="question-id-badge">#${idx + 1} (${q.id || 'q'})</span>
-                        <div class="question-title">${q.question}</div>
+                        <div class="question-title" id="qcard_title_${q.id}">${escapeHtml(q.question)}</div>
                     </div>
                     <div class="rose-reward-badge" title="Số hoa hồng thưởng khi trả lời đúng">
                         <span>🌹</span>
@@ -468,7 +543,7 @@
                 </div>
 
                 <div class="question-explanation">
-                    <strong>Bí Kíp Bảo Mật:</strong> ${q.explanation || 'Chưa có giải thích'}
+                    <strong>Bí Kíp Bảo Mật:</strong> ${escapeHtml(q.explanation || 'Chưa có giải thích')}
                 </div>
 
                 <div class="card-actions">
@@ -657,7 +732,8 @@
             label: 'Xem danh sách Vòng chơi'
         });
         renderAll();
-        showToast("✅ Đã cập nhật Vòng chơi!");
+        // Tự động lưu lên server và phát cập nhật cho tất cả mọi người
+        saveConfigToServer(false, `vòng chơi "${name}"`, editingSection ? editingSection.id : null);
     }
 
     function deleteSection(id) {
@@ -672,7 +748,8 @@
         }
 
         renderAll();
-        showToast(`🗑️ Đã xóa Vòng chơi #${id}!`);
+        // Tự động lưu lên server và phát cập nhật cho tất cả mọi người
+        saveConfigToServer(false, `xóa vòng chơi #${id}`);
     }
 
     function switchToQuestions(stageId) {
@@ -728,6 +805,54 @@
         modalQuestion.classList.add("active");
     }
 
+    function populateQuestionModal(found, foundStageId) {
+        if (!found) return;
+
+        if (foundStageId) {
+            const stageSelect = document.getElementById("qSelectStage");
+            stageSelect.innerHTML = "";
+            (currentConfig.sections || []).forEach(s => {
+                const opt = document.createElement("option");
+                opt.value = s.id;
+                opt.textContent = s.name;
+                if (s.id === foundStageId) opt.selected = true;
+                stageSelect.appendChild(opt);
+            });
+        }
+
+        const activeEl = document.activeElement;
+
+        if (activeEl !== document.getElementById("qInputText")) {
+            document.getElementById("qInputText").value = found.question || "";
+        }
+
+        const opts = found.options || ["", "", "", ""];
+        if (activeEl !== document.getElementById("qInputOpt0")) {
+            document.getElementById("qInputOpt0").value = (opts[0] || "").replace(/^[A-D]\.\s*/, "");
+        }
+        if (activeEl !== document.getElementById("qInputOpt1")) {
+            document.getElementById("qInputOpt1").value = (opts[1] || "").replace(/^[A-D]\.\s*/, "");
+        }
+        if (activeEl !== document.getElementById("qInputOpt2")) {
+            document.getElementById("qInputOpt2").value = (opts[2] || "").replace(/^[A-D]\.\s*/, "");
+        }
+        if (activeEl !== document.getElementById("qInputOpt3")) {
+            document.getElementById("qInputOpt3").value = (opts[3] || "").replace(/^[A-D]\.\s*/, "");
+        }
+
+        const correct = found.correctIndex || 0;
+        const radio = document.querySelector(`input[name="optCorrect"][value="${correct}"]`);
+        if (radio) radio.checked = true;
+
+        if (activeEl !== document.getElementById("qInputRoses")) {
+            document.getElementById("qInputRoses").value = (typeof found.rosesReward === "number") ? found.rosesReward : 1;
+        }
+
+        if (activeEl !== document.getElementById("qInputExplanation")) {
+            document.getElementById("qInputExplanation").value = found.explanation || "";
+        }
+    }
+
     function openEditQuestion(qId) {
         let found = null;
         let foundStageId = null;
@@ -764,34 +889,7 @@
             label: `Sửa câu: ${(found.question || '').substring(0, 32)}...`
         });
 
-        // Điền dropdown vòng
-        const stageSelect = document.getElementById("qSelectStage");
-        stageSelect.innerHTML = "";
-        (currentConfig.sections || []).forEach(s => {
-            const opt = document.createElement("option");
-            opt.value = s.id;
-            opt.textContent = s.name;
-            if (s.id === foundStageId) opt.selected = true;
-            stageSelect.appendChild(opt);
-        });
-
-        document.getElementById("qInputText").value = found.question || "";
-
-        const opts = found.options || ["", "", "", ""];
-        document.getElementById("qInputOpt0").value = (opts[0] || "").replace(/^[A-D]\.\s*/, "");
-        document.getElementById("qInputOpt1").value = (opts[1] || "").replace(/^[A-D]\.\s*/, "");
-        document.getElementById("qInputOpt2").value = (opts[2] || "").replace(/^[A-D]\.\s*/, "");
-        document.getElementById("qInputOpt3").value = (opts[3] || "").replace(/^[A-D]\.\s*/, "");
-
-        const correct = found.correctIndex || 0;
-        const radio = document.querySelector(`input[name="optCorrect"][value="${correct}"]`);
-        if (radio) radio.checked = true;
-
-        // HOA HỒNG TỪNG CÂU
-        document.getElementById("qInputRoses").value = (typeof found.rosesReward === "number") ? found.rosesReward : 1;
-
-        document.getElementById("qInputExplanation").value = found.explanation || "";
-
+        populateQuestionModal(found, foundStageId);
         modalQuestion.classList.add("active");
     }
 
@@ -865,7 +963,10 @@
             label: `Xem danh sách câu hỏi Vòng ${selectedStageId}`
         });
         renderAll();
-        showToast("✅ Đã lưu câu hỏi & số hoa hồng thành công!");
+
+        // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+        const shortQ = qText.substring(0, 30) + (qText.length > 30 ? '...' : '');
+        saveConfigToServer(false, `câu hỏi "${shortQ}"`, editingQuestion ? editingQuestion.id : null);
     }
 
     function duplicateQuestion(qId) {
@@ -880,7 +981,9 @@
 
         sec.questions.push(copy);
         renderAll();
-        showToast(`📋 Đã nhân bản câu hỏi thành #${copy.id}!`);
+
+        // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+        saveConfigToServer(false, `nhân bản câu hỏi #${copy.id}`, copy.id);
     }
 
     function deleteQuestion(qId) {
@@ -890,7 +993,9 @@
 
         sec.questions = sec.questions.filter(q => q.id !== qId);
         renderAll();
-        showToast(`🗑️ Đã xóa câu hỏi #${qId}!`);
+
+        // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+        saveConfigToServer(false, `xóa câu hỏi #${qId}`, qId);
     }
 
     // ==========================================
@@ -961,14 +1066,18 @@
             label: 'Cài đặt Boss & Thẻ bài'
         });
         renderCardsTable();
-        showToast("✅ Đã lưu thẻ bài ma thuật!");
+
+        // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+        saveConfigToServer(false, `thẻ bài "${title}"`, editingCard ? editingCard.id : null);
     }
 
     function deleteCard(cId) {
         if (!confirm(`Bạn có chắc muốn xóa thẻ bài ${cId}?`)) return;
         currentConfig.magicCards = (currentConfig.magicCards || []).filter(c => c.id !== cId);
         renderCardsTable();
-        showToast(`🗑️ Đã xóa thẻ bài!`);
+
+        // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+        saveConfigToServer(false, `xóa thẻ bài #${cId}`, cId);
     }
 
     // ==========================================
@@ -992,7 +1101,8 @@
             }
             currentConfig = parsed;
             renderAll();
-            showToast("⚡ Đã áp dụng mã JSON mới vào giao diện Helper!");
+            // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
+            saveConfigToServer(false, "áp dụng cấu hình JSON trực tiếp");
         } catch (e) {
             alert("Lỗi cú pháp JSON: " + e.message);
         }
@@ -1038,23 +1148,56 @@
                             if (msg.config) {
                                 const updaterName = msg.savedBy || "Đồng nghiệp";
                                 const isSelf = (updaterName === currentProfile.name);
+                                const summary = msg.savedSummary || "Cấu hình game";
+
+                                // Cập nhật cấu hình hiện tại và revision cho TẤT CẢ mọi người
+                                currentConfig = msg.config;
+                                if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
+
+                                // Nếu người dùng đang mở modal câu hỏi:
+                                if (modalQuestion.classList.contains("active") && editingQuestion) {
+                                    let updatedQ = null;
+                                    let updatedStageId = null;
+                                    (currentConfig.sections || []).forEach(s => {
+                                        (s.questions || []).forEach(q => {
+                                            if (q.id === editingQuestion.id) {
+                                                updatedQ = q;
+                                                updatedStageId = s.id;
+                                            }
+                                        });
+                                    });
+
+                                    if (updatedQ) {
+                                        if (!isSelf) {
+                                            editingQuestion = updatedQ;
+                                            populateQuestionModal(updatedQ, updatedStageId);
+                                            showToast(`✨ Dữ liệu câu hỏi vừa được "${updaterName}" lưu bản mới (#${baseRevision})!`);
+                                        }
+                                    } else if (!isSelf) {
+                                        showToast(`⚠️ Câu hỏi này vừa bị xóa hoặc di chuyển bởi "${updaterName}"!`, true);
+                                    }
+                                }
+
+                                // Render lại toàn bộ giao diện cho người dùng
+                                renderAll();
+
+                                // Xóa các lock / thẻ live edit tạm thời của mục vừa lưu
+                                if (msg.savedTargetId) {
+                                    clearPeerFieldEditsForTarget(msg.savedTargetId);
+                                }
 
                                 if (!isSelf) {
-                                    const anyModalOpen = document.querySelector(".modal-overlay.active:not(#modalConflict)");
-                                    if (!anyModalOpen) {
-                                        currentConfig = msg.config;
-                                        if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
-                                        renderAll();
-                                        showToast(`🔔 "${updaterName}" vừa lưu cấu hình mới! (Bản #${msg.revision || baseRevision})`);
-                                    } else {
-                                        // Có modal đang mở, hiển thị cảnh báo
-                                        showToast(`⚠️ "${updaterName}" vừa lưu bản #${msg.revision || 'mới'}. Hãy cẩn thận kiểm tra trước khi lưu!`, true);
-                                    }
-                                } else {
-                                    currentConfig = msg.config;
-                                    if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
-                                    renderAll();
+                                    showToast(`🚀 "${updaterName}" vừa lưu ${summary}! (Đã đồng bộ lên máy của bạn)`, false, 4000);
+                                    playSyncChime();
                                 }
+                            }
+                        } else if (msg.type === "HELPER_FIELD_EDIT") {
+                            if (msg.clientId !== currentProfile.clientId) {
+                                handleIncomingFieldEdit(msg);
+                            }
+                        } else if (msg.type === "HELPER_FIELD_BLUR") {
+                            if (msg.clientId !== currentProfile.clientId) {
+                                handleIncomingFieldBlur(msg);
                             }
                         } else if (msg.type === "HELPER_COLLABORATORS") {
                             collaborators = msg.collaborators || [];
@@ -1085,14 +1228,13 @@
     }
 
     // ==========================================
-    // 10b. RENDER GIAO DIỆN CỘNG TÁC VIÊN (PRESENCE)
+    // 10b. RENDER GIAO DIỆN CỘNG TÁC VIÊN (PRESENCE) & LIVE EDITING
     // ==========================================
     function renderCollaboratorsUI() {
         const avatarsGroup = document.getElementById("collaboratorAvatars");
         const countText = document.getElementById("collaboratorCountText");
-        const listEl = document.getElementById("collaboratorsList");
 
-        if (!avatarsGroup || !countText || !listEl) return;
+        if (!avatarsGroup || !countText) return;
 
         // 1. Render nhóm avatar trên thanh Top Bar
         avatarsGroup.innerHTML = "";
@@ -1116,7 +1258,19 @@
         countText.textContent = total > 1 ? `${total} máy` : `1 máy (bạn)`;
 
         // 2. Render dropdown danh sách chi tiết các máy
+        renderCollaboratorsDropdownOnly();
+
+        // 3. Highlight các card mà máy khác đang sửa
+        highlightPeerEditingCards();
+    }
+
+    function renderCollaboratorsDropdownOnly() {
+        const listEl = document.getElementById("collaboratorsList");
+        if (!listEl) return;
         listEl.innerHTML = "";
+
+        const sorted = [...collaborators].sort((a, b) => (a.clientId === currentProfile.clientId ? -1 : 1));
+
         sorted.forEach(c => {
             const isYou = (c.clientId === currentProfile.clientId);
             const initials = (c.name || "U").trim().split(/\s+/).map(w => w[0]).join("").substring(0, 2).toUpperCase();
@@ -1126,37 +1280,67 @@
                 <div class="collab-item-avatar" style="background:${c.color || '#3498db'};">${initials}</div>
                 <div class="collab-item-details">
                     <div class="collab-item-name">
-                        <span>${c.name}</span>
+                        <span>${escapeHtml(c.name)}</span>
                         ${isYou ? '<span class="collab-you-tag">BẠN</span>' : ''}
-                        <span style="font-size:10.5px; color:#94a3b8; font-weight:normal;">(${c.device || 'PC'})</span>
+                        <span style="font-size:10.5px; color:#94a3b8; font-weight:normal;">(${escapeHtml(c.device || 'PC')})</span>
                     </div>
-                    <div class="collab-item-loc">📍 ${c.location ? c.location.label : 'Trang tổng quan'}</div>
+                    <div class="collab-item-loc">📍 ${escapeHtml(c.location ? c.location.label : 'Trang tổng quan')}</div>
                 </div>
             `;
             listEl.appendChild(item);
         });
-
-        // 3. Highlight các card mà máy khác đang sửa
-        highlightPeerEditingCards();
     }
 
-    // Hiển thị nhãn và viền sáng trên các Card đang được máy khác chỉnh sửa
+    // Hiển thị nhãn và viền sáng trên các Card đang được máy khác chỉnh sửa (Kèm ô nào, chữ nào)
     function highlightPeerEditingCards() {
         // Cập nhật Question Cards
         document.querySelectorAll(".question-card").forEach(card => {
             const qId = card.getAttribute("data-qid");
             const lockSlot = card.querySelector(".collab-lock-slot");
-            if (!lockSlot || !qId) return;
+            const bannerSlot = card.querySelector(".card-live-banner-slot");
+            if (!qId) return;
 
-            const peer = collaborators.find(c => c.clientId !== currentProfile.clientId && c.location && c.location.type === 'question' && String(c.location.questionId) === String(qId));
-            if (peer) {
-                card.classList.add("editing-by-peer");
-                card.style.borderColor = peer.color || "#e74c3c";
-                lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${peer.name} đang soạn thảo câu này...</span>`;
+            // Kiểm tra xem có ai đang gõ trực tiếp vào trường nào của câu hỏi này không
+            const activeEdits = Array.from(peerFieldEdits.values()).filter(e => e.targetType === 'question' && String(e.targetId) === String(qId));
+
+            if (activeEdits.length > 0) {
+                const latest = activeEdits[activeEdits.length - 1];
+                card.classList.add("live-card-highlight");
+                card.style.setProperty('--peer-collab-color', latest.sender.color || "#3498db");
+                card.style.setProperty('--peer-collab-glow', (latest.sender.color || "#3498db") + '55');
+
+                if (bannerSlot) {
+                    bannerSlot.innerHTML = `
+                        <div class="card-live-typing-banner" style="--peer-collab-color: ${latest.sender.color || '#3498db'};">
+                            <div class="banner-header">
+                                <span class="peer-badge-pill">${escapeHtml(latest.sender.name)}</span>
+                                <span>đang sửa ô <strong>[${escapeHtml(latest.fieldLabel || latest.fieldId)}]</strong></span>
+                            </div>
+                            <div class="banner-content">
+                                "${escapeHtml(String(latest.value || ''))}"<span class="live-caret"></span>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (lockSlot) lockSlot.innerHTML = "";
             } else {
-                card.classList.remove("editing-by-peer");
-                card.style.borderColor = "";
-                lockSlot.innerHTML = "";
+                // Kiểm tra xem có người đang mở modal câu này (dù chưa gõ)
+                const peer = collaborators.find(c => c.clientId !== currentProfile.clientId && c.location && c.location.type === 'question' && String(c.location.questionId) === String(qId));
+                if (peer) {
+                    card.classList.add("editing-by-peer");
+                    card.style.borderColor = peer.color || "#e74c3c";
+                    if (lockSlot) {
+                        lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${escapeHtml(peer.name)} đang mở câu này...</span>`;
+                    }
+                } else {
+                    card.classList.remove("editing-by-peer");
+                    card.classList.remove("live-card-highlight");
+                    card.style.borderColor = "";
+                    card.style.removeProperty('--peer-collab-color');
+                    card.style.removeProperty('--peer-collab-glow');
+                    if (lockSlot) lockSlot.innerHTML = "";
+                    if (bannerSlot) bannerSlot.innerHTML = "";
+                }
             }
         });
 
@@ -1170,13 +1354,340 @@
             if (peer) {
                 card.classList.add("editing-by-peer");
                 card.style.borderColor = peer.color || "#e74c3c";
-                lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${peer.name} đang sửa vòng này...</span>`;
+                lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${escapeHtml(peer.name)} đang sửa vòng này...</span>`;
             } else {
                 card.classList.remove("editing-by-peer");
                 card.style.borderColor = "";
                 lockSlot.innerHTML = "";
             }
         });
+    }
+
+    // ==========================================
+    // 10c. LIVE FIELD TRACKING & SYNC (Ô NÀO, CHỮ NÀO)
+    // ==========================================
+    function handleFieldInput(el) {
+        const fieldId = el.id || el.name;
+        const fieldLabel = FIELD_LABELS[fieldId] || el.placeholder || fieldId;
+        let targetType = 'general';
+        let targetId = 'general';
+
+        if (modalQuestion.classList.contains("active")) {
+            targetType = 'question';
+            targetId = editingQuestion ? editingQuestion.id : 'new';
+        } else if (modalSection.classList.contains("active")) {
+            targetType = 'section';
+            targetId = editingSection ? editingSection.id : 'new';
+        } else if (modalCard.classList.contains("active")) {
+            targetType = 'card';
+            targetId = editingCard ? editingCard.id : 'new';
+        }
+
+        const val = (el.type === 'checkbox') ? (el.checked ? 'Bật' : 'Tắt') : el.value;
+
+        const now = Date.now();
+        if (now - lastFieldEditSentTime > 65) {
+            lastFieldEditSentTime = now;
+            sendFieldEdit(targetType, targetId, fieldId, fieldLabel, val, el.selectionStart);
+        } else {
+            clearTimeout(fieldEditThrottleTimer);
+            fieldEditThrottleTimer = setTimeout(() => {
+                lastFieldEditSentTime = Date.now();
+                sendFieldEdit(targetType, targetId, fieldId, fieldLabel, val, el.selectionStart);
+            }, 65);
+        }
+    }
+
+    function sendFieldEdit(targetType, targetId, fieldId, fieldLabel, value, selectionStart) {
+        sendWs({
+            type: 'HELPER_FIELD_EDIT',
+            targetType: targetType,
+            targetId: targetId,
+            fieldId: fieldId,
+            fieldLabel: fieldLabel,
+            value: value,
+            selectionStart: selectionStart,
+            sender: {
+                clientId: currentProfile.clientId,
+                name: currentProfile.name,
+                color: currentProfile.color,
+                device: currentProfile.device
+            }
+        });
+
+        // Cập nhật vị trí của chính mình để người khác xem dropdown biết mình đang sửa ô nào
+        const preview = String(value || '').substring(0, 30);
+        updateLocation({
+            type: targetType,
+            targetId: targetId,
+            fieldId: fieldId,
+            fieldLabel: fieldLabel,
+            label: `Đang sửa [${fieldLabel}]: "${preview}"`
+        });
+    }
+
+    function handleFieldBlur(el) {
+        const fieldId = el.id || el.name;
+        let targetType = 'general';
+        let targetId = 'general';
+
+        if (modalQuestion.classList.contains("active")) {
+            targetType = 'question';
+            targetId = editingQuestion ? editingQuestion.id : 'new';
+        } else if (modalSection.classList.contains("active")) {
+            targetType = 'section';
+            targetId = editingSection ? editingSection.id : 'new';
+        } else if (modalCard.classList.contains("active")) {
+            targetType = 'card';
+            targetId = editingCard ? editingCard.id : 'new';
+        }
+
+        sendWs({
+            type: 'HELPER_FIELD_BLUR',
+            targetType: targetType,
+            targetId: targetId,
+            fieldId: fieldId,
+            clientId: currentProfile.clientId
+        });
+    }
+
+    function setupLiveFieldListeners() {
+        const selector = `
+            #modalQuestion input, #modalQuestion textarea, #modalQuestion select,
+            #modalSection input, #modalSection textarea, #modalSection select,
+            #modalCard input, #modalCard textarea, #modalCard select,
+            #tab-random input
+        `;
+        const elements = document.querySelectorAll(selector);
+
+        elements.forEach(el => {
+            el.addEventListener("input", () => handleFieldInput(el));
+            el.addEventListener("focus", () => handleFieldInput(el));
+            el.addEventListener("change", () => handleFieldInput(el));
+            el.addEventListener("blur", () => handleFieldBlur(el));
+        });
+    }
+
+    function handleIncomingFieldEdit(msg) {
+        const key = `${msg.targetType}_${msg.targetId}_${msg.fieldId}`;
+        peerFieldEdits.set(key, msg);
+
+        // 1. CẬP NHẬT TRONG MODAL ĐANG MỞ (Nếu người dùng đang mở đúng modal và câu/vòng đó)
+        let isModalMatch = false;
+        if (msg.targetType === 'question' && modalQuestion.classList.contains("active")) {
+            const currentQId = editingQuestion ? editingQuestion.id : 'new';
+            if (String(currentQId) === String(msg.targetId)) isModalMatch = true;
+        } else if (msg.targetType === 'section' && modalSection.classList.contains("active")) {
+            const currentSecId = editingSection ? editingSection.id : 'new';
+            if (String(currentSecId) === String(msg.targetId)) isModalMatch = true;
+        } else if (msg.targetType === 'card' && modalCard.classList.contains("active")) {
+            const currentCardId = editingCard ? editingCard.id : 'new';
+            if (String(currentCardId) === String(msg.targetId)) isModalMatch = true;
+        }
+
+        if (isModalMatch) {
+            if (msg.fieldId === 'optCorrect') {
+                const radio = document.querySelector(`input[name="optCorrect"][value="${msg.value}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    if (radio.parentElement) radio.parentElement.classList.add('peer-value-sync-active');
+                }
+            } else {
+                const inputEl = document.getElementById(msg.fieldId);
+                if (inputEl) {
+                    inputEl.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    inputEl.style.setProperty('--peer-collab-glow', (msg.sender.color || '#3498db') + '66');
+                    inputEl.classList.add('peer-editing-field');
+
+                    // Thẻ định danh nổi (Floating live badge)
+                    let tag = document.getElementById(`peer_tag_${msg.fieldId}`);
+                    if (!tag) {
+                        tag = document.createElement('div');
+                        tag.id = `peer_tag_${msg.fieldId}`;
+                        tag.className = 'live-field-cursor-tag';
+                        if (inputEl.parentNode) {
+                            inputEl.parentNode.insertBefore(tag, inputEl);
+                        }
+                    }
+                    tag.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+
+                    const isSelfFocused = (document.activeElement === inputEl);
+                    if (isSelfFocused) {
+                        tag.innerHTML = `
+                            <span class="tag-author">⚠️ <strong>${escapeHtml(msg.sender.name)}</strong> cũng đang gõ vào ô này:</span>
+                            <span class="tag-preview">"${escapeHtml(String(msg.value || '').substring(0, 35))}"</span>
+                        `;
+                    } else {
+                        tag.innerHTML = `
+                            <span class="tag-author">✍️ <strong>${escapeHtml(msg.sender.name)}</strong> đang nhập:</span>
+                            <span class="tag-preview">"${escapeHtml(String(msg.value || '').substring(0, 45))}"</span>
+                        `;
+
+                        // STREAMING CHỮ TRỰC TIẾP VÀO Ô ĐANG NHÌN
+                        inputEl.value = (msg.value !== undefined) ? msg.value : '';
+                        inputEl.classList.add('peer-value-sync-active');
+                        setTimeout(() => inputEl.classList.remove('peer-value-sync-active'), 800);
+                    }
+                }
+            }
+        }
+
+        // 2. CẬP NHẬT TRÊN THẺ CÂU HỎI Ở DANH SÁCH (Questions List)
+        if (msg.targetType === 'question') {
+            const card = document.getElementById(`qcard_${msg.targetId}`) || document.querySelector(`[data-qid="${msg.targetId}"]`);
+            if (card) {
+                card.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                card.style.setProperty('--peer-collab-glow', (msg.sender.color || '#3498db') + '55');
+                card.classList.add('live-card-highlight');
+
+                // Banner live typing
+                const bannerSlot = card.querySelector('.card-live-banner-slot') || card.querySelector('.collab-lock-slot');
+                if (bannerSlot) {
+                    bannerSlot.innerHTML = `
+                        <div class="card-live-typing-banner" style="--peer-collab-color: ${msg.sender.color || '#3498db'};">
+                            <div class="banner-header">
+                                <span class="peer-badge-pill">${escapeHtml(msg.sender.name)}</span>
+                                <span>đang sửa ô <strong>[${escapeHtml(msg.fieldLabel || msg.fieldId)}]</strong></span>
+                            </div>
+                            <div class="banner-content">
+                                "${escapeHtml(String(msg.value || ''))}"<span class="live-caret"></span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Stream chữ trực tiếp vào nội dung trên Card
+                if (msg.fieldId === 'qInputText') {
+                    const titleEl = card.querySelector('.question-title');
+                    if (titleEl) {
+                        titleEl.textContent = msg.value || '(Đang nhập câu hỏi...)';
+                        titleEl.classList.add('peer-value-sync-active');
+                    }
+                } else if (msg.fieldId === 'qInputOpt0') {
+                    const optA = card.querySelector('[data-opt-idx="0"] span:nth-child(2)');
+                    if (optA) {
+                        optA.textContent = (msg.value || '').replace(/^[A-D]\.\s*/, '');
+                        optA.parentElement.classList.add('opt-live-stream-glow');
+                        optA.parentElement.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    }
+                } else if (msg.fieldId === 'qInputOpt1') {
+                    const optB = card.querySelector('[data-opt-idx="1"] span:nth-child(2)');
+                    if (optB) {
+                        optB.textContent = (msg.value || '').replace(/^[A-D]\.\s*/, '');
+                        optB.parentElement.classList.add('opt-live-stream-glow');
+                        optB.parentElement.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    }
+                } else if (msg.fieldId === 'qInputOpt2') {
+                    const optC = card.querySelector('[data-opt-idx="2"] span:nth-child(2)');
+                    if (optC) {
+                        optC.textContent = (msg.value || '').replace(/^[A-D]\.\s*/, '');
+                        optC.parentElement.classList.add('opt-live-stream-glow');
+                        optC.parentElement.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    }
+                } else if (msg.fieldId === 'qInputOpt3') {
+                    const optD = card.querySelector('[data-opt-idx="3"] span:nth-child(2)');
+                    if (optD) {
+                        optD.textContent = (msg.value || '').replace(/^[A-D]\.\s*/, '');
+                        optD.parentElement.classList.add('opt-live-stream-glow');
+                        optD.parentElement.style.setProperty('--peer-collab-color', msg.sender.color || '#3498db');
+                    }
+                } else if (msg.fieldId === 'qInputRoses') {
+                    const roseEl = card.querySelector('.rose-reward-badge span:last-child');
+                    if (roseEl) roseEl.textContent = `+${msg.value || 1} Hoa Hồng`;
+                } else if (msg.fieldId === 'qInputExplanation') {
+                    const expEl = card.querySelector('.question-explanation');
+                    if (expEl) expEl.innerHTML = `<strong>Bí Kíp Bảo Mật:</strong> ${escapeHtml(msg.value || 'Chưa có giải thích')}`;
+                }
+            }
+        }
+
+        // 3. CẬP NHẬT COLLABORATORS LIST DROPDOWN
+        const collab = collaborators.find(c => c.clientId === msg.clientId);
+        if (collab) {
+            collab.location = {
+                type: msg.targetType,
+                targetId: msg.targetId,
+                fieldId: msg.fieldId,
+                fieldLabel: msg.fieldLabel,
+                label: `Đang sửa [${msg.fieldLabel || msg.fieldId}]: "${(msg.value || '').substring(0, 20)}"`
+            };
+            renderCollaboratorsDropdownOnly();
+        }
+    }
+
+    function handleIncomingFieldBlur(msg) {
+        const key = `${msg.targetType}_${msg.targetId}_${msg.fieldId}`;
+        peerFieldEdits.delete(key);
+
+        const inputEl = document.getElementById(msg.fieldId);
+        if (inputEl) {
+            inputEl.classList.remove('peer-editing-field');
+            inputEl.style.removeProperty('--peer-collab-color');
+            inputEl.style.removeProperty('--peer-collab-glow');
+        }
+        const tag = document.getElementById(`peer_tag_${msg.fieldId}`);
+        if (tag) tag.remove();
+
+        // Kiểm tra xem thẻ câu hỏi còn trường nào đang được edit không
+        if (msg.targetType === 'question') {
+            const anyLeft = Array.from(peerFieldEdits.values()).some(e => e.targetType === 'question' && String(e.targetId) === String(msg.targetId));
+            if (!anyLeft) {
+                const card = document.getElementById(`qcard_${msg.targetId}`) || document.querySelector(`[data-qid="${msg.targetId}"]`);
+                if (card) {
+                    card.classList.remove('live-card-highlight');
+                    const bannerSlot = card.querySelector('.card-live-banner-slot') || card.querySelector('.collab-lock-slot');
+                    if (bannerSlot) bannerSlot.innerHTML = '';
+                    card.querySelectorAll('.opt-live-stream-glow').forEach(el => el.classList.remove('opt-live-stream-glow'));
+                }
+            }
+        }
+    }
+
+    function clearPeerFieldEditsForTarget(targetId) {
+        for (const [k, v] of peerFieldEdits.entries()) {
+            if (String(v.targetId) === String(targetId)) {
+                peerFieldEdits.delete(k);
+                handleIncomingFieldBlur(v);
+            }
+        }
+    }
+
+    function clearOwnFieldEdits(targetType) {
+        sendWs({
+            type: 'HELPER_FIELD_BLUR',
+            targetType: targetType,
+            targetId: 'all',
+            fieldId: 'all',
+            clientId: currentProfile.clientId
+        });
+    }
+
+    function onModalClosed(modalId) {
+        if (modalId === 'modalQuestion') {
+            editingQuestion = null;
+            updateLocation({
+                type: 'tab',
+                tab: 'tab-questions',
+                label: `Xem danh sách câu hỏi Vòng ${selectedStageId}`
+            });
+            clearOwnFieldEdits('question');
+        } else if (modalId === 'modalSection') {
+            editingSection = null;
+            updateLocation({
+                type: 'tab',
+                tab: 'tab-sections',
+                label: 'Xem danh sách Vòng chơi'
+            });
+            clearOwnFieldEdits('section');
+        } else if (modalId === 'modalCard') {
+            editingCard = null;
+            updateLocation({
+                type: 'tab',
+                tab: 'tab-random',
+                label: 'Cài đặt Boss & Thẻ bài'
+            });
+            clearOwnFieldEdits('card');
+        }
     }
 
     // ==========================================
@@ -1403,24 +1914,15 @@
             modalProfile.classList.remove("active");
         });
 
+        // Khởi tạo các listener theo dõi gõ phím trực tiếp vào từng ô (Live Field Edit)
+        setupLiveFieldListeners();
+
         // Đóng các Modal
         document.querySelectorAll("[data-close]").forEach(btn => {
             btn.addEventListener("click", () => {
                 const modalId = btn.getAttribute("data-close");
                 document.getElementById(modalId).classList.remove("active");
-
-                // Cập nhật vị trí quay lại tab hiện tại
-                const activeTab = document.querySelector(".nav-tab.active");
-                const target = activeTab ? activeTab.getAttribute("data-tab") : "tab-sections";
-                let tabLabel = 'Xem Vòng chơi';
-                if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
-                else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
-                else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
-                updateLocation({
-                    type: 'tab',
-                    tab: target,
-                    label: tabLabel
-                });
+                onModalClosed(modalId);
             });
         });
 
@@ -1429,18 +1931,7 @@
             overlay.addEventListener("click", (e) => {
                 if (e.target === overlay) {
                     overlay.classList.remove("active");
-
-                    const activeTab = document.querySelector(".nav-tab.active");
-                    const target = activeTab ? activeTab.getAttribute("data-tab") : "tab-sections";
-                    let tabLabel = 'Xem Vòng chơi';
-                    if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
-                    else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
-                    else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
-                    updateLocation({
-                        type: 'tab',
-                        tab: target,
-                        label: tabLabel
-                    });
+                    onModalClosed(overlay.id);
                 }
             });
         });

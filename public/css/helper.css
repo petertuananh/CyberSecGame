@@ -1408,3 +1408,166 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-color: #ffffff;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
 }
+
+/* ========================================================
+   LIVE COLLABORATIVE EDITING (Ô NÀO, CHỮ NÀO, CẬP NHẬT TẤT CẢ)
+   ======================================================== */
+
+/* Ô input đang được đồng nghiệp gõ trực tiếp */
+.peer-editing-field {
+    border-color: var(--peer-collab-color, #3498db) !important;
+    box-shadow: 0 0 12px var(--peer-collab-glow, rgba(52, 152, 219, 0.5)) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Thẻ định danh nổi trên từng ô đang nhập (Live Cursor Tag) */
+.live-field-cursor-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--peer-collab-color, #3498db);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    animation: fadeInFieldTag 0.2s ease-out;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.live-field-cursor-tag .tag-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.live-field-cursor-tag .tag-preview {
+    font-weight: 500;
+    opacity: 0.95;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+
+@keyframes fadeInFieldTag {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hiệu ứng chớp sáng khi nhận ký tự mới từ đồng nghiệp */
+@keyframes peerValueGlow {
+    0% {
+        background-color: rgba(52, 152, 219, 0.3);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.peer-value-sync-active {
+    animation: peerValueGlow 0.8s ease-out;
+}
+
+/* Banner hiển thị đang gõ trực tiếp trên Thẻ câu hỏi (Question Card) */
+.card-live-typing-banner {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid var(--peer-collab-color, #3498db);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    animation: fadeInFieldTag 0.2s ease;
+}
+
+.card-live-typing-banner .banner-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.card-live-typing-banner .peer-badge-pill {
+    background: var(--peer-collab-color, #3498db);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.card-live-typing-banner .banner-content {
+    color: #f1f2f6;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 5px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    border-left: 2px solid var(--peer-collab-color, #3498db);
+}
+
+.card-live-typing-banner .live-caret {
+    display: inline-block;
+    width: 2px;
+    height: 12px;
+    background: var(--peer-collab-color, #3498db);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blinkCaret 0.8s infinite;
+}
+
+@keyframes blinkCaret {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.live-card-highlight {
+    border-color: var(--peer-collab-color, #3498db) !important;
+    box-shadow: 0 0 16px var(--peer-collab-glow, rgba(52, 152, 219, 0.35)) !important;
+}
+
+.opt-live-stream-glow {
+    background: rgba(52, 152, 219, 0.18) !important;
+    border-color: var(--peer-collab-color, #3498db) !important;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Cảnh báo khi 2 người cùng focus vào 1 ô */
+.field-collision-alert {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #ff6b81;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.field-collision-alert .btn-take-peer {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+

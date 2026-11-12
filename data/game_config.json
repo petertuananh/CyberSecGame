@@ -30,7 +30,7 @@
           "id": "q1_1",
           "question": "Trong các mật khẩu sau đây, mật khẩu nào MẠNH NHẤT để bảo vệ dữ liệu cá nhân chống lại hacker?",
           "options": [
-            "Hk9#mP2$xL5!vQ8@",
+            "Hk9#mP2$xL5!vQ8@@",
             "12345678",
             "password2026",
             "nguyenvanan123"
@@ -295,5 +295,8 @@
       "roses": 1,
       "description": "Mã hóa cấp quân sự bảo vệ bạn! Tặng 1 bông hồng chiến đấu!"
     }
-  ]
+  ],
+  "_revision": 4,
+  "_lastSavedAt": 1794498398947,
+  "_lastSavedBy": "Biên tập viên #880"
 }
