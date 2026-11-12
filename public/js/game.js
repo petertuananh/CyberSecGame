@@ -361,7 +361,7 @@ class CyberSecGame {
             .then(info => {
                 this.updateQrModal(info);
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     updateQrModal(info) {
@@ -398,8 +398,8 @@ class CyberSecGame {
             if (qrImg) qrImg.style.display = 'none';
             if (spinner) {
                 spinner.style.display = 'block';
-                spinner.innerText = this.activeQrTab === 'tunnel' 
-                    ? '⏳ Đang tạo Live Tunnel (4G)...' 
+                spinner.innerText = this.activeQrTab === 'tunnel'
+                    ? '⏳ Đang tạo Live Tunnel (4G)...'
                     : '⏳ Đang lấy địa chỉ Wi-Fi...';
             }
         }
@@ -427,8 +427,8 @@ class CyberSecGame {
 
         const countText = document.getElementById('qrConnectedCountText');
         if (countText) {
-            countText.innerText = this.controllerCount > 0 
-                ? `Đang có ${this.controllerCount} điện thoại kết nối` 
+            countText.innerText = this.controllerCount > 0
+                ? `Đang có ${this.controllerCount} điện thoại kết nối`
                 : 'Đang có 0 điện thoại kết nối';
         }
     }
@@ -788,7 +788,7 @@ class CyberSecGame {
     // Kích hoạt hiệu ứng Jumpscare kinh dị khi trả lời sai
     triggerJumpscare() {
         this.jumpscareActive = true;
-        this.jumpscareTimer = 1.35; // Thời lượng jumpscare kinh hoàng (khoảng 1.35 giây)
+        this.jumpscareTimer = 1.67; // Thời lượng jumpscare kinh hoàng (khoảng 1.35 giây)
         this.screenShake = 35;      // Rung lắc màn hình dữ dội
         window.SoundEngine.play("jumpscare");
         if (window.CursorFX && window.CursorFX.burst) {
@@ -1887,7 +1887,7 @@ class CyberSecGame {
         window.PixelSprites.drawHorrorClawSlashes(ctx, w, h, time);
 
         // 5. Quỷ dữ Malware / Cyber Demon lao thẳng vào mặt (Jumpscare Lunge)
-        const progress = Math.max(0, 1.0 - (this.jumpscareTimer / 1.35));
+        const progress = Math.max(0, 1.0 - (this.jumpscareTimer / 1.67));
         const lungeScale = 1.3 + Math.min(progress * 1.8, 1.3) + Math.sin(time * 45) * 0.08;
         const demonX = w / 2 + (Math.random() - 0.5) * 16;
         const demonY = h * 0.46 + (Math.random() - 0.5) * 16;

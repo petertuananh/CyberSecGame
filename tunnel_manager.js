@@ -19,8 +19,13 @@ class TunnelManager extends EventEmitter {
         this.localUrl = `http://${this.localIp}:${this.port}/controller`;
         this.localQr = null;
 
+        this.localHelperUrl = `http://${this.localIp}:${this.port}/helper`;
+        this.localHelperQr = null;
+
         this.tunnelUrl = null;
         this.tunnelQr = null;
+        this.tunnelHelperUrl = null;
+        this.tunnelHelperQr = null;
         this.tunnelStatus = 'initializing'; // 'initializing', 'active', 'failed'
         this.sshProcess = null;
         this.localtunnelInstance = null;
@@ -65,14 +70,20 @@ class TunnelManager extends EventEmitter {
     }
 
     async init() {
-        // 1. Tạo QR Code cho mạng Wi-Fi nội bộ trước (ngay tức thì 0ms)
+        // 1. Tạo QR Code cho mạng Wi-Fi nội bộ trước (ngay tức thì 0ms) cho cả Controller và Helper
         try {
             this.localQr = await qrcode.toDataURL(this.localUrl, {
                 width: 280,
                 margin: 2,
                 color: { dark: '#000000', light: '#ffffff' }
             });
-            console.log(`[TunnelManager] 📶 Mạng Wi-Fi nội bộ: ${this.localUrl}`);
+            this.localHelperQr = await qrcode.toDataURL(this.localHelperUrl, {
+                width: 280,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            });
+            console.log(`[TunnelManager] 📶 Mạng Wi-Fi nội bộ Controller: ${this.localUrl}`);
+            console.log(`[TunnelManager] 📝 Mạng Wi-Fi nội bộ Helper Live: ${this.localHelperUrl}`);
             this.emit('update', this.getInfo());
         } catch (e) {
             console.error('[TunnelManager] Lỗi tạo QR mạng nội bộ:', e);
@@ -185,13 +196,19 @@ class TunnelManager extends EventEmitter {
     }
 
     async _onTunnelReady(rawUrl, provider) {
-        // Đảm bảo URL kết thúc không có slash và trỏ đến /controller
+        // Đảm bảo URL kết thúc không có slash và trỏ đến /controller và /helper
         const base = rawUrl.replace(/\/+$/, '');
         this.tunnelUrl = `${base}/controller`;
+        this.tunnelHelperUrl = `${base}/helper`;
         this.tunnelStatus = 'active';
 
         try {
             this.tunnelQr = await qrcode.toDataURL(this.tunnelUrl, {
+                width: 280,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            });
+            this.tunnelHelperQr = await qrcode.toDataURL(this.tunnelHelperUrl, {
                 width: 280,
                 margin: 2,
                 color: { dark: '#000000', light: '#ffffff' }
@@ -202,9 +219,10 @@ class TunnelManager extends EventEmitter {
 
         console.log(`================================================================`);
         console.log(`📱 TAY CẦM ĐIỆN THOẠI (SMARTPHONE CONTROLLER) SẴN SÀNG!`);
-        console.log(`🌐 Live Tunnel (4G/Internet): ${this.tunnelUrl} (${provider})`);
-        console.log(`📶 Mạng Nội Bộ (Cùng Wi-Fi): ${this.localUrl}`);
-        console.log(`📷 Quét mã QR trên màn hình game để kết nối ngay!`);
+        console.log(`🌐 Live Tunnel Controller: ${this.tunnelUrl} (${provider})`);
+        console.log(`🌐 Live Tunnel Helper:     ${this.tunnelHelperUrl} (${provider})`);
+        console.log(`📶 Mạng Nội Bộ Controller: ${this.localUrl}`);
+        console.log(`📶 Mạng Nội Bộ Helper:     ${this.localHelperUrl}`);
         console.log(`================================================================`);
 
         this.emit('update', this.getInfo());
@@ -237,6 +255,10 @@ class TunnelManager extends EventEmitter {
             tunnelQr: this.tunnelQr,
             localUrl: this.localUrl,
             localQr: this.localQr,
+            tunnelHelperUrl: this.tunnelHelperUrl,
+            tunnelHelperQr: this.tunnelHelperQr,
+            localHelperUrl: this.localHelperUrl,
+            localHelperQr: this.localHelperQr,
             localIp: this.localIp,
             controllerCount: this.getControllerCount()
         };

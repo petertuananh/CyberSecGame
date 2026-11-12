@@ -35,9 +35,28 @@
     let editingSection = null;
     let editingCard = null;
 
+    // Trạng thái Phiên bản cấu hình & Chống xung đột (Conflict Checking)
+    let baseRevision = 1;
+    let pendingConflictData = null;
+
+    // Trạng thái Định danh Người dùng Cộng tác (Collaborator Profile)
+    let currentProfile = {
+        clientId: 'usr_' + Math.random().toString(36).substring(2, 9),
+        name: 'Biên tập viên #' + Math.floor(100 + Math.random() * 900),
+        color: ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#00d2d3', '#ff6b81', '#ff9f43'][Math.floor(Math.random() * 8)],
+        device: /Mobi|Android/i.test(navigator.userAgent) ? 'Điện thoại' : (/iPad|Tablet/i.test(navigator.userAgent) ? 'Tablet' : 'Máy tính')
+    };
+
+    let collaborators = [];
+    let tunnelInfo = null;
+    let shareActiveTab = 'wifi'; // 'wifi' hoặc 'tunnel'
+    let activeWs = null;
+    let currentLocation = { type: 'viewing', label: 'Xem trang tổng quan' };
+
     // DOM Elements
     const syncStatusEl = document.getElementById("syncStatus");
     const btnSaveConfig = document.getElementById("btnSaveConfig");
+    const btnShareLive = document.getElementById("btnShareLive");
     const btnExportJson = document.getElementById("btnExportJson");
     const fileInputJson = document.getElementById("fileInputJson");
     const btnResetConfig = document.getElementById("btnResetConfig");
@@ -65,6 +84,27 @@
     const modalSection = document.getElementById("modalSection");
     const modalQuestion = document.getElementById("modalQuestion");
     const modalCard = document.getElementById("modalCard");
+    const modalShareLive = document.getElementById("modalShareLive");
+    const modalConflict = document.getElementById("modalConflict");
+    const modalProfile = document.getElementById("modalProfile");
+
+    // Collaborators & Dropdown Elements
+    const collabWrapper = document.querySelector(".collab-wrapper");
+    const collaboratorsBadge = document.getElementById("collaboratorsBadge");
+    const collaboratorsDropdown = document.getElementById("collaboratorsDropdown");
+    const btnOpenProfileModal = document.getElementById("btnOpenProfileModal");
+    const inputProfileName = document.getElementById("inputProfileName");
+    const btnSaveProfile = document.getElementById("btnSaveProfile");
+
+    // Share Modal Elements
+    const tabBtnShareWifi = document.getElementById("tabBtnShareWifi");
+    const tabBtnShareTunnel = document.getElementById("tabBtnShareTunnel");
+    const btnCopyShareUrl = document.getElementById("btnCopyShareUrl");
+
+    // Conflict Modal Elements
+    const btnConflictForceOverwrite = document.getElementById("btnConflictForceOverwrite");
+    const btnConflictLoadServer = document.getElementById("btnConflictLoadServer");
+    const btnConflictBackupJson = document.getElementById("btnConflictBackupJson");
 
     // Toast
     const toastEl = document.getElementById("toastNotification");
@@ -78,6 +118,55 @@
     }
 
     // ==========================================
+    // 0. QUẢN LÝ THÔNG TIN CỘNG TÁC (PROFILE)
+    // ==========================================
+    function loadProfile() {
+        try {
+            const saved = localStorage.getItem('cybersec_helper_profile');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.name) currentProfile.name = parsed.name;
+                if (parsed.color) currentProfile.color = parsed.color;
+                if (parsed.clientId) currentProfile.clientId = parsed.clientId;
+            } else {
+                localStorage.setItem('cybersec_helper_profile', JSON.stringify(currentProfile));
+            }
+        } catch (e) {}
+    }
+
+    function saveProfile(name, color) {
+        currentProfile.name = name.trim() || currentProfile.name;
+        currentProfile.color = color || currentProfile.color;
+        try {
+            localStorage.setItem('cybersec_helper_profile', JSON.stringify(currentProfile));
+        } catch (e) {}
+
+        sendWs({
+            type: 'HELPER_PROFILE',
+            name: currentProfile.name,
+            color: currentProfile.color
+        });
+        renderCollaboratorsUI();
+        showToast("✅ Đã cập nhật thông tin hiển thị của bạn!");
+    }
+
+    function sendWs(data) {
+        if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+            activeWs.send(JSON.stringify(data));
+        }
+    }
+
+    function updateLocation(loc) {
+        currentLocation = loc;
+        sendWs({
+            type: 'HELPER_LOCATION',
+            location: loc,
+            name: currentProfile.name
+        });
+        renderCollaboratorsUI();
+    }
+
+    // ==========================================
     // 1. TẢI CẤU HÌNH TỪ SERVER
     // ==========================================
     async function loadConfigFromServer() {
@@ -86,8 +175,11 @@
             if (!res.ok) throw new Error("Không thể kết nối đến máy chủ");
             const data = await res.json();
             currentConfig = data;
+            if (typeof data._revision !== 'undefined') {
+                baseRevision = data._revision;
+            }
             renderAll();
-            showToast("✅ Đã nạp cấu hình từ Server thành công!");
+            showToast(`✅ Đã nạp cấu hình từ Server thành công! (Bản #${baseRevision})`);
         } catch (e) {
             console.warn("Lỗi tải config từ server:", e.message);
             showToast("⚠️ Không tải được từ server, đang dùng cấu hình cục bộ!", true);
@@ -96,9 +188,9 @@
     }
 
     // ==========================================
-    // 2. LƯU CẤU HÌNH LÊN SERVER
+    // 2. LƯU CẤU HÌNH LÊN SERVER (CÓ CHECK CONFLICT)
     // ==========================================
-    async function saveConfigToServer() {
+    async function saveConfigToServer(force = false) {
         // Thu thập cài đặt chung
         syncFormToState();
 
@@ -106,17 +198,68 @@
             const res = await fetch("/api/config", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(currentConfig, null, 2)
+                body: JSON.stringify({
+                    config: currentConfig,
+                    baseRevision: baseRevision,
+                    editorName: currentProfile.name,
+                    force: force
+                }, null, 2)
             });
 
             const result = await res.json();
+
+            // PHÁT HIỆN XUNG ĐỘT (409 CONFLICT)
+            if (res.status === 409 && result.conflict) {
+                openConflictModal(result);
+                return;
+            }
+
             if (!res.ok) throw new Error(result.error || "Lỗi lưu cấu hình");
 
-            showToast("💾 Đã lưu cấu hình vào Game thành công! Game đang chạy đã tự động cập nhật.");
+            baseRevision = result.revision || (baseRevision + 1);
+            if (modalConflict.classList.contains("active")) {
+                modalConflict.classList.remove("active");
+            }
+            showToast(`💾 Đã lưu cấu hình vào Game thành công! (Phiên bản #${baseRevision})`);
         } catch (e) {
             console.error("Lỗi lưu cấu hình:", e);
             showToast("❌ Lỗi khi lưu cấu hình: " + e.message, true);
         }
+    }
+
+    // Mở hộp thoại giải quyết xung đột khi phát hiện máy khác lưu trước
+    function openConflictModal(conflictData) {
+        pendingConflictData = conflictData;
+        const descText = document.getElementById("conflictDescText");
+        const myStats = document.getElementById("conflictMyStats");
+        const serverStats = document.getElementById("conflictServerStats");
+
+        const timeStr = conflictData.lastSavedAt ? new Date(conflictData.lastSavedAt).toLocaleTimeString('vi-VN') : 'vài phút trước';
+        descText.innerHTML = `Đồng nghiệp <strong>${conflictData.lastSavedBy || 'Một máy khác'}</strong> vừa lưu phiên bản mới <strong>#${conflictData.serverRevision}</strong> lúc <strong>${timeStr}</strong> trong khi bạn đang soạn thảo! Nếu bạn lưu ngay bây giờ, nội dung của đồng nghiệp sẽ bị ghi đè.`;
+
+        const myTotalSec = currentConfig.sections ? currentConfig.sections.length : 0;
+        const myTotalQ = (currentConfig.sections || []).reduce((acc, s) => acc + (s.questions ? s.questions.length : 0), 0);
+
+        const srvTotalSec = (conflictData.serverConfig && conflictData.serverConfig.sections) ? conflictData.serverConfig.sections.length : 0;
+        const srvTotalQ = (conflictData.serverConfig && conflictData.serverConfig.sections)
+            ? conflictData.serverConfig.sections.reduce((acc, s) => acc + (s.questions ? s.questions.length : 0), 0)
+            : 0;
+
+        myStats.innerHTML = `
+            <div>• Số vòng chơi: <strong>${myTotalSec}</strong></div>
+            <div>• Số câu hỏi: <strong>${myTotalQ} câu</strong></div>
+            <div>• Phiên bản gốc của bạn: <strong>#${conflictData.clientRevision || baseRevision}</strong></div>
+            <div style="color:#00d2d3; margin-top:4px;">(Bản nháp đang mở trên máy bạn)</div>
+        `;
+
+        serverStats.innerHTML = `
+            <div>• Số vòng chơi: <strong>${srvTotalSec}</strong></div>
+            <div>• Số câu hỏi: <strong>${srvTotalQ} câu</strong></div>
+            <div>• Phiên bản mới trên máy chủ: <strong>#${conflictData.serverRevision}</strong></div>
+            <div style="color:#2ecc71; margin-top:4px;">Người lưu: <strong>${conflictData.lastSavedBy}</strong></div>
+        `;
+
+        modalConflict.classList.add("active");
     }
 
     // ==========================================
@@ -186,6 +329,7 @@
         renderCardsTable();
         renderRawJsonView();
         updateBadges();
+        highlightPeerEditingCards();
     }
 
     function updateBadges() {
@@ -216,10 +360,12 @@
         currentConfig.sections.forEach(sec => {
             const card = document.createElement("div");
             card.className = "section-card";
+            card.setAttribute("data-secid", sec.id);
             const qCount = sec.questions ? sec.questions.length : 0;
             const iconEmoji = iconMap[sec.icon] || "🛡️";
 
             card.innerHTML = `
+                <div class="collab-lock-slot"></div>
                 <div>
                     <div class="section-card-header">
                         <div class="section-badge-group">
@@ -287,6 +433,7 @@
         sec.questions.forEach((q, idx) => {
             const card = document.createElement("div");
             card.className = "question-card";
+            card.setAttribute("data-qid", q.id);
 
             const optKeys = ["A", "B", "C", "D"];
             const optsHtml = (q.options || []).map((opt, oIdx) => {
@@ -304,6 +451,7 @@
             const roses = (typeof q.rosesReward === "number") ? q.rosesReward : 1;
 
             card.innerHTML = `
+                <div class="collab-lock-slot"></div>
                 <div class="question-header">
                     <div style="display:flex; align-items:flex-start; flex:1;">
                         <span class="question-id-badge">#${idx + 1} (${q.id || 'q'})</span>
@@ -331,6 +479,7 @@
             `;
             questionsListEl.appendChild(card);
         });
+        highlightPeerEditingCards();
     }
 
     // Render Tab 3: Settings & Cards
@@ -428,6 +577,12 @@
         document.getElementById("secInputDesc").value = "Mô tả bối cảnh thế giới an ninh mạng...";
         document.getElementById("secInputSubDesc").value = "Hãy trả lời đúng để bảo vệ thế giới và tích lũy hoa hồng!";
 
+        updateLocation({
+            type: 'section',
+            sectionId: 'new',
+            label: 'Tạo vòng chơi mới'
+        });
+
         modalSection.classList.add("active");
     }
 
@@ -435,6 +590,12 @@
         const sec = (currentConfig.sections || []).find(s => s.id === id);
         if (!sec) return;
         editingSection = sec;
+
+        updateLocation({
+            type: 'section',
+            sectionId: sec.id,
+            label: `Sửa Vòng: ${sec.name}`
+        });
 
         document.getElementById("modalSectionTitle").textContent = `CHỈNH SỬA ${sec.name}`;
         document.getElementById("secInputId").value = sec.id;
@@ -490,6 +651,11 @@
         }
 
         modalSection.classList.remove("active");
+        updateLocation({
+            type: 'tab',
+            tab: 'tab-sections',
+            label: 'Xem danh sách Vòng chơi'
+        });
         renderAll();
         showToast("✅ Đã cập nhật Vòng chơi!");
     }
@@ -528,6 +694,16 @@
     function openCreateQuestion() {
         editingQuestion = null;
         document.getElementById("modalQuestionTitle").textContent = "THÊM CÂU HỎI MỚI";
+
+        const warnBanner = document.getElementById("modalQuestionConflictWarning");
+        if (warnBanner) warnBanner.style.display = "none";
+
+        updateLocation({
+            type: 'question',
+            sectionId: selectedStageId,
+            questionId: 'new',
+            label: `Tạo câu hỏi mới cho Vòng ${selectedStageId}`
+        });
 
         // Điền dropdown vòng
         const stageSelect = document.getElementById("qSelectStage");
@@ -568,6 +744,25 @@
         if (!found) return;
         editingQuestion = found;
         document.getElementById("modalQuestionTitle").textContent = `CHỈNH SỬA CÂU HỎI (${found.id})`;
+
+        // Kiểm tra xem có máy nào khác cũng đang mở câu này không
+        const peer = collaborators.find(c => c.clientId !== currentProfile.clientId && c.location && c.location.type === 'question' && String(c.location.questionId) === String(qId));
+        const warnBanner = document.getElementById("modalQuestionConflictWarning");
+        if (warnBanner) {
+            if (peer) {
+                warnBanner.style.display = "flex";
+                warnBanner.innerHTML = `⚠️ Chú ý: Đồng nghiệp <strong>${peer.name}</strong> (${peer.device}) cũng đang mở câu hỏi này! Hãy cẩn thận tránh xung đột ghi đè.`;
+            } else {
+                warnBanner.style.display = "none";
+            }
+        }
+
+        updateLocation({
+            type: 'question',
+            sectionId: foundStageId,
+            questionId: qId,
+            label: `Sửa câu: ${(found.question || '').substring(0, 32)}...`
+        });
 
         // Điền dropdown vòng
         const stageSelect = document.getElementById("qSelectStage");
@@ -664,6 +859,11 @@
         }
 
         modalQuestion.classList.remove("active");
+        updateLocation({
+            type: 'tab',
+            tab: 'tab-questions',
+            label: `Xem danh sách câu hỏi Vòng ${selectedStageId}`
+        });
         renderAll();
         showToast("✅ Đã lưu câu hỏi & số hoa hồng thành công!");
     }
@@ -698,6 +898,11 @@
     // ==========================================
     function openCreateCard() {
         editingCard = null;
+        updateLocation({
+            type: 'card',
+            cardId: 'new',
+            label: 'Tạo thẻ bài ma thuật mới'
+        });
         document.getElementById("modalCardTitle").textContent = "THÊM THẺ BÀI MA THUẬT";
         document.getElementById("cardInputTitle").value = "KHO BÁU BẢO MẬT MỚI";
         document.getElementById("cardSelectType").value = "bonus";
@@ -710,6 +915,11 @@
         const card = (currentConfig.magicCards || []).find(c => c.id === cId);
         if (!card) return;
         editingCard = card;
+        updateLocation({
+            type: 'card',
+            cardId: cId,
+            label: `Sửa Thẻ: ${card.title}`
+        });
         document.getElementById("modalCardTitle").textContent = `CHỈNH SỬA THẺ ${card.title}`;
         document.getElementById("cardInputTitle").value = card.title || "";
         document.getElementById("cardSelectType").value = card.type || "bonus";
@@ -745,6 +955,11 @@
         }
 
         modalCard.classList.remove("active");
+        updateLocation({
+            type: 'tab',
+            tab: 'tab-random',
+            label: 'Cài đặt Boss & Thẻ bài'
+        });
         renderCardsTable();
         showToast("✅ Đã lưu thẻ bài ma thuật!");
     }
@@ -784,35 +999,74 @@
     }
 
     // ==========================================
-    // 10. WEBSOCKET REALTIME SYNC
+    // 10. WEBSOCKET REALTIME SYNC & CỘNG TÁC
     // ==========================================
     function initWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const wsUrl = `${protocol}//${window.location.host}`;
-        let ws = null;
 
         function connect() {
             try {
-                ws = new WebSocket(wsUrl);
+                activeWs = new WebSocket(wsUrl);
 
-                ws.onopen = () => {
+                activeWs.onopen = () => {
                     syncStatusEl.className = "status-pill status-online";
                     syncStatusEl.innerHTML = `<span class="status-dot"></span><span>Đã kết nối Server</span>`;
+
+                    // Đăng ký thông tin cộng tác viên với Server
+                    sendWs({
+                        type: 'HELPER_JOIN',
+                        clientId: currentProfile.clientId,
+                        name: currentProfile.name,
+                        color: currentProfile.color,
+                        device: currentProfile.device,
+                        location: currentLocation
+                    });
                 };
 
-                ws.onmessage = (event) => {
+                activeWs.onmessage = (event) => {
                     try {
                         const msg = JSON.parse(event.data);
-                        if (msg.type === "CONFIG_SYNC" || msg.type === "CONFIG_UPDATED") {
+
+                        if (msg.type === "CONFIG_SYNC") {
                             if (msg.config) {
                                 currentConfig = msg.config;
+                                if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
                                 renderAll();
                             }
+                        } else if (msg.type === "CONFIG_UPDATED") {
+                            if (msg.config) {
+                                const updaterName = msg.savedBy || "Đồng nghiệp";
+                                const isSelf = (updaterName === currentProfile.name);
+
+                                if (!isSelf) {
+                                    const anyModalOpen = document.querySelector(".modal-overlay.active:not(#modalConflict)");
+                                    if (!anyModalOpen) {
+                                        currentConfig = msg.config;
+                                        if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
+                                        renderAll();
+                                        showToast(`🔔 "${updaterName}" vừa lưu cấu hình mới! (Bản #${msg.revision || baseRevision})`);
+                                    } else {
+                                        // Có modal đang mở, hiển thị cảnh báo
+                                        showToast(`⚠️ "${updaterName}" vừa lưu bản #${msg.revision || 'mới'}. Hãy cẩn thận kiểm tra trước khi lưu!`, true);
+                                    }
+                                } else {
+                                    currentConfig = msg.config;
+                                    if (typeof msg.revision !== 'undefined') baseRevision = msg.revision;
+                                    renderAll();
+                                }
+                            }
+                        } else if (msg.type === "HELPER_COLLABORATORS") {
+                            collaborators = msg.collaborators || [];
+                            renderCollaboratorsUI();
+                        } else if (msg.type === "TUNNEL_INFO") {
+                            tunnelInfo = msg.info;
+                            updateShareModalUI();
                         }
                     } catch (e) {}
                 };
 
-                ws.onclose = () => {
+                activeWs.onclose = () => {
                     syncStatusEl.className = "status-pill";
                     syncStatusEl.style.borderColor = "#f1c40f";
                     syncStatusEl.style.color = "#f1c40f";
@@ -821,8 +1075,8 @@
                     setTimeout(connect, 3000);
                 };
 
-                ws.onerror = () => {
-                    ws.close();
+                activeWs.onerror = () => {
+                    activeWs.close();
                 };
             } catch (e) {}
         }
@@ -831,10 +1085,166 @@
     }
 
     // ==========================================
+    // 10b. RENDER GIAO DIỆN CỘNG TÁC VIÊN (PRESENCE)
+    // ==========================================
+    function renderCollaboratorsUI() {
+        const avatarsGroup = document.getElementById("collaboratorAvatars");
+        const countText = document.getElementById("collaboratorCountText");
+        const listEl = document.getElementById("collaboratorsList");
+
+        if (!avatarsGroup || !countText || !listEl) return;
+
+        // 1. Render nhóm avatar trên thanh Top Bar
+        avatarsGroup.innerHTML = "";
+        const maxAvatars = 4;
+        const total = collaborators.length;
+
+        // Đảm bảo đưa bản thân lên đầu danh sách hiển thị
+        const sorted = [...collaborators].sort((a, b) => (a.clientId === currentProfile.clientId ? -1 : 1));
+
+        sorted.slice(0, maxAvatars).forEach(c => {
+            const isYou = (c.clientId === currentProfile.clientId);
+            const span = document.createElement("span");
+            span.className = "collab-avatar" + (isYou ? " you" : "");
+            span.style.background = c.color || "#3498db";
+            const initials = (c.name || "U").trim().split(/\s+/).map(w => w[0]).join("").substring(0, 2).toUpperCase();
+            span.textContent = initials;
+            span.title = isYou ? `Bạn: ${c.name} (${c.device})` : `${c.name} (${c.device})`;
+            avatarsGroup.appendChild(span);
+        });
+
+        countText.textContent = total > 1 ? `${total} máy` : `1 máy (bạn)`;
+
+        // 2. Render dropdown danh sách chi tiết các máy
+        listEl.innerHTML = "";
+        sorted.forEach(c => {
+            const isYou = (c.clientId === currentProfile.clientId);
+            const initials = (c.name || "U").trim().split(/\s+/).map(w => w[0]).join("").substring(0, 2).toUpperCase();
+            const item = document.createElement("div");
+            item.className = "collab-item";
+            item.innerHTML = `
+                <div class="collab-item-avatar" style="background:${c.color || '#3498db'};">${initials}</div>
+                <div class="collab-item-details">
+                    <div class="collab-item-name">
+                        <span>${c.name}</span>
+                        ${isYou ? '<span class="collab-you-tag">BẠN</span>' : ''}
+                        <span style="font-size:10.5px; color:#94a3b8; font-weight:normal;">(${c.device || 'PC'})</span>
+                    </div>
+                    <div class="collab-item-loc">📍 ${c.location ? c.location.label : 'Trang tổng quan'}</div>
+                </div>
+            `;
+            listEl.appendChild(item);
+        });
+
+        // 3. Highlight các card mà máy khác đang sửa
+        highlightPeerEditingCards();
+    }
+
+    // Hiển thị nhãn và viền sáng trên các Card đang được máy khác chỉnh sửa
+    function highlightPeerEditingCards() {
+        // Cập nhật Question Cards
+        document.querySelectorAll(".question-card").forEach(card => {
+            const qId = card.getAttribute("data-qid");
+            const lockSlot = card.querySelector(".collab-lock-slot");
+            if (!lockSlot || !qId) return;
+
+            const peer = collaborators.find(c => c.clientId !== currentProfile.clientId && c.location && c.location.type === 'question' && String(c.location.questionId) === String(qId));
+            if (peer) {
+                card.classList.add("editing-by-peer");
+                card.style.borderColor = peer.color || "#e74c3c";
+                lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${peer.name} đang soạn thảo câu này...</span>`;
+            } else {
+                card.classList.remove("editing-by-peer");
+                card.style.borderColor = "";
+                lockSlot.innerHTML = "";
+            }
+        });
+
+        // Cập nhật Section Cards
+        document.querySelectorAll(".section-card").forEach(card => {
+            const secId = card.getAttribute("data-secid");
+            const lockSlot = card.querySelector(".collab-lock-slot");
+            if (!lockSlot || !secId) return;
+
+            const peer = collaborators.find(c => c.clientId !== currentProfile.clientId && c.location && c.location.type === 'section' && String(c.location.sectionId) === String(secId));
+            if (peer) {
+                card.classList.add("editing-by-peer");
+                card.style.borderColor = peer.color || "#e74c3c";
+                lockSlot.innerHTML = `<span class="collaborator-lock-pill" style="background:${peer.color || '#e74c3c'};">✏️ ${peer.name} đang sửa vòng này...</span>`;
+            } else {
+                card.classList.remove("editing-by-peer");
+                card.style.borderColor = "";
+                lockSlot.innerHTML = "";
+            }
+        });
+    }
+
+    // ==========================================
+    // 10c. MODAL CHIA SẺ LIVE EDIT (QR & LINK)
+    // ==========================================
+    async function openShareModal() {
+        if (!tunnelInfo) {
+            try {
+                const res = await fetch("/api/tunnel");
+                if (res.ok) tunnelInfo = await res.json();
+            } catch (e) {}
+        }
+        updateShareModalUI();
+        modalShareLive.classList.add("active");
+    }
+
+    function updateShareModalUI() {
+        const qrImg = document.getElementById("shareQrImg");
+        const qrLoading = document.getElementById("shareQrLoading");
+        const urlInput = document.getElementById("shareUrlInput");
+        const noticeEl = document.getElementById("shareTunnelStatusNotice");
+
+        if (!qrImg || !urlInput) return;
+
+        if (!tunnelInfo) {
+            qrImg.style.display = "none";
+            qrLoading.style.display = "block";
+            urlInput.value = window.location.href;
+            return;
+        }
+
+        let targetUrl = "";
+        let targetQr = "";
+
+        if (shareActiveTab === "wifi") {
+            targetUrl = tunnelInfo.localHelperUrl || `http://${tunnelInfo.localIp || window.location.hostname}:3000/helper`;
+            targetQr = tunnelInfo.localHelperQr;
+            noticeEl.innerHTML = "📶 Mạng nội bộ Wi-Fi (Cho các máy cùng mạng Wi-Fi trường / nhà)";
+            noticeEl.style.color = "#00d2d3";
+        } else {
+            targetUrl = tunnelInfo.tunnelHelperUrl || (tunnelInfo.tunnelUrl ? tunnelInfo.tunnelUrl.replace(/\/controller$/, '/helper') : "");
+            targetQr = tunnelInfo.tunnelHelperQr;
+            if (tunnelInfo.status === "active" && targetUrl) {
+                noticeEl.innerHTML = "🟢 Live Tunnel Internet (4G) sẵn sàng truy cập từ xa mọi nơi";
+                noticeEl.style.color = "#2ecc71";
+            } else {
+                noticeEl.innerHTML = "⏳ Đang kết nối Live Tunnel Internet...";
+                noticeEl.style.color = "#f1c40f";
+            }
+        }
+
+        urlInput.value = targetUrl || window.location.href;
+
+        if (targetQr) {
+            qrImg.src = targetQr;
+            qrImg.style.display = "block";
+            qrLoading.style.display = "none";
+        } else {
+            qrImg.style.display = "none";
+            qrLoading.style.display = "block";
+        }
+    }
+
+    // ==========================================
     // 11. KHỞI TẠO SỰ KIỆN GIAO DIỆN
     // ==========================================
     function initEvents() {
-        // Tab switching
+        // Chuyển Tab chính
         document.querySelectorAll(".nav-tab").forEach(tab => {
             tab.addEventListener("click", () => {
                 const target = tab.getAttribute("data-tab");
@@ -844,20 +1254,37 @@
                 tab.classList.add("active");
                 document.getElementById(target).classList.add("active");
 
+                let tabLabel = 'Xem Vòng chơi';
+                if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
+                else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
+                else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
+
+                updateLocation({
+                    type: 'tab',
+                    tab: target,
+                    label: tabLabel
+                });
+
                 if (target === "tab-json") {
                     renderRawJsonView();
                 }
             });
         });
 
-        // Dropdown filter change
+        // Dropdown lọc câu hỏi theo vòng
         selectStageFilter.addEventListener("change", (e) => {
             selectedStageId = parseInt(e.target.value);
+            updateLocation({
+                type: 'tab',
+                tab: 'tab-questions',
+                label: `Xem Câu hỏi Vòng ${selectedStageId}`
+            });
             renderQuestionsList();
         });
 
         // Top actions
-        btnSaveConfig.addEventListener("click", saveConfigToServer);
+        btnSaveConfig.addEventListener("click", () => saveConfigToServer(false));
+        btnShareLive.addEventListener("click", openShareModal);
         btnExportJson.addEventListener("click", exportJsonFile);
         fileInputJson.addEventListener("change", handleFileImport);
         btnResetConfig.addEventListener("click", resetConfigDefault);
@@ -878,19 +1305,142 @@
         btnFormatJson.addEventListener("click", formatJsonEditor);
         btnApplyRawJson.addEventListener("click", applyRawJson);
 
-        // Modal close buttons
+        // Sự kiện Modal Chia Sẻ Live Edit
+        tabBtnShareWifi.addEventListener("click", () => {
+            shareActiveTab = "wifi";
+            tabBtnShareWifi.classList.add("active");
+            tabBtnShareTunnel.classList.remove("active");
+            updateShareModalUI();
+        });
+
+        tabBtnShareTunnel.addEventListener("click", () => {
+            shareActiveTab = "tunnel";
+            tabBtnShareTunnel.classList.add("active");
+            tabBtnShareWifi.classList.remove("active");
+            updateShareModalUI();
+        });
+
+        btnCopyShareUrl.addEventListener("click", () => {
+            const url = document.getElementById("shareUrlInput").value;
+            if (navigator.clipboard && url) {
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast("📋 Đã sao chép link Live Edit vào bộ nhớ tạm!");
+                }).catch(() => {
+                    document.getElementById("shareUrlInput").select();
+                    document.execCommand("copy");
+                    showToast("📋 Đã sao chép link!");
+                });
+            }
+        });
+
+        // Sự kiện Modal Xung Đột (Conflict Resolution)
+        btnConflictForceOverwrite.addEventListener("click", () => {
+            if (confirm("⚠️ Bạn có chắc chắn muốn ghi đè nội dung của mình lên máy chủ? Bản của đồng nghiệp sẽ bị thay thế!")) {
+                modalConflict.classList.remove("active");
+                saveConfigToServer(true); // Force overwrite
+            }
+        });
+
+        btnConflictLoadServer.addEventListener("click", () => {
+            if (pendingConflictData && pendingConflictData.serverConfig) {
+                currentConfig = pendingConflictData.serverConfig;
+                baseRevision = pendingConflictData.serverRevision;
+                renderAll();
+                modalConflict.classList.remove("active");
+                showToast("📥 Đã nạp bản mới nhất từ máy chủ!");
+            }
+        });
+
+        btnConflictBackupJson.addEventListener("click", () => {
+            exportJsonFile();
+            showToast("💾 Đã tải bản nháp của bạn về máy dạng file .json!");
+        });
+
+        // Sự kiện Collaborator Badge & Profile Modal
+        collaboratorsBadge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            collabWrapper.classList.toggle("open");
+        });
+
+        document.addEventListener("click", (e) => {
+            if (collabWrapper && !collabWrapper.contains(e.target)) {
+                collabWrapper.classList.remove("open");
+            }
+        });
+
+        btnOpenProfileModal.addEventListener("click", () => {
+            collabWrapper.classList.remove("open");
+            inputProfileName.value = currentProfile.name;
+
+            // Highlight màu hiện tại
+            document.querySelectorAll("#profileColorPicker .color-swatch").forEach(swatch => {
+                if (swatch.getAttribute("data-color") === currentProfile.color) {
+                    swatch.classList.add("active");
+                } else {
+                    swatch.classList.remove("active");
+                }
+            });
+
+            modalProfile.classList.add("active");
+        });
+
+        let selectedColor = currentProfile.color;
+        document.querySelectorAll("#profileColorPicker .color-swatch").forEach(swatch => {
+            swatch.addEventListener("click", () => {
+                document.querySelectorAll("#profileColorPicker .color-swatch").forEach(s => s.classList.remove("active"));
+                swatch.classList.add("active");
+                selectedColor = swatch.getAttribute("data-color");
+            });
+        });
+
+        btnSaveProfile.addEventListener("click", () => {
+            const newName = inputProfileName.value.trim();
+            if (!newName) {
+                alert("Vui lòng nhập tên hoặc biệt danh của bạn!");
+                return;
+            }
+            saveProfile(newName, selectedColor);
+            modalProfile.classList.remove("active");
+        });
+
+        // Đóng các Modal
         document.querySelectorAll("[data-close]").forEach(btn => {
             btn.addEventListener("click", () => {
                 const modalId = btn.getAttribute("data-close");
                 document.getElementById(modalId).classList.remove("active");
+
+                // Cập nhật vị trí quay lại tab hiện tại
+                const activeTab = document.querySelector(".nav-tab.active");
+                const target = activeTab ? activeTab.getAttribute("data-tab") : "tab-sections";
+                let tabLabel = 'Xem Vòng chơi';
+                if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
+                else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
+                else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
+                updateLocation({
+                    type: 'tab',
+                    tab: target,
+                    label: tabLabel
+                });
             });
         });
 
-        // Close modal when clicking outside dialog
+        // Đóng modal khi bấm ra ngoài nền mờ
         document.querySelectorAll(".modal-overlay").forEach(overlay => {
             overlay.addEventListener("click", (e) => {
                 if (e.target === overlay) {
                     overlay.classList.remove("active");
+
+                    const activeTab = document.querySelector(".nav-tab.active");
+                    const target = activeTab ? activeTab.getAttribute("data-tab") : "tab-sections";
+                    let tabLabel = 'Xem Vòng chơi';
+                    if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
+                    else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
+                    else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
+                    updateLocation({
+                        type: 'tab',
+                        tab: target,
+                        label: tabLabel
+                    });
                 }
             });
         });
@@ -911,8 +1461,10 @@
 
     // Khởi chạy khi DOM sẵn sàng
     window.addEventListener("DOMContentLoaded", () => {
+        loadProfile();
         initEvents();
         initWebSocket();
         loadConfigFromServer();
+        renderCollaboratorsUI();
     });
 })();

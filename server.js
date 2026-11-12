@@ -27,6 +27,25 @@ const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'game_config.json');
 const DEFAULT_CONFIG_FILE = path.join(DATA_DIR, 'default_config.json');
 
+// Quản lý Phiên bản cấu hình để kiểm tra Xung đột (Conflict Checking) khi nhiều máy cùng sửa
+let serverRevision = 1;
+let lastSavedMeta = {
+    savedAt: Date.now(),
+    savedBy: 'Hệ thống Khởi tạo',
+    revision: 1
+};
+
+// Quản lý các Biên tập viên / Máy đang mở Helper để cộng tác trực tiếp (Live Collaboration Presence)
+const helperCollaborators = new Map(); // socketId -> { socketId, clientId, name, color, device, location, joinedAt, lastActive }
+
+function broadcastHelperCollaborators() {
+    const list = Array.from(helperCollaborators.values());
+    broadcast({
+        type: 'HELPER_COLLABORATORS',
+        collaborators: list
+    });
+}
+
 function loadGameConfig() {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -83,27 +102,71 @@ app.get('/api/config', (req, res) => {
     if (!cfg) {
         return res.status(500).json({ error: 'Không thể tải cấu hình game' });
     }
+    cfg._revision = serverRevision;
+    cfg._lastSavedAt = lastSavedMeta.savedAt;
+    cfg._lastSavedBy = lastSavedMeta.savedBy;
     res.json(cfg);
 });
 
-// API lưu cấu hình game mới từ Helper
+// API lưu cấu hình game mới từ Helper (Hỗ trợ Kiểm tra Xung đột - Conflict Checking)
 app.post('/api/config', (req, res) => {
     try {
-        const newConfig = req.body;
-        if (!newConfig || !Array.isArray(newConfig.sections)) {
+        const body = req.body;
+        // Hỗ trợ cả 2 định dạng: { config, baseRevision, editorName, force } hoặc gửi trực tiếp {...}
+        const targetConfig = (body && body.config && body.config.sections) ? body.config : body;
+        const baseRev = (body && typeof body.baseRevision !== 'undefined') ? body.baseRevision : (targetConfig ? targetConfig._revision : null);
+        const editorName = (body && body.editorName) ? body.editorName : 'Cộng tác viên';
+        const isForce = body && body.force === true;
+
+        if (!targetConfig || !Array.isArray(targetConfig.sections)) {
             return res.status(400).json({ error: 'Dữ liệu cấu hình không hợp lệ (phải có danh sách sections)' });
         }
-        saveGameConfig(newConfig);
-        const totalQ = newConfig.sections.reduce((acc, s) => acc + (s.questions ? s.questions.length : 0), 0);
-        console.log(`[Config] 💾 Đã lưu cấu hình mới (${newConfig.sections.length} sections, ${totalQ} câu hỏi)!`);
 
-        // Phát sự kiện cập nhật cấu hình cho tất cả game client đang mở
+        // KIỂM TRA XUNG ĐỘT (CONFLICT CHECKING):
+        // Nếu client gửi baseRevision cũ hơn serverRevision hiện tại và không ép buộc (force), báo lỗi 409 Conflict
+        if (!isForce && baseRev && baseRev !== serverRevision) {
+            console.warn(`[Config] ⚠️ Phát hiện xung đột! Client baseRev=${baseRev}, serverRevision=${serverRevision}, người sửa trước: ${lastSavedMeta.savedBy}`);
+            return res.status(409).json({
+                conflict: true,
+                serverRevision: serverRevision,
+                clientRevision: baseRev,
+                lastSavedBy: lastSavedMeta.savedBy,
+                lastSavedAt: lastSavedMeta.savedAt,
+                serverConfig: loadGameConfig(),
+                message: `Phát hiện xung đột! Cấu hình đã được lưu bởi "${lastSavedMeta.savedBy}" cách đây ít phút (Bản #${serverRevision}). Hãy kiểm tra so sánh trước khi ghi đè!`
+            });
+        }
+
+        serverRevision++;
+        lastSavedMeta = {
+            savedAt: Date.now(),
+            savedBy: editorName,
+            revision: serverRevision
+        };
+        targetConfig._revision = serverRevision;
+        targetConfig._lastSavedAt = lastSavedMeta.savedAt;
+        targetConfig._lastSavedBy = lastSavedMeta.savedBy;
+
+        saveGameConfig(targetConfig);
+        const totalQ = targetConfig.sections.reduce((acc, s) => acc + (s.questions ? s.questions.length : 0), 0);
+        console.log(`[Config] 💾 Đã lưu cấu hình mới #${serverRevision} bởi "${editorName}" (${targetConfig.sections.length} sections, ${totalQ} câu hỏi)!`);
+
+        // Phát sự kiện cập nhật cấu hình cho tất cả game client và helper client đang mở
         broadcast({
             type: 'CONFIG_UPDATED',
-            config: newConfig
+            config: targetConfig,
+            revision: serverRevision,
+            savedBy: editorName,
+            savedAt: lastSavedMeta.savedAt
         });
 
-        res.json({ success: true, message: 'Đã lưu cấu hình vào game thành công!' });
+        res.json({
+            success: true,
+            revision: serverRevision,
+            savedBy: editorName,
+            savedAt: lastSavedMeta.savedAt,
+            message: 'Đã lưu cấu hình vào game thành công!'
+        });
     } catch (e) {
         console.error('[Config] Lỗi lưu cấu hình:', e.message);
         res.status(500).json({ error: e.message });
@@ -116,13 +179,26 @@ app.post('/api/config/reset', (req, res) => {
         if (fs.existsSync(DEFAULT_CONFIG_FILE)) {
             const raw = fs.readFileSync(DEFAULT_CONFIG_FILE, 'utf8');
             const def = JSON.parse(raw);
+            serverRevision++;
+            lastSavedMeta = {
+                savedAt: Date.now(),
+                savedBy: 'Khôi phục Mặc định',
+                revision: serverRevision
+            };
+            def._revision = serverRevision;
+            def._lastSavedAt = lastSavedMeta.savedAt;
+            def._lastSavedBy = lastSavedMeta.savedBy;
+
             saveGameConfig(def);
-            console.log('[Config] 🔄 Đã khôi phục cấu hình game về mặc định!');
+            console.log(`[Config] 🔄 Đã khôi phục cấu hình game về mặc định (Bản #${serverRevision})!`);
             broadcast({
                 type: 'CONFIG_UPDATED',
-                config: def
+                config: def,
+                revision: serverRevision,
+                savedBy: lastSavedMeta.savedBy,
+                savedAt: lastSavedMeta.savedAt
             });
-            return res.json({ success: true, config: def, message: 'Đã khôi phục cấu hình mặc định!' });
+            return res.json({ success: true, config: def, revision: serverRevision, message: 'Đã khôi phục cấu hình mặc định!' });
         }
         res.status(404).json({ error: 'Không tìm thấy file default_config.json' });
     } catch (e) {
@@ -316,11 +392,23 @@ wss.on('connection', (ws) => {
     // Gửi cấu hình game hiện tại
     const currentCfg = loadGameConfig();
     if (currentCfg) {
+        currentCfg._revision = serverRevision;
+        currentCfg._lastSavedAt = lastSavedMeta.savedAt;
+        currentCfg._lastSavedBy = lastSavedMeta.savedBy;
         ws.send(JSON.stringify({
             type: 'CONFIG_SYNC',
-            config: currentCfg
+            config: currentCfg,
+            revision: serverRevision,
+            savedBy: lastSavedMeta.savedBy,
+            savedAt: lastSavedMeta.savedAt
         }));
     }
+
+    // Gửi danh sách các máy / cộng tác viên đang mở Helper
+    ws.send(JSON.stringify({
+        type: 'HELPER_COLLABORATORS',
+        collaborators: Array.from(helperCollaborators.values())
+    }));
 
     ws.on('message', (raw) => {
         try {
@@ -335,6 +423,47 @@ wss.on('connection', (ws) => {
                     device: data.device
                 });
                 console.log(`[WebSocket] 📱 Điện thoại đã kết nối: ${ws.controllerId} (Tổng tay cầm: ${tunnelManager.getControllerCount()})`);
+            }
+
+            // Đăng ký máy tham gia cộng tác Live Edit trên Helper
+            else if (data.type === 'HELPER_JOIN') {
+                ws.isHelper = true;
+                ws.helperClientId = data.clientId || `usr_${socketId}`;
+                const info = {
+                    socketId: socketId,
+                    clientId: ws.helperClientId,
+                    name: data.name || `Biên tập viên #${socketId}`,
+                    color: data.color || '#3498db',
+                    device: data.device || 'Desktop',
+                    location: data.location || { type: 'viewing', label: 'Trang tổng quan' },
+                    joinedAt: Date.now(),
+                    lastActive: Date.now()
+                };
+                helperCollaborators.set(socketId, info);
+                console.log(`[Helper Collab] 👤 Biên tập viên tham gia: ${info.name} (${info.device})`);
+                broadcastHelperCollaborators();
+            }
+
+            // Cập nhật vị trí đang chỉnh sửa của máy trên Helper (đang sửa câu nào / vòng nào)
+            else if (data.type === 'HELPER_LOCATION') {
+                if (helperCollaborators.has(socketId)) {
+                    const collab = helperCollaborators.get(socketId);
+                    collab.location = data.location || { type: 'viewing', label: 'Trang tổng quan' };
+                    collab.lastActive = Date.now();
+                    if (data.name) collab.name = data.name;
+                    broadcastHelperCollaborators();
+                }
+            }
+
+            // Cập nhật thông tin cá nhân (Tên, Màu hiển thị)
+            else if (data.type === 'HELPER_PROFILE') {
+                if (helperCollaborators.has(socketId)) {
+                    const collab = helperCollaborators.get(socketId);
+                    if (data.name) collab.name = data.name;
+                    if (data.color) collab.color = data.color;
+                    collab.lastActive = Date.now();
+                    broadcastHelperCollaborators();
+                }
             }
 
             // Nhận tín hiệu nút bấm từ Điện thoại song song với Arduino
@@ -359,6 +488,12 @@ wss.on('connection', (ws) => {
         if (ws.isController) {
             tunnelManager.unregisterController(socketId);
             console.log(`[WebSocket] 📱 Điện thoại đã ngắt kết nối: ${ws.controllerId} (Còn lại: ${tunnelManager.getControllerCount()})`);
+        }
+        if (ws.isHelper) {
+            const collab = helperCollaborators.get(socketId);
+            helperCollaborators.delete(socketId);
+            console.log(`[Helper Collab] 👤 Biên tập viên rời khỏi: ${collab ? collab.name : socketId} (Còn lại: ${helperCollaborators.size})`);
+            broadcastHelperCollaborators();
         }
     });
 });

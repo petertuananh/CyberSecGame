@@ -24,9 +24,34 @@
                     <span class="status-dot"></span>
                     <span class="status-text">Đã kết nối Server</span>
                 </div>
+
+                <!-- Live Collaboration Presence Badge -->
+                <div class="collab-wrapper">
+                    <div id="collaboratorsBadge" class="collaborators-badge" title="Nhấp để xem các máy đang cùng chỉnh sửa">
+                        <div id="collaboratorAvatars" class="collab-avatars-group">
+                            <span class="collab-avatar you" style="background:#3498db;">BẠN</span>
+                        </div>
+                        <span id="collaboratorCountText" class="collab-count-text">1 máy</span>
+                        <span class="collab-arrow">▼</span>
+                    </div>
+
+                    <!-- Dropdown danh sách máy cộng tác -->
+                    <div id="collaboratorsDropdown" class="collaborators-dropdown">
+                        <div class="collab-dropdown-header">
+                            <span>👥 MÁY ĐANG CỘNG TÁC LIVE</span>
+                            <button id="btnOpenProfileModal" class="btn-edit-profile" title="Đổi tên và màu đại diện">✏️ Đổi tên</button>
+                        </div>
+                        <div id="collaboratorsList" class="collab-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="header-actions">
+                <button id="btnShareLive" class="action-btn btn-share" title="Mở mã QR và đường link để đồng nghiệp cùng chỉnh sửa">
+                    🔗 CHIA SẺ LIVE EDIT (QR)
+                </button>
                 <button id="btnSaveConfig" class="action-btn btn-save" title="Lưu dữ liệu vào server và áp dụng ngay vào game">
                     💾 LƯU VÀO GAME
                 </button>
@@ -290,6 +315,9 @@
                 <button class="modal-close" data-close="modalQuestion">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Cảnh báo nếu máy khác cũng đang mở câu hỏi này -->
+                <div id="modalQuestionConflictWarning" class="modal-warning-banner" style="display:none;"></div>
+
                 <div class="form-row">
                     <label>Vòng Chơi Chứa Câu Hỏi:</label>
                     <select id="qSelectStage" class="custom-select"></select>
@@ -391,6 +419,154 @@
             <div class="modal-footer">
                 <button class="btn-secondary" data-close="modalCard">HỦY BỎ</button>
                 <button id="btnSaveCardModal" class="btn-create">LƯU THẺ BÀI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHIA SẺ LIVE EDIT & QR CODE -->
+    <div id="modalShareLive" class="modal-overlay">
+        <div class="modal-dialog modal-share-dialog">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge-icon">🔗</span>
+                    <div>
+                        <h3>CHIA SẺ TRÌNH BIÊN SOẠN CÂU HỎI (LIVE EDIT)</h3>
+                        <p class="modal-subtitle">Quét mã QR bằng điện thoại / tablet hoặc gửi link cho đồng nghiệp để cùng sửa nội dung trực tiếp!</p>
+                    </div>
+                </div>
+                <button class="modal-close" data-close="modalShareLive">&times;</button>
+            </div>
+            <div class="modal-body share-body">
+                <!-- Tabs chuyển Wi-Fi / Tunnel -->
+                <div class="share-tabs">
+                    <button id="tabBtnShareWifi" class="share-tab-btn active">
+                        📶 CÙNG MẠNG WI-FI (LAN)
+                    </button>
+                    <button id="tabBtnShareTunnel" class="share-tab-btn">
+                        🌐 LIVE TUNNEL (4G / INTERNET)
+                    </button>
+                </div>
+
+                <div class="share-content">
+                    <div class="qr-container">
+                        <img id="shareQrImg" class="share-qr-image" alt="QR Code Live Edit" />
+                        <div id="shareQrLoading" class="share-qr-loading">⏳ Đang tạo mã QR...</div>
+                    </div>
+
+                    <div class="share-info">
+                        <label class="section-label">ĐƯỜNG LINK TRUY CẬP TRỰC TIẾP:</label>
+                        <div class="copy-input-group">
+                            <input type="text" id="shareUrlInput" class="form-input copy-input" readonly>
+                            <button id="btnCopyShareUrl" class="btn-copy">📋 SAO CHÉP</button>
+                        </div>
+
+                        <div class="share-instructions">
+                            <div class="instruction-item">
+                                <span class="inst-num">1</span>
+                                <span>Mở camera trên điện thoại, iPad hoặc trình duyệt trên laptop khác.</span>
+                            </div>
+                            <div class="instruction-item">
+                                <span class="inst-num">2</span>
+                                <span>Quét mã QR để mở trang Helper và cùng thêm/sửa câu hỏi.</span>
+                            </div>
+                            <div class="instruction-item">
+                                <span class="inst-num">3</span>
+                                <span>Hệ thống hiển thị máy nào đang sửa phần nào và tự động chống ghi đè (Conflict Check).</span>
+                            </div>
+                        </div>
+
+                        <div id="shareTunnelStatusNotice" class="tunnel-status-notice">
+                            🟢 Mạng nội bộ Wi-Fi sẵn sàng
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalShareLive">ĐÓNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GIẢI QUYẾT XUNG ĐỘT (CONFLICT RESOLUTION) -->
+    <div id="modalConflict" class="modal-overlay">
+        <div class="modal-dialog modal-conflict-dialog">
+            <div class="modal-header header-danger">
+                <div class="modal-title-group">
+                    <span class="modal-badge-icon">⚠️</span>
+                    <div>
+                        <h3 style="color:#ff4757;">PHÁT HIỆN XUNG ĐỘT CẬP NHẬT!</h3>
+                        <p class="modal-subtitle">Dữ liệu trên máy chủ đã được đồng nghiệp lưu phiên bản mới hơn trong khi bạn đang soạn thảo.</p>
+                    </div>
+                </div>
+                <button class="modal-close" data-close="modalConflict">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="conflict-alert-box">
+                    <p id="conflictDescText">
+                        Đồng nghiệp <strong>[Tên]</strong> vừa lưu bản mới lúc <strong>[Giờ]</strong>. Nếu bạn lưu ngay bây giờ, nội dung của đồng nghiệp có thể bị ghi đè!
+                    </p>
+                </div>
+
+                <div class="conflict-compare-grid">
+                    <div class="conflict-card my-version">
+                        <h4>📝 BẢN CỦA BẠN (CHƯA LƯU)</h4>
+                        <div id="conflictMyStats" class="conflict-stats">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                    <div class="conflict-card server-version">
+                        <h4>🌐 BẢN MỚI TRÊN SERVER</h4>
+                        <div id="conflictServerStats" class="conflict-stats">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <p class="conflict-action-hint">Hãy chọn phương án xử lý an toàn nhất cho bạn:</p>
+            </div>
+            <div class="modal-footer conflict-footer">
+                <button id="btnConflictBackupJson" class="btn-secondary" title="Tải bản nháp của bạn về máy dạng file .json trước">
+                    💾 TẢI FILE DỰ PHÒNG (.JSON)
+                </button>
+                <button id="btnConflictLoadServer" class="btn-load-server" title="Hủy bản nháp hiện tại và nạp bản mới nhất của đồng đội">
+                    📥 TẢI BẢN MỚI TỪ MÁY CHỦ
+                </button>
+                <button id="btnConflictForceOverwrite" class="btn-danger" title="Ghi đè bản của bạn lên máy chủ">
+                    ⚠️ GHI ĐÈ BẰNG BẢN CỦA TÔI
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐỔI THÔNG TIN CỘNG TÁC VIÊN -->
+    <div id="modalProfile" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>THÔNG TIN HIỂN THỊ CỘNG TÁC CỦA BẠN</h3>
+                <button class="modal-close" data-close="modalProfile">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>Tên / Biệt danh hiển thị cho đồng nghiệp:</label>
+                    <input type="text" id="inputProfileName" class="form-input" placeholder="VD: Thầy Tuấn Anh, Vệ Binh Đỏ...">
+                </div>
+                <div class="form-row">
+                    <label>Màu đại diện của bạn:</label>
+                    <div class="color-picker-grid" id="profileColorPicker">
+                        <button type="button" class="color-swatch active" data-color="#3498db" style="background:#3498db;"></button>
+                        <button type="button" class="color-swatch" data-color="#2ecc71" style="background:#2ecc71;"></button>
+                        <button type="button" class="color-swatch" data-color="#e74c3c" style="background:#e74c3c;"></button>
+                        <button type="button" class="color-swatch" data-color="#f1c40f" style="background:#f1c40f;"></button>
+                        <button type="button" class="color-swatch" data-color="#9b59b6" style="background:#9b59b6;"></button>
+                        <button type="button" class="color-swatch" data-color="#00d2d3" style="background:#00d2d3;"></button>
+                        <button type="button" class="color-swatch" data-color="#ff6b81" style="background:#ff6b81;"></button>
+                        <button type="button" class="color-swatch" data-color="#ff9f43" style="background:#ff9f43;"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalProfile">HỦY BỎ</button>
+                <button id="btnSaveProfile" class="btn-create">LƯU THÔNG TIN</button>
             </div>
         </div>
     </div>
