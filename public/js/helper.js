@@ -120,7 +120,13 @@
         } catch (e) {}
     }
 
-    // DOM Elements
+    // DOM Elements & Multiplayer Live Cursors
+    const tabContentContainer = document.getElementById("tabContentContainer");
+    const peerCursorsLayer = document.getElementById("peerCursorsLayer");
+    const peerCursorsMap = new Map(); // clientId -> { el, idleTimer, tab }
+    let cursorThrottleTimer = null;
+    let lastCursorSentTime = 0;
+
     const syncStatusEl = document.getElementById("syncStatus");
     const btnSaveConfig = document.getElementById("btnSaveConfig");
     const btnShareLive = document.getElementById("btnShareLive");
@@ -1199,6 +1205,14 @@
                             if (msg.clientId !== currentProfile.clientId) {
                                 handleIncomingFieldBlur(msg);
                             }
+                        } else if (msg.type === "HELPER_CURSOR_MOVE") {
+                            if (msg.clientId !== currentProfile.clientId) {
+                                handleIncomingCursorMove(msg);
+                            }
+                        } else if (msg.type === "HELPER_CURSOR_LEAVE") {
+                            if (msg.clientId !== currentProfile.clientId) {
+                                handleIncomingCursorLeave(msg);
+                            }
                         } else if (msg.type === "HELPER_COLLABORATORS") {
                             collaborators = msg.collaborators || [];
                             renderCollaboratorsUI();
@@ -1691,6 +1705,123 @@
     }
 
     // ==========================================
+    // 10d. MULTIPLAYER LIVE CURSORS (CHUỘT CỘNG TÁC CÙNG TAB)
+    // ==========================================
+    function getActiveTab() {
+        const activeBtn = document.querySelector(".nav-tab.active");
+        return activeBtn ? activeBtn.getAttribute("data-tab") : "tab-sections";
+    }
+
+    function sendCursorMove(tab, x, y, percentX) {
+        sendWs({
+            type: 'HELPER_CURSOR_MOVE',
+            tab: tab,
+            x: Math.round(x),
+            y: Math.round(y),
+            percentX: Number(percentX.toFixed(4)),
+            clientId: currentProfile.clientId,
+            sender: {
+                name: currentProfile.name,
+                color: currentProfile.color
+            }
+        });
+    }
+
+    function handleContainerMouseMove(e) {
+        const container = tabContentContainer || document.getElementById("tabContentContainer");
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top + container.scrollTop;
+        const percentX = x / (rect.width || 1);
+        const currentTab = getActiveTab();
+
+        const now = Date.now();
+        if (now - lastCursorSentTime > 35) {
+            lastCursorSentTime = now;
+            sendCursorMove(currentTab, x, y, percentX);
+        } else {
+            clearTimeout(cursorThrottleTimer);
+            cursorThrottleTimer = setTimeout(() => {
+                lastCursorSentTime = Date.now();
+                sendCursorMove(currentTab, x, y, percentX);
+            }, 35);
+        }
+    }
+
+    function handleContainerMouseLeave() {
+        sendWs({
+            type: 'HELPER_CURSOR_LEAVE',
+            clientId: currentProfile.clientId
+        });
+    }
+
+    function filterPeerCursorsByTab(activeTab) {
+        peerCursorsMap.forEach((cursorObj) => {
+            if (cursorObj.tab !== activeTab) {
+                cursorObj.el.classList.add("hidden");
+            } else {
+                cursorObj.el.classList.remove("hidden");
+            }
+        });
+    }
+
+    function handleIncomingCursorMove(msg) {
+        const currentTab = getActiveTab();
+        let cursorObj = peerCursorsMap.get(msg.clientId);
+
+        if (!cursorObj) {
+            const layer = peerCursorsLayer || document.getElementById("peerCursorsLayer");
+            if (!layer) return;
+
+            const el = document.createElement("div");
+            el.className = "peer-cursor";
+            el.id = `peer_cursor_${msg.clientId}`;
+            el.innerHTML = `
+                <svg class="peer-cursor-pointer" width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M5.65 12.37H5.46L5.32 12.5L0.5 16.88L0.5 1.2L11.78 12.37H5.65Z" fill="${msg.sender.color || '#3498db'}" stroke="#ffffff" stroke-width="1.3"/>
+                </svg>
+                <div class="peer-cursor-label" style="background:${msg.sender.color || '#3498db'};">
+                    <span>${escapeHtml(msg.sender.name || 'Biên tập viên')}</span>
+                </div>
+            `;
+            layer.appendChild(el);
+            cursorObj = { el, idleTimer: null, tab: msg.tab };
+            peerCursorsMap.set(msg.clientId, cursorObj);
+        }
+
+        cursorObj.tab = msg.tab;
+
+        // CHỈ HIỂN THỊ NẾU ĐANG CÙNG TAB
+        if (msg.tab !== currentTab) {
+            cursorObj.el.classList.add("hidden");
+            return;
+        }
+
+        cursorObj.el.classList.remove("hidden");
+        const container = tabContentContainer || document.getElementById("tabContentContainer");
+        const targetX = (typeof msg.percentX === 'number' && container)
+            ? (msg.percentX * container.clientWidth)
+            : msg.x;
+        const targetY = msg.y;
+
+        cursorObj.el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+
+        // Tự động mờ đi sau 3.5 giây không di chuyển
+        clearTimeout(cursorObj.idleTimer);
+        cursorObj.idleTimer = setTimeout(() => {
+            cursorObj.el.classList.add("hidden");
+        }, 3500);
+    }
+
+    function handleIncomingCursorLeave(msg) {
+        const cursorObj = peerCursorsMap.get(msg.clientId);
+        if (cursorObj) {
+            cursorObj.el.classList.add("hidden");
+        }
+    }
+
+    // ==========================================
     // 10c. MODAL CHIA SẺ LIVE EDIT (QR & LINK)
     // ==========================================
     async function openShareModal() {
@@ -1764,6 +1895,13 @@
 
                 tab.classList.add("active");
                 document.getElementById(target).classList.add("active");
+
+                // Lọc chuột các cộng tác viên theo tab mới
+                filterPeerCursorsByTab(target);
+                sendWs({
+                    type: 'HELPER_CURSOR_LEAVE',
+                    clientId: currentProfile.clientId
+                });
 
                 let tabLabel = 'Xem Vòng chơi';
                 if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
@@ -1916,6 +2054,14 @@
 
         // Khởi tạo các listener theo dõi gõ phím trực tiếp vào từng ô (Live Field Edit)
         setupLiveFieldListeners();
+
+        // Khởi tạo listener theo dõi di chuyển chuột giữa các máy đang cùng Tab (Multiplayer Live Cursors)
+        const container = tabContentContainer || document.getElementById("tabContentContainer");
+        if (container) {
+            container.addEventListener("mousemove", handleContainerMouseMove);
+            container.addEventListener("mouseleave", handleContainerMouseLeave);
+        }
+        window.addEventListener("blur", handleContainerMouseLeave);
 
         // Đóng các Modal
         document.querySelectorAll("[data-close]").forEach(btn => {

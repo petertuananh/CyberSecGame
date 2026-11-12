@@ -227,6 +227,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
+    position: relative;
 }
 
 .tab-pane {
@@ -1570,4 +1571,73 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-weight: 700;
     cursor: pointer;
 }
+
+/* ========================================================
+   LIVE MULTIPLAYER CURSORS (HIỂN THỊ CHUỘT CỘNG TÁC VIÊN CÙNG TAB)
+   ======================================================== */
+.peer-cursors-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    overflow: visible;
+}
+
+.peer-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: transform 0.08s cubic-bezier(0.15, 0.45, 0.35, 1), opacity 0.25s ease;
+    will-change: transform, opacity;
+    opacity: 1;
+}
+
+.peer-cursor.hidden {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.peer-cursor-pointer {
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+    transform-origin: top left;
+}
+
+.peer-cursor-label {
+    margin-top: -3px;
+    margin-left: 14px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    animation: popInCursor 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popInCursor {
+    from {
+        transform: scale(0.65);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 

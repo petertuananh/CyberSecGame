@@ -531,6 +531,32 @@ wss.on('connection', (ws) => {
                 });
             }
 
+            // Sự kiện di chuyển chuột của cộng tác viên (Multiplayer Live Cursors)
+            else if (data.type === 'HELPER_CURSOR_MOVE') {
+                broadcast({
+                    type: 'HELPER_CURSOR_MOVE',
+                    socketId: socketId,
+                    clientId: ws.helperClientId || data.clientId,
+                    tab: data.tab,
+                    percentX: data.percentX,
+                    x: data.x,
+                    y: data.y,
+                    sender: data.sender || (helperCollaborators.get(socketId) ? {
+                        name: helperCollaborators.get(socketId).name,
+                        color: helperCollaborators.get(socketId).color
+                    } : null)
+                });
+            }
+
+            // Chuột rời khỏi tab / cửa sổ
+            else if (data.type === 'HELPER_CURSOR_LEAVE') {
+                broadcast({
+                    type: 'HELPER_CURSOR_LEAVE',
+                    socketId: socketId,
+                    clientId: ws.helperClientId || data.clientId
+                });
+            }
+
             // Nhận tín hiệu nút bấm từ Điện thoại song song với Arduino
             else if (data.type === 'BUTTON_PRESS') {
                 const button = (data.button || '').toUpperCase();
@@ -555,6 +581,11 @@ wss.on('connection', (ws) => {
             console.log(`[WebSocket] 📱 Điện thoại đã ngắt kết nối: ${ws.controllerId} (Còn lại: ${tunnelManager.getControllerCount()})`);
         }
         if (ws.isHelper) {
+            broadcast({
+                type: 'HELPER_CURSOR_LEAVE',
+                socketId: socketId,
+                clientId: ws.helperClientId
+            });
             const collab = helperCollaborators.get(socketId);
             helperCollaborators.delete(socketId);
             console.log(`[Helper Collab] 👤 Biên tập viên rời khỏi: ${collab ? collab.name : socketId} (Còn lại: ${helperCollaborators.size})`);
