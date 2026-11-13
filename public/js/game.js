@@ -233,6 +233,12 @@ class CyberSecGame {
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === "BUTTON_PRESS") {
+                    const nameModal = document.getElementById("nameModal");
+                    if (nameModal && !nameModal.classList.contains("hidden") && data.button === "ENTER") {
+                        const inputName = document.getElementById("pcPlayerNameInput");
+                        this.setPlayerName(inputName ? inputName.value : this.playerName);
+                        return;
+                    }
                     this.handleInput(data.button);
                     this.highlightDockButton(data.button);
                 } else if (data.type === "PORT_STATUS") {
@@ -253,16 +259,18 @@ class CyberSecGame {
                         }
                     }
                 } else if (data.type === "PLAYER_NAME_SYNC" || data.type === "PLAYER_NAME_UPDATED") {
-                    if (data.playerName) {
-                        this.playerName = data.playerName;
-                        this.updatePlayerNameUI(data.playerName);
+                    const newName = data.playerName || data.name;
+                    if (newName) {
+                        this.playerName = newName;
+                        this.updatePlayerNameUI(newName);
                         if (data.type === "PLAYER_NAME_UPDATED") {
-                            this._showToast(`⚔️ Tên người chơi: "${data.playerName}"`, "sword");
+                            this._showToast(`⚔️ Tên người chơi: "${newName}"`, "sword");
                         }
                     }
                 } else if (data.type === "LEADERBOARD_SYNC" || data.type === "LEADERBOARD_UPDATED") {
-                    if (Array.isArray(data.leaderboard)) {
-                        this.leaderboard = data.leaderboard;
+                    const newLb = data.leaderboard || data.entries;
+                    if (Array.isArray(newLb)) {
+                        this.leaderboard = newLb;
                         this.renderLeaderboardTable();
                         if (data.type === "LEADERBOARD_UPDATED") {
                             this._showToast("📊 Bảng Xếp Hạng vừa có lượt chơi mới!", "trophy");
@@ -476,9 +484,17 @@ class CyberSecGame {
                 ? `Đang có ${this.controllerCount} điện thoại kết nối`
                 : 'Đang có 0 điện thoại kết nối';
         }
+
+        const modalPhoneCount = document.getElementById('nameModalPhoneCount');
+        if (modalPhoneCount) {
+            modalPhoneCount.innerText = this.controllerCount > 0
+                ? `${this.controllerCount} ĐT kết nối`
+                : 'Chưa có ĐT (quét mã QR để kết nối)';
+        }
     }
 
     _initPlayerNameAndLeaderboard() {
+        this.isStartingGameFromModal = false;
         this.loadLeaderboard();
 
         // Gắn sự kiện Modal Đổi tên PC
@@ -487,11 +503,27 @@ class CyberSecGame {
         const modalName = document.getElementById("nameModal");
         const btnCloseName = document.getElementById("btnCloseNameModal");
         const btnSaveName = document.getElementById("btnSavePlayerName");
+        const btnRandom = document.getElementById("btnRandomPlayerName");
         const inputName = document.getElementById("pcPlayerNameInput");
 
-        if (badge) badge.addEventListener("click", () => this.openNameModal());
-        if (btnOpenName) btnOpenName.addEventListener("click", (e) => { e.stopPropagation(); this.openNameModal(); });
+        if (badge) badge.addEventListener("click", () => this.openNameModal(false));
+        if (btnOpenName) btnOpenName.addEventListener("click", (e) => { e.stopPropagation(); this.openNameModal(false); });
         if (btnCloseName) btnCloseName.addEventListener("click", () => this.closeNameModal());
+
+        if (btnRandom && inputName) {
+            const funNames = [
+                "Hiệp Sĩ Bão Táp", "Vệ Binh Rồng Thần", "Bậc Thầy Tường Lửa",
+                "Sát Thủ Mã Độc", "Đặc Vụ Mật Khẩu", "Chiến Binh Zero-Day",
+                "Hiệp Sĩ Nguyễn Bỉnh Khiêm", "Phù Thủy Mã Hóa", "Vệ Binh Ánh Sáng",
+                "Thợ Săn Bug", "Chiến Thần Mạng", "Vệ Binh CyberSec"
+            ];
+            btnRandom.addEventListener("click", () => {
+                const picked = funNames[Math.floor(Math.random() * funNames.length)];
+                inputName.value = picked;
+                inputName.focus();
+            });
+        }
+
         if (btnSaveName) {
             btnSaveName.addEventListener("click", () => {
                 if (inputName) this.setPlayerName(inputName.value);
@@ -530,19 +562,42 @@ class CyberSecGame {
         }
     }
 
-    openNameModal() {
+    openNameModal(isStarting = false) {
+        this.isStartingGameFromModal = isStarting;
         const modal = document.getElementById("nameModal");
+        const titleEl = document.getElementById("nameModalTitle");
+        const btnSave = document.getElementById("btnSavePlayerName");
         const input = document.getElementById("pcPlayerNameInput");
+        const phoneCountEl = document.getElementById("nameModalPhoneCount");
+
+        if (titleEl) {
+            titleEl.innerText = isStarting
+                ? "⚔️ NHẬP TÊN NGƯỜI CHƠI TRƯỚC KHI VÀO GAME"
+                : "👤 ĐỔI TÊN NGƯỜI CHƠI";
+        }
+        if (btnSave) {
+            btnSave.innerText = isStarting ? "🎮 VÀO CHƠI GAME NGAY ↵" : "LƯU TÊN ↵";
+        }
+        if (phoneCountEl) {
+            phoneCountEl.innerText = this.controllerCount > 0
+                ? `${this.controllerCount} ĐT kết nối`
+                : "Chưa có ĐT (quét mã QR để kết nối)";
+        }
+
         if (modal) modal.classList.remove("hidden");
         if (input) {
             input.value = this.playerName;
-            setTimeout(() => input.focus(), 60);
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 60);
         }
     }
 
     closeNameModal() {
         const modal = document.getElementById("nameModal");
         if (modal) modal.classList.add("hidden");
+        this.isStartingGameFromModal = false;
     }
 
     openLeaderboardModal() {
@@ -568,16 +623,19 @@ class CyberSecGame {
         }
     }
 
-    async setPlayerName(name) {
+    async setPlayerName(name, shouldStart = null) {
         const cleaned = (name || "").trim() || "Hiệp Sĩ Không Gian Mạng";
         this.playerName = cleaned;
         this.updatePlayerNameUI(cleaned);
+
+        const willStart = (shouldStart !== null) ? shouldStart : this.isStartingGameFromModal;
         this.closeNameModal();
 
         // Gửi qua WebSocket cho server phát thanh tới toàn bộ điện thoại và client
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 type: "SET_PLAYER_NAME",
+                name: cleaned,
                 playerName: cleaned
             }));
         }
@@ -587,13 +645,17 @@ class CyberSecGame {
             await fetch("/api/player-name", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ playerName: cleaned })
+                body: JSON.stringify({ name: cleaned, playerName: cleaned })
             });
         } catch (e) {
             console.warn("[Game] Không thể lưu tên người chơi qua API:", e);
         }
 
-        this._showToast(`⚔️ Tên người chơi: "${cleaned}"`, "sword");
+        if (willStart) {
+            this.startStory();
+        } else {
+            this._showToast(`⚔️ Tên người chơi: "${cleaned}"`, "sword");
+        }
     }
 
     async loadLeaderboard() {
@@ -601,12 +663,14 @@ class CyberSecGame {
             const res = await fetch("/api/leaderboard");
             if (res.ok) {
                 const data = await res.json();
-                if (data.playerName) {
-                    this.playerName = data.playerName;
-                    this.updatePlayerNameUI(data.playerName);
+                const pName = data.playerName || data.currentPlayerName || data.name;
+                if (pName) {
+                    this.playerName = pName;
+                    this.updatePlayerNameUI(pName);
                 }
-                if (Array.isArray(data.leaderboard)) {
-                    this.leaderboard = data.leaderboard;
+                const lb = data.leaderboard || data.entries;
+                if (Array.isArray(lb)) {
+                    this.leaderboard = lb;
                     this.renderLeaderboardTable();
                 }
             }
@@ -790,9 +854,9 @@ class CyberSecGame {
                     this.advanceStory();
                 }
             } else if (this.state === "START") {
-                // Kiểm tra click vào khung tên người chơi ở trên (y: 140 -> 185)
-                if (cx >= this.canvas.width / 2 - 250 && cx <= this.canvas.width / 2 + 250 && cy >= 140 && cy <= 185) {
-                    this.openNameModal();
+                // Kiểm tra click vào khung tên người chơi ở trên (y: 130 -> 185)
+                if (cx >= this.canvas.width / 2 - 250 && cx <= this.canvas.width / 2 + 250 && cy >= 130 && cy <= 185) {
+                    this.openNameModal(false);
                 } else if (cx >= this.canvas.width / 2 - 260 && cx <= this.canvas.width / 2 + 260 && cy >= 560 && cy <= 600) {
                     // Click vào nút Bảng Xếp Hạng Live
                     this.openLeaderboardModal();
@@ -800,7 +864,8 @@ class CyberSecGame {
                     // Click vào nút Kho Thành tựu
                     this.state = "ACHIEVEMENTS";
                 } else {
-                    this.startStory();
+                    // Nhấp vào bất kỳ đâu để vào game -> hiện hộp thoại nhập tên người chơi
+                    this.openNameModal(true);
                 }
             } else if (this.state === "VICTORY") {
                 // Nút Tiến vào Kho Thành Tựu
@@ -875,14 +940,12 @@ class CyberSecGame {
 
         switch (this.state) {
             case "START":
-                if (button === "ENTER") {
-                    this.startStory();
-                } else if (button === "A") {
-                    this.startStage(1);
+                if (button === "ENTER" || button === "A") {
+                    this.openNameModal(true);
                 } else if (button === "C") {
                     this.state = "ACHIEVEMENTS";
                 } else if (button === "N") {
-                    this.openNameModal();
+                    this.openNameModal(false);
                 } else if (button === "L") {
                     this.openLeaderboardModal();
                 }
@@ -2173,10 +2236,10 @@ class CyberSecGame {
             ctx.fillStyle = "#2ecc71";
             ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.77);
-            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 380, h * 0.77 - 18, 24);
+            ctx.fillText("👉 NHẤN [ENTER] HOẶC CLICK ĐỂ NHẬP TÊN & VÀO GAME 👈", w / 2, h * 0.77);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 400, h * 0.77 - 18, 24);
             ctx.save();
-            ctx.translate(w / 2 + 380, h * 0.77 - 6);
+            ctx.translate(w / 2 + 400, h * 0.77 - 6);
             ctx.scale(-1, 1);
             window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -12, 24);
             ctx.restore();

@@ -174,22 +174,24 @@
         </div>
     </div>
 
-    <!-- Hộp thoại Modal Đổi Tên Người Chơi -->
+    <!-- Hộp thoại Modal Nhập/Đổi Tên Người Chơi Trước Khi Chơi -->
     <div id="nameModal" class="cert-modal-backdrop hidden">
         <div class="name-modal-card">
             <div class="cert-modal-header">
-                <div class="cert-modal-title">👤 ĐỔI TÊN NGƯỜI CHƠI</div>
+                <div id="nameModalTitle" class="cert-modal-title">⚔️ NHẬP TÊN NGƯỜI CHƠI TRƯỚC KHI VÀO GAME</div>
                 <button id="btnCloseNameModal" class="cert-close-btn">&times;</button>
             </div>
-            <p class="name-modal-desc">
-                Nhập họ tên hoặc biệt danh của bạn. Tên này sẽ hiển thị trong game, trên Bảng Xếp Hạng và trên Giấy Chứng Nhận!
+            <p id="nameModalDesc" class="name-modal-desc">
+                Nhập họ tên hoặc lớp của bạn để ghi danh Bảng Xếp Hạng Live và in Giấy Chứng Nhận! Bạn có thể nhập trực tiếp tại đây trên máy tính hoặc mở điện thoại quét mã QR để nhập.
             </p>
             <div class="name-input-row">
                 <input type="text" id="pcPlayerNameInput" placeholder="Nhập tên của bạn (VD: Nguyễn Tuấn Anh - 7A1)..." maxlength="35" class="name-modal-input" />
-                <button id="btnSavePlayerName" class="btn-save-name">LƯU TÊN ↵</button>
+                <button id="btnRandomPlayerName" class="btn-cert-secondary" style="padding:10px 14px; font-size:13px;" title="Gợi ý tên ngẫu nhiên">🎲 Tên Vui</button>
+                <button id="btnSavePlayerName" class="btn-save-name">VÀO GAME ↵</button>
             </div>
-            <div class="name-hint">
-                💡 Bạn cũng có thể dùng điện thoại quét mã QR và đổi tên trực tiếp trên điện thoại!
+            <div id="nameModalLiveInfo" class="name-hint" style="margin-top:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <span>📱 <strong>Đồng bộ điện thoại:</strong> Quét mã QR góc phải để gõ tên trực tiếp từ điện thoại!</span>
+                <span id="nameModalPhoneCount" style="color:#34d399; font-weight:bold;">0 ĐT kết nối</span>
             </div>
         </div>
     </div>

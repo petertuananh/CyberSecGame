@@ -546,9 +546,12 @@
                         try {
                             const data = JSON.parse(event.data);
                             if (data.type === 'PLAYER_NAME_SYNC' || data.type === 'PLAYER_NAME_UPDATED') {
-                                if (currentNameTag) currentNameTag.innerText = data.name;
-                                if (inputPlayerName && document.activeElement !== inputPlayerName) {
-                                    inputPlayerName.value = data.name;
+                                const newName = data.name || data.playerName;
+                                if (newName) {
+                                    if (currentNameTag) currentNameTag.innerText = newName;
+                                    if (inputPlayerName && document.activeElement !== inputPlayerName) {
+                                        inputPlayerName.value = newName;
+                                    }
                                 }
                             }
                         } catch (e) {}

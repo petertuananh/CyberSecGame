@@ -120,6 +120,7 @@ function addLeaderboardEntry(entry) {
     broadcast({
         type: 'LEADERBOARD_UPDATED',
         entries: list,
+        leaderboard: list,
         newEntry: newEntry
     });
     return list;
@@ -302,18 +303,21 @@ app.post('/api/config/reset', (req, res) => {
 
 // API: Lấy Bảng Xếp Hạng & Tên người chơi hiện tại
 app.get('/api/leaderboard', (req, res) => {
+    const list = loadLeaderboard();
     res.json({
-        entries: loadLeaderboard(),
-        currentPlayerName: currentPlayerName
+        entries: list,
+        leaderboard: list,
+        currentPlayerName: currentPlayerName,
+        playerName: currentPlayerName
     });
 });
 
 // API: Gửi kết quả lượt chơi mới vào Bảng Xếp Hạng (lưu json)
 app.post('/api/leaderboard', (req, res) => {
     try {
-        const body = req.body;
+        const body = req.body.entry || req.body;
         const list = addLeaderboardEntry(body);
-        res.json({ success: true, entries: list });
+        res.json({ success: true, entries: list, leaderboard: list });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -325,7 +329,8 @@ app.delete('/api/leaderboard', (req, res) => {
         saveLeaderboard([]);
         broadcast({
             type: 'LEADERBOARD_UPDATED',
-            entries: []
+            entries: [],
+            leaderboard: []
         });
         res.json({ success: true, message: 'Đã reset bảng xếp hạng thành công!' });
     } catch (e) {
@@ -335,16 +340,19 @@ app.delete('/api/leaderboard', (req, res) => {
 
 // API: Đổi tên người chơi
 app.post('/api/player-name', (req, res) => {
-    const { name, source } = req.body;
-    if (name) {
-        currentPlayerName = name.trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
+    const rawName = req.body.name || req.body.playerName;
+    if (rawName) {
+        currentPlayerName = rawName.trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
+        console.log(`[Player] 👤 Cập nhật tên người chơi (API): "${currentPlayerName}"`);
         broadcast({
             type: 'PLAYER_NAME_UPDATED',
             name: currentPlayerName,
-            source: source || 'API'
+            playerName: currentPlayerName,
+            source: req.body.source || 'REST API'
         });
+        return res.json({ success: true, name: currentPlayerName, playerName: currentPlayerName });
     }
-    res.json({ success: true, playerName: currentPlayerName });
+    res.status(400).json({ error: 'Thiếu trường name hoặc playerName' });
 });
 
 // Trạng thái kết nối Serial
@@ -553,13 +561,16 @@ wss.on('connection', (ws) => {
     // Gửi tên người chơi hiện tại (đồng bộ thời gian thực PC và ĐT)
     ws.send(JSON.stringify({
         type: 'PLAYER_NAME_SYNC',
-        name: currentPlayerName
+        name: currentPlayerName,
+        playerName: currentPlayerName
     }));
 
     // Gửi danh sách Bảng Xếp Hạng Live
+    const initialLb = loadLeaderboard();
     ws.send(JSON.stringify({
         type: 'LEADERBOARD_SYNC',
-        entries: loadLeaderboard()
+        entries: initialLb,
+        leaderboard: initialLb
     }));
 
     ws.on('message', (raw) => {
@@ -708,20 +719,23 @@ wss.on('connection', (ws) => {
 
             // Đổi tên người chơi (từ Bàn phím PC hoặc Điện thoại đang kết nối)
             else if (data.type === 'SET_PLAYER_NAME') {
-                const cleanName = (data.name || '').trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
+                const cleanName = (data.name || data.playerName || '').trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
                 currentPlayerName = cleanName;
                 console.log(`[Player] 👤 Cập nhật tên người chơi: "${currentPlayerName}" (Nguồn: ${data.source || 'Client'})`);
                 broadcast({
                     type: 'PLAYER_NAME_UPDATED',
                     name: currentPlayerName,
+                    playerName: currentPlayerName,
                     source: data.source || 'Client'
                 });
             }
 
             // Gửi điểm lượt chơi vào Bảng Xếp Hạng Live (Lưu JSON)
             else if (data.type === 'SUBMIT_SCORE') {
-                console.log(`[Leaderboard] 🏆 Ghi nhận điểm lượt chơi mới từ "${data.playerName || currentPlayerName}": ${data.totalDuration}s, Boss: ${data.bossDuration}s, Hoa hồng: ${data.roses}`);
-                addLeaderboardEntry(data);
+                const scoreData = data.entry || data;
+                const pName = scoreData.playerName || scoreData.name || currentPlayerName;
+                console.log(`[Leaderboard] 🏆 Ghi nhận điểm lượt chơi mới từ "${pName}": ${scoreData.totalDuration}s, Boss: ${scoreData.bossDuration}s, Hoa hồng: ${scoreData.roses}`);
+                addLeaderboardEntry(scoreData);
             }
 
             // Reset Bảng Xếp Hạng
@@ -730,7 +744,8 @@ wss.on('connection', (ws) => {
                 saveLeaderboard([]);
                 broadcast({
                     type: 'LEADERBOARD_UPDATED',
-                    entries: []
+                    entries: [],
+                    leaderboard: []
                 });
             }
 

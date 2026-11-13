@@ -856,10 +856,11 @@
             const res = await fetch("/api/leaderboard");
             if (res.ok) {
                 const data = await res.json();
-                if (data.playerName && helperCurrentPlayerTag) {
-                    helperCurrentPlayerTag.innerText = data.playerName;
+                const pName = data.playerName || data.currentPlayerName || data.name;
+                if (pName && helperCurrentPlayerTag) {
+                    helperCurrentPlayerTag.innerText = pName;
                 }
-                helperLeaderboardData = data.leaderboard || [];
+                helperLeaderboardData = data.leaderboard || data.entries || [];
                 renderLeaderboardView();
             }
         } catch (e) {
@@ -1487,11 +1488,12 @@
                             tunnelInfo = msg.info;
                             updateShareModalUI();
                         } else if (msg.type === "LEADERBOARD_SYNC" || msg.type === "LEADERBOARD_UPDATED") {
-                            helperLeaderboardData = msg.leaderboard || [];
+                            helperLeaderboardData = msg.leaderboard || msg.entries || [];
                             renderLeaderboardView();
                         } else if (msg.type === "PLAYER_NAME_SYNC" || msg.type === "PLAYER_NAME_UPDATED") {
-                            if (msg.playerName && helperCurrentPlayerTag) {
-                                helperCurrentPlayerTag.innerText = msg.playerName;
+                            const newName = msg.playerName || msg.name;
+                            if (newName && helperCurrentPlayerTag) {
+                                helperCurrentPlayerTag.innerText = newName;
                             }
                         }
                     } catch (e) {}
