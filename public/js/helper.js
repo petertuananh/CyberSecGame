@@ -294,6 +294,8 @@
         try {
             const res = await fetch("/api/config");
             if (!res.ok) throw new Error("Không thể kết nối đến máy chủ");
+            const ct = res.headers.get("content-type");
+            if (!ct || !ct.includes("application/json")) throw new Error("Server trả về dữ liệu không đúng định dạng JSON");
             const data = await res.json();
             currentConfig = data;
             if (typeof data._revision !== 'undefined') {
@@ -329,7 +331,8 @@
                 }, null, 2)
             });
 
-            const result = await res.json();
+            const ct = res.headers.get("content-type");
+            const result = (ct && ct.includes("application/json")) ? await res.json() : {};
 
             // PHÁT HIỆN XUNG ĐỘT (409 CONFLICT)
             if (res.status === 409 && result.conflict) {
@@ -395,7 +398,8 @@
 
         try {
             const res = await fetch("/api/config/reset", { method: "POST" });
-            const result = await res.json();
+            const ct = res.headers.get("content-type");
+            const result = (ct && ct.includes("application/json")) ? await res.json() : {};
             if (!res.ok) throw new Error(result.error || "Lỗi khôi phục mặc định");
 
             currentConfig = result.config;
@@ -855,13 +859,16 @@
         try {
             const res = await fetch("/api/leaderboard");
             if (res.ok) {
-                const data = await res.json();
-                const pName = data.playerName || data.currentPlayerName || data.name;
-                if (pName && helperCurrentPlayerTag) {
-                    helperCurrentPlayerTag.innerText = pName;
+                const ct = res.headers.get("content-type");
+                if (ct && ct.includes("application/json")) {
+                    const data = await res.json();
+                    const pName = data.playerName || data.currentPlayerName || data.name;
+                    if (pName && helperCurrentPlayerTag) {
+                        helperCurrentPlayerTag.innerText = pName;
+                    }
+                    helperLeaderboardData = data.leaderboard || data.entries || [];
+                    renderLeaderboardView();
                 }
-                helperLeaderboardData = data.leaderboard || data.entries || [];
-                renderLeaderboardView();
             }
         } catch (e) {
             console.warn("[Helper] Lỗi nạp bảng xếp hạng:", e);
@@ -2203,7 +2210,12 @@
         if (!tunnelInfo) {
             try {
                 const res = await fetch("/api/tunnel");
-                if (res.ok) tunnelInfo = await res.json();
+                if (res.ok) {
+                    const ct = res.headers.get("content-type");
+                    if (ct && ct.includes("application/json")) {
+                        tunnelInfo = await res.json();
+                    }
+                }
             } catch (e) {}
         }
         updateShareModalUI();

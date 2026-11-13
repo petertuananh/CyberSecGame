@@ -355,6 +355,15 @@ app.post('/api/player-name', (req, res) => {
     res.status(400).json({ error: 'Thiếu trường name hoặc playerName' });
 });
 
+// Xử lý favicon.ico (tránh lỗi 404 Not Found từ trình duyệt)
+app.get('/favicon.ico', (req, res) => {
+    const icoPath = path.join(__dirname, 'icon.ico');
+    if (fs.existsSync(icoPath)) return res.sendFile(icoPath);
+    const pngPath = path.join(__dirname, 'public', 'images', 'logo_nbk_pixel.png');
+    if (fs.existsSync(pngPath)) return res.sendFile(pngPath);
+    res.status(204).end();
+});
+
 // Trạng thái kết nối Serial
 let currentSerialPort = null;
 let currentParser = null;

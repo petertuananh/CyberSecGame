@@ -291,9 +291,12 @@ class CyberSecGame {
         try {
             const res = await fetch("/api/config");
             if (res.ok) {
-                const data = await res.json();
-                this.applyConfig(data);
-                console.log("[Game] Đã nạp thành công cấu hình từ server (/api/config)!");
+                const ct = res.headers.get("content-type");
+                if (ct && ct.includes("application/json")) {
+                    const data = await res.json();
+                    this.applyConfig(data);
+                    console.log("[Game] Đã nạp thành công cấu hình từ server (/api/config)!");
+                }
             }
         } catch (e) {
             console.warn("[Game] Không thể tải /api/config, dùng cấu hình mặc định:", e.message);
@@ -410,9 +413,13 @@ class CyberSecGame {
 
         // Tải thông tin tunnel ban đầu qua HTTP API
         fetch('/api/tunnel')
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) return null;
+                const ct = res.headers.get("content-type");
+                return (ct && ct.includes("application/json")) ? res.json() : null;
+            })
             .then(info => {
-                this.updateQrModal(info);
+                if (info) this.updateQrModal(info);
             })
             .catch(() => { });
     }
@@ -662,16 +669,19 @@ class CyberSecGame {
         try {
             const res = await fetch("/api/leaderboard");
             if (res.ok) {
-                const data = await res.json();
-                const pName = data.playerName || data.currentPlayerName || data.name;
-                if (pName) {
-                    this.playerName = pName;
-                    this.updatePlayerNameUI(pName);
-                }
-                const lb = data.leaderboard || data.entries;
-                if (Array.isArray(lb)) {
-                    this.leaderboard = lb;
-                    this.renderLeaderboardTable();
+                const ct = res.headers.get("content-type");
+                if (ct && ct.includes("application/json")) {
+                    const data = await res.json();
+                    const pName = data.playerName || data.currentPlayerName || data.name;
+                    if (pName) {
+                        this.playerName = pName;
+                        this.updatePlayerNameUI(pName);
+                    }
+                    const lb = data.leaderboard || data.entries;
+                    if (Array.isArray(lb)) {
+                        this.leaderboard = lb;
+                        this.renderLeaderboardTable();
+                    }
                 }
             }
         } catch (e) {

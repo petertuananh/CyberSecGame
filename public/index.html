@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vệ Binh Mật Khẩu - CyberSec Password Guardian (Pixel Style)</title>
+    <link rel="icon" type="image/png" href="images/logo_nbk_pixel.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -308,8 +309,14 @@
         async function loadPorts() {
             try {
                 const res = await fetch('/api/ports');
+                if (!res.ok) return;
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) return;
                 const data = await res.json();
+                if (!data || !Array.isArray(data.ports)) return;
+
                 const select = document.getElementById('portSelect');
+                if (!select) return;
                 select.innerHTML = '<option value="">Chọn cổng COM...</option>';
                 data.ports.forEach(p => {
                     const opt = document.createElement('option');
@@ -321,7 +328,7 @@
                     select.value = data.connectedPort;
                 }
             } catch (e) {
-                console.error("Lỗi lấy danh sách cổng COM:", e);
+                // Im lặng khi server chưa sẵn sàng hoặc cổng chưa cắm
             }
         }
 
