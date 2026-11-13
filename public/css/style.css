@@ -904,3 +904,250 @@ button.btn-connect:hover {
     background: #4b4b4b;
     color: #ffffff;
 }
+
+/* ========================================================
+   PLAYER NAME BADGE & LEADERBOARD BUTTON (TOP BAR)
+   ======================================================== */
+.player-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1.5px solid #3b82f6;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #60a5fa;
+    white-space: nowrap;
+}
+
+.player-name-text {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #ffffff;
+}
+
+.btn-name-edit {
+    background: transparent;
+    border: none;
+    color: #fbbf24;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 2px;
+    transition: transform 0.15s;
+}
+
+.btn-name-edit:hover {
+    transform: scale(1.25);
+}
+
+.btn-leaderboard {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border: 1.5px solid #34d399;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.btn-leaderboard:hover {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    transform: scale(1.05);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+    color: #000;
+}
+
+/* ========================================================
+   MODAL ĐỔI TÊN NGƯỜI CHƠI (NAME MODAL)
+   ======================================================== */
+.name-modal-card {
+    background: #15102a;
+    border: 2px solid #3b82f6;
+    border-radius: 10px;
+    padding: 20px 24px;
+    width: 90vw;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+}
+
+.name-modal-desc {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.5;
+}
+
+.name-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.name-modal-input {
+    flex: 1;
+    background: #090714;
+    border: 1.5px solid #4338ca;
+    color: #38bdf8;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 6px;
+    outline: none;
+}
+
+.name-modal-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.btn-save-name {
+    background: #2563eb;
+    color: #ffffff;
+    border: 1px solid #60a5fa;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.btn-save-name:hover {
+    background: #1d4ed8;
+}
+
+.name-hint {
+    font-size: 12px;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    padding: 8px 10px;
+    border-radius: 5px;
+    border-left: 3px solid #fbbf24;
+}
+
+/* ========================================================
+   MODAL BẢNG XẾP HẠNG LIVE (LEADERBOARD MODAL)
+   ======================================================== */
+.leaderboard-modal-card {
+    background: #120e26;
+    border: 2.5px solid #10b981;
+    border-radius: 12px;
+    padding: 20px 26px;
+    width: 92vw;
+    max-width: 950px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.4);
+    overflow: hidden;
+}
+
+.leaderboard-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #94a3b8;
+    padding-bottom: 4px;
+}
+
+.btn-refresh-lb {
+    background: #1e293b;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-refresh-lb:hover {
+    background: #334155;
+    color: #34d399;
+}
+
+.leaderboard-table-wrap {
+    overflow-y: auto;
+    max-height: 58vh;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    text-align: left;
+}
+
+.leaderboard-table thead th {
+    position: sticky;
+    top: 0;
+    background: #1e1b4b;
+    color: #fbbf24;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 800;
+    border-bottom: 2px solid #4338ca;
+    white-space: nowrap;
+}
+
+.leaderboard-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+    vertical-align: middle;
+}
+
+.leaderboard-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.lb-rank {
+    font-weight: 900;
+    font-size: 14px;
+}
+
+.lb-rank-1 { color: #f1c40f; text-shadow: 0 0 8px rgba(241, 196, 15, 0.6); }
+.lb-rank-2 { color: #cbd5e1; text-shadow: 0 0 8px rgba(203, 213, 225, 0.6); }
+.lb-rank-3 { color: #cd7f32; text-shadow: 0 0 8px rgba(205, 127, 50, 0.6); }
+
+.lb-player-name {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.lb-achievements-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.lb-ach-tag {
+    font-size: 10.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.lb-ach-flash { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; }
+.lb-ach-kratos { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+.lb-ach-loser { background: rgba(168, 85, 247, 0.2); color: #a855f7; border: 1px solid #a855f7; }

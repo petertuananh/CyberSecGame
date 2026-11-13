@@ -87,9 +87,18 @@
                 <span class="tab-icon">🎲</span>
                 <span class="tab-text">3. Cài Đặt Ngẫu Nhiên & Boss</span>
             </button>
+            <button class="nav-tab" data-tab="tab-achievements">
+                <span class="tab-icon">🏆</span>
+                <span class="tab-text">4. Cài Đặt Thành Tựu</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-leaderboard">
+                <span class="tab-icon">📊</span>
+                <span class="tab-text">5. Bảng Xếp Hạng Live</span>
+                <span id="badgeLbCount" class="tab-badge">0</span>
+            </button>
             <button class="nav-tab" data-tab="tab-json">
                 <span class="tab-icon">📄</span>
-                <span class="tab-text">4. Trình Xem Mã JSON</span>
+                <span class="tab-text">6. Trình Xem Mã JSON</span>
             </button>
         </nav>
 
@@ -223,7 +232,163 @@
                 </div>
             </section>
 
-            <!-- TAB 4: RAW JSON CODE EDITOR -->
+            <!-- TAB 4: ACHIEVEMENTS SETTINGS (CÀI ĐẶT THÀNH TỰU) -->
+            <section id="tab-achievements" class="tab-pane">
+                <div class="pane-header">
+                    <div class="pane-intro">
+                        <h2>🏆 CÀI ĐẶT ĐIỀU KIỆN & TIÊU CHÍ MỞ KHÓA THÀNH TỰU</h2>
+                        <p>Tùy chỉnh linh hoạt số giây hoàn thành (The Flash), số giây diệt Boss Rồng (Kratos), số câu trả lời sai (Loser) và tiêu đề danh hiệu. Dữ liệu tự động đồng bộ Live sang Game và các máy khác.</p>
+                    </div>
+                    <div class="pane-actions">
+                        <button id="btnSaveAchievements" class="btn-create">💾 LƯU CÀI ĐẶT THÀNH TỰU</button>
+                    </div>
+                </div>
+
+                <div class="settings-grid">
+                    <!-- Card 1: The Flash -->
+                    <div class="settings-card">
+                        <div class="card-head">
+                            <h3>⚡ THÀNH TỰU "THE FLASH" (THẦN TỐC)</h3>
+                            <div class="switch">
+                                <input type="checkbox" id="chkTheFlashEnabled" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <label for="inputTheFlashTitle">Tiêu Đề Thành Tựu:</label>
+                                <input type="text" id="inputTheFlashTitle" class="form-input" value="The Flash">
+                            </div>
+                            <div class="form-row">
+                                <label for="inputTheFlashTitleVi">Danh Hiệu Phụ (Tiếng Việt):</label>
+                                <input type="text" id="inputTheFlashTitleVi" class="form-input" value="Tốc Độ Sấm Sét">
+                            </div>
+                            <div class="form-row">
+                                <label for="inputTheFlashMaxSec">Thời Gian Hoàn Thành Tối Đa (Giây):</label>
+                                <input type="number" id="inputTheFlashMaxSec" class="form-input" min="10" max="1800" step="5" value="180">
+                                <small>Người chơi hoàn thành toàn bộ game dưới số giây này sẽ đạt thành tựu. (180s = 3 phút, 120s = 2 phút,...)</small>
+                            </div>
+                            <div class="form-row">
+                                <label for="inputTheFlashDesc">Mô Tả Điều Kiện Hiển Thị:</label>
+                                <textarea id="inputTheFlashDesc" class="form-textarea" rows="2">Hoàn thành toàn bộ trò chơi trong thời gian dưới 3 phút (&lt; 180s).</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Kratos -->
+                    <div class="settings-card">
+                        <div class="card-head">
+                            <h3>⚔️ THÀNH TỰU "KRATOS" (CHIẾN THẦN)</h3>
+                            <div class="switch">
+                                <input type="checkbox" id="chkKratosEnabled" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <label for="inputKratosTitle">Tiêu Đề Thành Tựu:</label>
+                                <input type="text" id="inputKratosTitle" class="form-input" value="Kratos">
+                            </div>
+                            <div class="form-row">
+                                <label for="inputKratosTitleVi">Danh Hiệu Phụ (Tiếng Việt):</label>
+                                <input type="text" id="inputKratosTitleVi" class="form-input" value="Chiến Thần Đồ Long">
+                            </div>
+                            <div class="form-row">
+                                <label for="inputKratosMaxBossSec">Thời Gian Diệt Boss Rồng Tối Đa (Giây):</label>
+                                <input type="number" id="inputKratosMaxBossSec" class="form-input" min="3" max="300" step="1" value="20">
+                                <small>Bắn hạ Rồng Hắc Ám dưới số giây này sẽ đạt cúp Kratos. (Ví dụ: 15s, 20s, 30s,...)</small>
+                            </div>
+                            <div class="form-row">
+                                <label for="inputKratosDesc">Mô Tả Điều Kiện Hiển Thị:</label>
+                                <textarea id="inputKratosDesc" class="form-textarea" rows="2">Tiêu diệt Boss Rồng Hắc Ám trong thời gian chớp nhoáng dưới 20 giây (&lt; 20s).</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Loser -->
+                    <div class="settings-card full-width">
+                        <div class="card-head">
+                            <h3>🤡 THÀNH TỰU "LOSER" (THÁNH ĐOÁN SAI)</h3>
+                            <div class="switch">
+                                <input type="checkbox" id="chkLoserEnabled" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row form-cols-2">
+                                <div>
+                                    <label for="inputLoserTitle">Tiêu Đề Thành Tựu:</label>
+                                    <input type="text" id="inputLoserTitle" class="form-input" value="Loser">
+                                </div>
+                                <div>
+                                    <label for="inputLoserTitleVi">Danh Hiệu Phụ (Tiếng Việt):</label>
+                                    <input type="text" id="inputLoserTitleVi" class="form-input" value="Thánh Đoán Sai">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label for="inputLoserWrongThreshold">Số Câu Sai Liên Tiếp / Toàn Bộ Trong 1 Ải:</label>
+                                <input type="number" id="inputLoserWrongThreshold" class="form-input" min="1" max="20" value="3">
+                                <small>Số câu sai trong cùng một ải để kích hoạt thành tựu hài hước này (mặc định 3 câu).</small>
+                            </div>
+                            <div class="form-row">
+                                <label for="inputLoserDesc">Mô Tả Điều Kiện Hiển Thị:</label>
+                                <textarea id="inputLoserDesc" class="form-textarea" rows="2">Trả lời sai toàn bộ cả 3 câu hỏi trong cùng một ải thử thách.</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: LEADERBOARD LIVE (BẢNG XẾP HẠNG LIVE) -->
+            <section id="tab-leaderboard" class="tab-pane">
+                <div class="pane-header">
+                    <div class="pane-intro">
+                        <h2>📊 BẢNG XẾP HẠNG TRỰC TIẾP (LIVE LEADERBOARD)</h2>
+                        <p>Theo dõi thành tích của các học sinh và người chơi theo thời gian thực qua WebSocket. Dữ liệu được lưu trữ tự động vào file JSON (data/leaderboard.json).</p>
+                    </div>
+                    <div class="pane-actions">
+                        <button id="btnRefreshHelperLb" class="btn-secondary">🔄 LÀM MỚI</button>
+                        <button id="btnResetHelperLb" class="btn-danger" style="background:#c0392b; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;">🗑️ RESET BẢNG XẾP HẠNG</button>
+                    </div>
+                </div>
+
+                <!-- Thanh quản lý Tên Người Chơi hiện tại -->
+                <div class="helper-player-bar">
+                    <div class="helper-player-info">
+                        <span class="player-icon" style="font-size:24px;">⚔️</span>
+                        <div>
+                            <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Tên Người Chơi Đang Thi Đấu Trên Hệ Thống:</div>
+                            <span id="helperCurrentPlayerTag" class="current-player-tag" style="font-size:17px; font-weight:800; color:#f1c40f;">Hiệp Sĩ Không Gian Mạng</span>
+                        </div>
+                    </div>
+                    <div class="helper-player-actions" style="display:flex; gap:8px;">
+                        <input type="text" id="inputHelperPlayerName" class="form-input" placeholder="Nhập tên người chơi mới..." style="width:260px;">
+                        <button id="btnHelperSetPlayerName" class="btn-create" style="padding:8px 14px; white-space:nowrap;">CẬP NHẬT ↵</button>
+                    </div>
+                </div>
+
+                <!-- Bảng danh sách kết quả -->
+                <div class="cards-table-container" style="margin-top:20px;">
+                    <table class="cards-table">
+                        <thead>
+                            <tr>
+                                <th style="width:70px;">Hạng</th>
+                                <th>Tên Hiệp Sĩ</th>
+                                <th>Tổng Thời Gian</th>
+                                <th>Thời Gian Diệt Boss</th>
+                                <th>Hoa Hồng</th>
+                                <th>Thành Tựu Đạt Được</th>
+                                <th>Thời Điểm Hoàn Thành</th>
+                            </tr>
+                        </thead>
+                        <tbody id="helperLeaderboardBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 6: RAW JSON CODE EDITOR -->
             <section id="tab-json" class="tab-pane">
                 <div class="pane-header">
                     <div class="pane-intro">

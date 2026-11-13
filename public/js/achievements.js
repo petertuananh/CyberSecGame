@@ -76,8 +76,14 @@
             const state = {};
             ACHIEVEMENTS_DEF.forEach(def => {
                 const s = saved[def.id] || {};
+                let extraDefaults = {};
+                if (def.id === "the_flash") extraDefaults = { maxSeconds: 180, enabled: true };
+                else if (def.id === "kratos") extraDefaults = { maxBossSeconds: 20, enabled: true };
+                else if (def.id === "loser") extraDefaults = { wrongThreshold: 3, enabled: true };
+
                 state[def.id] = {
                     ...def,
+                    ...extraDefaults,
                     unlocked: !!s.unlocked,
                     unlockedAt: s.unlockedAt || null,
                     record: s.record || null, // e.g. "02:14" hoặc "14.2s" hoặc "Ải 1"
@@ -105,6 +111,56 @@
             }
         }
 
+        applyConfig(achSettings) {
+            if (!achSettings) return;
+            if (achSettings.the_flash) {
+                const cfg = achSettings.the_flash;
+                const item = this.data["the_flash"];
+                if (item) {
+                    if (cfg.title) item.title = cfg.title;
+                    if (cfg.titleVi) item.titleVi = cfg.titleVi;
+                    if (typeof cfg.maxSeconds === "number") {
+                        item.maxSeconds = cfg.maxSeconds;
+                        const min = Math.round(cfg.maxSeconds / 60);
+                        item.conditionDesc = `Hoàn thành game < ${min > 0 ? min + ' phút' : cfg.maxSeconds + 's'}`;
+                        item.targetDesc = `< ${cfg.maxSeconds} giây`;
+                    }
+                    if (cfg.description) item.description = cfg.description;
+                    if (cfg.enabled !== undefined) item.enabled = !!cfg.enabled;
+                }
+            }
+            if (achSettings.kratos) {
+                const cfg = achSettings.kratos;
+                const item = this.data["kratos"];
+                if (item) {
+                    if (cfg.title) item.title = cfg.title;
+                    if (cfg.titleVi) item.titleVi = cfg.titleVi;
+                    if (typeof cfg.maxBossSeconds === "number") {
+                        item.maxBossSeconds = cfg.maxBossSeconds;
+                        item.conditionDesc = `Đánh boss rồng < ${cfg.maxBossSeconds} giây`;
+                        item.targetDesc = `< ${cfg.maxBossSeconds} giây`;
+                    }
+                    if (cfg.description) item.description = cfg.description;
+                    if (cfg.enabled !== undefined) item.enabled = !!cfg.enabled;
+                }
+            }
+            if (achSettings.loser) {
+                const cfg = achSettings.loser;
+                const item = this.data["loser"];
+                if (item) {
+                    if (cfg.title) item.title = cfg.title;
+                    if (cfg.titleVi) item.titleVi = cfg.titleVi;
+                    if (typeof cfg.wrongThreshold === "number") {
+                        item.wrongThreshold = cfg.wrongThreshold;
+                        item.conditionDesc = `Sai hết cả ${cfg.wrongThreshold} câu trong 1 ải`;
+                        item.targetDesc = `Sai ${cfg.wrongThreshold}/${cfg.wrongThreshold} câu`;
+                    }
+                    if (cfg.description) item.description = cfg.description;
+                    if (cfg.enabled !== undefined) item.enabled = !!cfg.enabled;
+                }
+            }
+        }
+
         getAll() {
             return Object.values(this.data);
         }
@@ -123,7 +179,7 @@
 
         unlock(id, record = null, meta = {}) {
             const item = this.data[id];
-            if (!item) return false;
+            if (!item || item.enabled === false) return false;
 
             const wasUnlocked = item.unlocked;
             item.unlocked = true;
@@ -925,8 +981,8 @@
 
                 // Vẽ ảnh thành tựu chính thức từ thư mục images
                 const achImg = (ach.id === "kratos") ? this.trophyKratos :
-                               (ach.id === "the_flash") ? this.imgFlash :
-                               (ach.id === "loser") ? this.imgLoser : null;
+                    (ach.id === "the_flash") ? this.imgFlash :
+                        (ach.id === "loser") ? this.imgLoser : null;
 
                 if (achImg && achImg.complete && achImg.naturalWidth > 0) {
                     ctx.save();
@@ -984,13 +1040,13 @@
             ctx.textAlign = "center";
             ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillStyle = "#1e272e";
-            ctx.fillText("ĐẠI DIỆN CHUYÊN MÔN SOFTLAB", margin + 180, sigY + 12);
+            ctx.fillText("ĐẠI DIỆN CHUYÊN MÔN", margin + 180, sigY + 12);
             ctx.font = "italic 12px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillStyle = "#57606f";
             ctx.fillText("(Ký & đóng dấu số)", margin + 180, sigY + 30);
             ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillStyle = "#0c2461";
-            ctx.fillText("Ban An Toàn Thông Tin SoftLab", margin + 180, sigY + 80);
+            ctx.fillText("Ban An Toàn Thông Tin", margin + 180, sigY + 80);
 
             // Chữ ký bên phải: THCS Nguyễn Bỉnh Khiêm
             ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";

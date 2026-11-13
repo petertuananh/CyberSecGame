@@ -1,0 +1,30 @@
+[
+  {
+    "id": "sample_1",
+    "playerName": "Vệ Binh Nguyễn Bỉnh Khiêm",
+    "totalDuration": 135,
+    "durationFormatted": "02:15",
+    "bossDuration": 14.5,
+    "roses": 12,
+    "achievements": [
+      "the_flash",
+      "kratos"
+    ],
+    "timestamp": 1794582411136,
+    "dateStr": "13/11/2026"
+  },
+  {
+    "id": "sample_2",
+    "playerName": "Hiệp Sĩ SoftLab",
+    "totalDuration": 168,
+    "durationFormatted": "02:48",
+    "bossDuration": 18.2,
+    "roses": 9,
+    "achievements": [
+      "the_flash",
+      "kratos"
+    ],
+    "timestamp": 1794578811196,
+    "dateStr": "13/11/2026"
+  }
+]

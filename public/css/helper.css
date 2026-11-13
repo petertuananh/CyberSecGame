@@ -1663,4 +1663,63 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
 }
 
+/* Helper Player Bar & Leaderboard */
+.helper-player-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 20, 55, 0.9);
+    border: 2px solid rgba(241, 196, 15, 0.4);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.helper-player-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.current-player-tag {
+    display: inline-block;
+    background: rgba(241, 196, 15, 0.15);
+    border: 1px solid #f1c40f;
+    padding: 4px 12px;
+    border-radius: 6px;
+    margin-top: 4px;
+}
+
+.lb-badge-flash {
+    background: rgba(241, 196, 15, 0.2);
+    color: #f1c40f;
+    border: 1px solid #f1c40f;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.lb-badge-kratos {
+    background: rgba(231, 76, 60, 0.2);
+    color: #ff7675;
+    border: 1px solid #e74c3c;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.lb-badge-loser {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid #a855f7;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
 

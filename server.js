@@ -26,6 +26,10 @@ const tunnelManager = new TunnelManager(PORT);
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'game_config.json');
 const DEFAULT_CONFIG_FILE = path.join(DATA_DIR, 'default_config.json');
+const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
+
+// Quản lý Tên Người Chơi hiện tại đang tham gia (đồng bộ PC & Điện thoại)
+let currentPlayerName = "Hiệp Sĩ Không Gian Mạng";
 
 // Quản lý Phiên bản cấu hình để kiểm tra Xung đột (Conflict Checking) khi nhiều máy cùng sửa
 let serverRevision = 1;
@@ -34,6 +38,92 @@ let lastSavedMeta = {
     savedBy: 'Hệ thống Khởi tạo',
     revision: 1
 };
+
+// Quản lý Bảng Xếp Hạng & Lịch Sử Chơi (Live Leaderboard trong JSON)
+function loadLeaderboard() {
+    try {
+        if (fs.existsSync(LEADERBOARD_FILE)) {
+            const raw = fs.readFileSync(LEADERBOARD_FILE, 'utf8');
+            return JSON.parse(raw);
+        }
+    } catch (e) {
+        console.warn('[Leaderboard] Lỗi đọc leaderboard.json:', e.message);
+    }
+    const sample = [
+        {
+            id: 'sample_1',
+            playerName: 'Vệ Binh Nguyễn Bỉnh Khiêm',
+            totalDuration: 135,
+            durationFormatted: '02:15',
+            bossDuration: 14.5,
+            roses: 12,
+            achievements: ['the_flash', 'kratos'],
+            timestamp: Date.now() - 3600000,
+            dateStr: new Date(Date.now() - 3600000).toLocaleDateString('vi-VN')
+        },
+        {
+            id: 'sample_2',
+            playerName: 'Hiệp Sĩ SoftLab',
+            totalDuration: 168,
+            durationFormatted: '02:48',
+            bossDuration: 18.2,
+            roses: 9,
+            achievements: ['the_flash', 'kratos'],
+            timestamp: Date.now() - 7200000,
+            dateStr: new Date(Date.now() - 7200000).toLocaleDateString('vi-VN')
+        }
+    ];
+    saveLeaderboard(sample);
+    return sample;
+}
+
+function saveLeaderboard(entries) {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries, null, 2), 'utf8');
+    } catch (e) {
+        console.error('[Leaderboard] Lỗi lưu file:', e.message);
+    }
+}
+
+function addLeaderboardEntry(entry) {
+    const list = loadLeaderboard();
+    const newEntry = {
+        id: 'run_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        playerName: (entry.playerName || currentPlayerName || 'Hiệp Sĩ Không Gian Mạng').trim().slice(0, 40),
+        totalDuration: typeof entry.totalDuration === 'number' ? Math.round(entry.totalDuration * 10) / 10 : 0,
+        durationFormatted: entry.durationFormatted || (Math.floor((entry.totalDuration || 0) / 60) + ':' + Math.floor((entry.totalDuration || 0) % 60).toString().padStart(2, '0')),
+        bossDuration: typeof entry.bossDuration === 'number' ? Math.round(entry.bossDuration * 10) / 10 : 0,
+        roses: typeof entry.roses === 'number' ? entry.roses : 0,
+        achievements: Array.isArray(entry.achievements) ? entry.achievements : [],
+        timestamp: Date.now(),
+        dateStr: new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    list.push(newEntry);
+
+    // Sắp xếp Bảng Xếp Hạng:
+    // 1. Nhiều thành tựu hơn xếp trên
+    // 2. Thời gian hoàn thành ít hơn xếp trên
+    // 3. Số hoa hồng nhiều hơn xếp trên
+    list.sort((a, b) => {
+        const achA = (a.achievements || []).length;
+        const achB = (b.achievements || []).length;
+        if (achB !== achA) return achB - achA;
+        if (a.totalDuration !== b.totalDuration) return a.totalDuration - b.totalDuration;
+        return (b.roses || 0) - (a.roses || 0);
+    });
+
+    saveLeaderboard(list);
+    broadcast({
+        type: 'LEADERBOARD_UPDATED',
+        entries: list,
+        newEntry: newEntry
+    });
+    return list;
+}
 
 // Quản lý các Biên tập viên / Máy đang mở Helper để cộng tác trực tiếp (Live Collaboration Presence)
 const helperCollaborators = new Map(); // socketId -> { socketId, clientId, name, color, device, location, joinedAt, lastActive }
@@ -208,6 +298,53 @@ app.post('/api/config/reset', (req, res) => {
         console.error('[Config] Lỗi reset cấu hình:', e.message);
         res.status(500).json({ error: e.message });
     }
+});
+
+// API: Lấy Bảng Xếp Hạng & Tên người chơi hiện tại
+app.get('/api/leaderboard', (req, res) => {
+    res.json({
+        entries: loadLeaderboard(),
+        currentPlayerName: currentPlayerName
+    });
+});
+
+// API: Gửi kết quả lượt chơi mới vào Bảng Xếp Hạng (lưu json)
+app.post('/api/leaderboard', (req, res) => {
+    try {
+        const body = req.body;
+        const list = addLeaderboardEntry(body);
+        res.json({ success: true, entries: list });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// API: Reset / Xóa Bảng Xếp Hạng (Dành cho Giáo viên / BTC cuộc thi mới)
+app.delete('/api/leaderboard', (req, res) => {
+    try {
+        saveLeaderboard([]);
+        broadcast({
+            type: 'LEADERBOARD_UPDATED',
+            entries: []
+        });
+        res.json({ success: true, message: 'Đã reset bảng xếp hạng thành công!' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// API: Đổi tên người chơi
+app.post('/api/player-name', (req, res) => {
+    const { name, source } = req.body;
+    if (name) {
+        currentPlayerName = name.trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
+        broadcast({
+            type: 'PLAYER_NAME_UPDATED',
+            name: currentPlayerName,
+            source: source || 'API'
+        });
+    }
+    res.json({ success: true, playerName: currentPlayerName });
 });
 
 // Trạng thái kết nối Serial
@@ -413,6 +550,18 @@ wss.on('connection', (ws) => {
         collaborators: Array.from(helperCollaborators.values())
     }));
 
+    // Gửi tên người chơi hiện tại (đồng bộ thời gian thực PC và ĐT)
+    ws.send(JSON.stringify({
+        type: 'PLAYER_NAME_SYNC',
+        name: currentPlayerName
+    }));
+
+    // Gửi danh sách Bảng Xếp Hạng Live
+    ws.send(JSON.stringify({
+        type: 'LEADERBOARD_SYNC',
+        entries: loadLeaderboard()
+    }));
+
     ws.on('message', (raw) => {
         try {
             const data = JSON.parse(raw);
@@ -554,6 +703,34 @@ wss.on('connection', (ws) => {
                     type: 'HELPER_CURSOR_LEAVE',
                     socketId: socketId,
                     clientId: ws.helperClientId || data.clientId
+                });
+            }
+
+            // Đổi tên người chơi (từ Bàn phím PC hoặc Điện thoại đang kết nối)
+            else if (data.type === 'SET_PLAYER_NAME') {
+                const cleanName = (data.name || '').trim().slice(0, 40) || 'Hiệp Sĩ Không Gian Mạng';
+                currentPlayerName = cleanName;
+                console.log(`[Player] 👤 Cập nhật tên người chơi: "${currentPlayerName}" (Nguồn: ${data.source || 'Client'})`);
+                broadcast({
+                    type: 'PLAYER_NAME_UPDATED',
+                    name: currentPlayerName,
+                    source: data.source || 'Client'
+                });
+            }
+
+            // Gửi điểm lượt chơi vào Bảng Xếp Hạng Live (Lưu JSON)
+            else if (data.type === 'SUBMIT_SCORE') {
+                console.log(`[Leaderboard] 🏆 Ghi nhận điểm lượt chơi mới từ "${data.playerName || currentPlayerName}": ${data.totalDuration}s, Boss: ${data.bossDuration}s, Hoa hồng: ${data.roses}`);
+                addLeaderboardEntry(data);
+            }
+
+            // Reset Bảng Xếp Hạng
+            else if (data.type === 'RESET_LEADERBOARD') {
+                console.log(`[Leaderboard] 🗑️ Yêu cầu reset bảng xếp hạng từ client.`);
+                saveLeaderboard([]);
+                broadcast({
+                    type: 'LEADERBOARD_UPDATED',
+                    entries: []
                 });
             }
 

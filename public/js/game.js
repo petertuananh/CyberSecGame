@@ -99,6 +99,10 @@ class CyberSecGame {
         this.stageQuestionsAnswered = 0;
         this.totalWrongCount = 0;
 
+        // Quản lý Tên Người Chơi & Bảng Xếp Hạng Live
+        this.playerName = "Hiệp Sĩ Không Gian Mạng";
+        this.leaderboard = [];
+
         // Hệ thống thời tiết động (Nắng, Mưa, Tuyết) & Tự động đổi ngẫu nhiên
         this.weather = window.WeatherSystem;
         this.weatherToast = null;
@@ -141,6 +145,7 @@ class CyberSecGame {
         this._bindInputs();
         this._connectWebSocket();
         this._initQrModal();
+        this._initPlayerNameAndLeaderboard();
         this.loadConfig();
 
         // Start Loop
@@ -247,6 +252,22 @@ class CyberSecGame {
                             this._showToast("🔔 Cấu hình & câu hỏi đã cập nhật từ Helper!", "lightbulb");
                         }
                     }
+                } else if (data.type === "PLAYER_NAME_SYNC" || data.type === "PLAYER_NAME_UPDATED") {
+                    if (data.playerName) {
+                        this.playerName = data.playerName;
+                        this.updatePlayerNameUI(data.playerName);
+                        if (data.type === "PLAYER_NAME_UPDATED") {
+                            this._showToast(`⚔️ Tên người chơi: "${data.playerName}"`, "sword");
+                        }
+                    }
+                } else if (data.type === "LEADERBOARD_SYNC" || data.type === "LEADERBOARD_UPDATED") {
+                    if (Array.isArray(data.leaderboard)) {
+                        this.leaderboard = data.leaderboard;
+                        this.renderLeaderboardTable();
+                        if (data.type === "LEADERBOARD_UPDATED") {
+                            this._showToast("📊 Bảng Xếp Hạng vừa có lượt chơi mới!", "trophy");
+                        }
+                    }
                 }
             } catch (e) {
                 console.error("WS Parse error:", e);
@@ -294,6 +315,11 @@ class CyberSecGame {
         // Cập nhật cấu hình vòng chơi hiện tại nếu có
         if (cfg.sections) {
             this.currentStageConfig = cfg.sections.find(s => s.id === this.stage) || null;
+        }
+
+        // Cập nhật cấu hình Thành Tựu
+        if (cfg.achievementsSettings && window.AchievementManager && window.AchievementManager.applyConfig) {
+            window.AchievementManager.applyConfig(cfg.achievementsSettings);
         }
     }
 
@@ -452,6 +478,243 @@ class CyberSecGame {
         }
     }
 
+    _initPlayerNameAndLeaderboard() {
+        this.loadLeaderboard();
+
+        // Gắn sự kiện Modal Đổi tên PC
+        const badge = document.getElementById("playerBadge");
+        const btnOpenName = document.getElementById("btnOpenNameModal");
+        const modalName = document.getElementById("nameModal");
+        const btnCloseName = document.getElementById("btnCloseNameModal");
+        const btnSaveName = document.getElementById("btnSavePlayerName");
+        const inputName = document.getElementById("pcPlayerNameInput");
+
+        if (badge) badge.addEventListener("click", () => this.openNameModal());
+        if (btnOpenName) btnOpenName.addEventListener("click", (e) => { e.stopPropagation(); this.openNameModal(); });
+        if (btnCloseName) btnCloseName.addEventListener("click", () => this.closeNameModal());
+        if (btnSaveName) {
+            btnSaveName.addEventListener("click", () => {
+                if (inputName) this.setPlayerName(inputName.value);
+            });
+        }
+        if (inputName) {
+            inputName.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    this.setPlayerName(inputName.value);
+                } else if (e.key === "Escape") {
+                    this.closeNameModal();
+                }
+            });
+        }
+        if (modalName) {
+            modalName.addEventListener("click", (e) => {
+                if (e.target === modalName) this.closeNameModal();
+            });
+        }
+
+        // Gắn sự kiện Modal Bảng Xếp Hạng
+        const btnOpenLb = document.getElementById("btnOpenLeaderboard");
+        const modalLb = document.getElementById("leaderboardModal");
+        const btnCloseLb = document.getElementById("btnCloseLeaderboardModal");
+        const btnCloseLbBtm = document.getElementById("btnCloseLeaderboardBottom");
+        const btnRefreshLb = document.getElementById("btnRefreshLeaderboard");
+
+        if (btnOpenLb) btnOpenLb.addEventListener("click", () => this.openLeaderboardModal());
+        if (btnCloseLb) btnCloseLb.addEventListener("click", () => this.closeLeaderboardModal());
+        if (btnCloseLbBtm) btnCloseLbBtm.addEventListener("click", () => this.closeLeaderboardModal());
+        if (btnRefreshLb) btnRefreshLb.addEventListener("click", () => this.loadLeaderboard());
+        if (modalLb) {
+            modalLb.addEventListener("click", (e) => {
+                if (e.target === modalLb) this.closeLeaderboardModal();
+            });
+        }
+    }
+
+    openNameModal() {
+        const modal = document.getElementById("nameModal");
+        const input = document.getElementById("pcPlayerNameInput");
+        if (modal) modal.classList.remove("hidden");
+        if (input) {
+            input.value = this.playerName;
+            setTimeout(() => input.focus(), 60);
+        }
+    }
+
+    closeNameModal() {
+        const modal = document.getElementById("nameModal");
+        if (modal) modal.classList.add("hidden");
+    }
+
+    openLeaderboardModal() {
+        const modal = document.getElementById("leaderboardModal");
+        if (modal) {
+            modal.classList.remove("hidden");
+            this.renderLeaderboardTable();
+        }
+    }
+
+    closeLeaderboardModal() {
+        const modal = document.getElementById("leaderboardModal");
+        if (modal) modal.classList.add("hidden");
+    }
+
+    updatePlayerNameUI(name) {
+        const topDisplay = document.getElementById("topPlayerNameDisplay");
+        if (topDisplay) topDisplay.innerText = name;
+        const pcInput = document.getElementById("pcPlayerNameInput");
+        if (pcInput && document.activeElement !== pcInput) pcInput.value = name;
+        if (window.CertificateGenerator) {
+            window.CertificateGenerator.currentStats.playerName = name;
+        }
+    }
+
+    async setPlayerName(name) {
+        const cleaned = (name || "").trim() || "Hiệp Sĩ Không Gian Mạng";
+        this.playerName = cleaned;
+        this.updatePlayerNameUI(cleaned);
+        this.closeNameModal();
+
+        // Gửi qua WebSocket cho server phát thanh tới toàn bộ điện thoại và client
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "SET_PLAYER_NAME",
+                playerName: cleaned
+            }));
+        }
+
+        // Gọi API fallback
+        try {
+            await fetch("/api/player-name", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ playerName: cleaned })
+            });
+        } catch (e) {
+            console.warn("[Game] Không thể lưu tên người chơi qua API:", e);
+        }
+
+        this._showToast(`⚔️ Tên người chơi: "${cleaned}"`, "sword");
+    }
+
+    async loadLeaderboard() {
+        try {
+            const res = await fetch("/api/leaderboard");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.playerName) {
+                    this.playerName = data.playerName;
+                    this.updatePlayerNameUI(data.playerName);
+                }
+                if (Array.isArray(data.leaderboard)) {
+                    this.leaderboard = data.leaderboard;
+                    this.renderLeaderboardTable();
+                }
+            }
+        } catch (e) {
+            console.warn("[Game] Không thể tải /api/leaderboard:", e);
+        }
+    }
+
+    renderLeaderboardTable() {
+        const tbody = document.getElementById("leaderboardTableBody");
+        if (!tbody) return;
+
+        if (!this.leaderboard || this.leaderboard.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:30px; color:#94a3b8; font-style:italic;">
+                        Chưa có hiệp sĩ nào hoàn thành trò chơi. Hãy bắt đầu cuộc hành trình và ghi danh vào bảng vàng!
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = "";
+        this.leaderboard.forEach((item, index) => {
+            const rank = index + 1;
+            let rankBadge = `<span class="lb-rank rank-other">#${rank}</span>`;
+            if (rank === 1) rankBadge = `<span class="lb-rank rank-1">🥇 1</span>`;
+            else if (rank === 2) rankBadge = `<span class="lb-rank rank-2">🥈 2</span>`;
+            else if (rank === 3) rankBadge = `<span class="lb-rank rank-3">🥉 3</span>`;
+
+            const m = Math.floor((item.totalDuration || 0) / 60);
+            const s = Math.floor((item.totalDuration || 0) % 60).toString().padStart(2, "0");
+            const timeStr = `${m}:${s}`;
+            const bossStr = `${(item.bossDuration || 0).toFixed(1)}s`;
+
+            // Thành tựu đạt được
+            let achBadges = "";
+            const achs = Array.isArray(item.achievements) ? item.achievements : [];
+            if (achs.includes("the_flash")) {
+                achBadges += `<span class="lb-ach flash" title="The Flash: Hoàn thành game siêu tốc">⚡ Flash</span>`;
+            }
+            if (achs.includes("kratos")) {
+                achBadges += `<span class="lb-ach kratos" title="Kratos: Đánh Boss Rồng chớp nhoáng">⚔️ Kratos</span>`;
+            }
+            if (achs.includes("loser")) {
+                achBadges += `<span class="lb-ach loser" title="Loser: Thánh đoán sai">🤡 Loser</span>`;
+            }
+            if (!achBadges) achBadges = `<span style="color:#64748b; font-size:11px;">Chưa có</span>`;
+
+            // Thời điểm
+            let dateStr = "Vừa xong";
+            if (item.timestamp) {
+                try {
+                    const d = new Date(item.timestamp);
+                    dateStr = d.toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                } catch (e) {}
+            }
+
+            const isCurrent = item.playerName === this.playerName;
+            const highlightClass = isCurrent ? " style='background:rgba(241, 196, 15, 0.12);'" : "";
+            const safeName = String(item.playerName || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+            html += `
+                <tr${highlightClass}>
+                    <td>${rankBadge}</td>
+                    <td><strong style="color:${isCurrent ? '#f1c40f' : '#ffffff'};">${safeName}</strong></td>
+                    <td style="color:#00d2d3; font-weight:bold;">${timeStr}</td>
+                    <td style="color:#ff7675; font-weight:bold;">${bossStr}</td>
+                    <td style="color:#f39c12; font-weight:bold;">${item.roses || 0} 🌹</td>
+                    <td><div style="display:flex; gap:4px; flex-wrap:wrap;">${achBadges}</div></td>
+                    <td style="color:#94a3b8; font-size:12px;">${dateStr}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    submitScoreToLeaderboard(details = {}) {
+        const achList = window.AchievementManager ?
+            window.AchievementManager.getAll().filter(a => a.unlocked).map(a => a.id) : [];
+
+        const entry = {
+            playerName: this.playerName || "Hiệp Sĩ Không Gian Mạng",
+            totalDuration: details.totalDuration || this.lastTotalDuration || 0,
+            bossDuration: details.bossDuration || this.lastBossDuration || 0,
+            roses: typeof details.roses === "number" ? details.roses : this.roses,
+            stage: this.stage || 3,
+            achievements: achList
+        };
+
+        // Gửi qua WebSocket
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "SUBMIT_SCORE",
+                entry: entry
+            }));
+        }
+
+        // Fallback POST qua API
+        fetch("/api/leaderboard", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entry)
+        }).catch(err => console.warn("[Game] Lỗi gửi điểm số:", err));
+    }
+
     _bindInputs() {
         // Nút mở Kho Thành Tựu trên thanh Top Bar
         const btnAch = document.getElementById("btnOpenAchievements");
@@ -466,11 +729,24 @@ class CyberSecGame {
         }
 
         window.addEventListener("keydown", (e) => {
+            if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
+                return;
+            }
             if (this.jumpscareActive) {
                 this.skipJumpscare();
                 return;
             }
             let key = e.key.toUpperCase();
+            if (key === "N") {
+                this.openNameModal();
+                return;
+            } else if (key === "L") {
+                this.openLeaderboardModal();
+                return;
+            } else if (key === "C") {
+                this.state = (this.state === "ACHIEVEMENTS") ? "START" : "ACHIEVEMENTS";
+                return;
+            }
             if (key === "ENTER" || key === " ") {
                 this.handleInput("ENTER");
             } else if (key === "ESCAPE") {
@@ -514,8 +790,14 @@ class CyberSecGame {
                     this.advanceStory();
                 }
             } else if (this.state === "START") {
-                // Kiểm tra click vào nút Kho Thành tựu ở dưới
-                if (cx >= this.canvas.width / 2 - 250 && cx <= this.canvas.width / 2 + 250 && cy >= 615 && cy <= 655) {
+                // Kiểm tra click vào khung tên người chơi ở trên (y: 140 -> 185)
+                if (cx >= this.canvas.width / 2 - 250 && cx <= this.canvas.width / 2 + 250 && cy >= 140 && cy <= 185) {
+                    this.openNameModal();
+                } else if (cx >= this.canvas.width / 2 - 260 && cx <= this.canvas.width / 2 + 260 && cy >= 560 && cy <= 600) {
+                    // Click vào nút Bảng Xếp Hạng Live
+                    this.openLeaderboardModal();
+                } else if (cx >= this.canvas.width / 2 - 320 && cx <= this.canvas.width / 2 + 320 && cy >= 605 && cy <= 645) {
+                    // Click vào nút Kho Thành tựu
                     this.state = "ACHIEVEMENTS";
                 } else {
                     this.startStory();
@@ -599,6 +881,10 @@ class CyberSecGame {
                     this.startStage(1);
                 } else if (button === "C") {
                     this.state = "ACHIEVEMENTS";
+                } else if (button === "N") {
+                    this.openNameModal();
+                } else if (button === "L") {
+                    this.openLeaderboardModal();
                 }
                 break;
 
@@ -948,8 +1234,10 @@ class CyberSecGame {
         if (this.currentQIndex < totalQ) {
             this.state = "QUESTION";
         } else {
-            // Kiểm tra thành tựu "Loser": Sai hết cả 3 câu trong 1 ải
-            if (this.stageQuestionsAnswered >= 3 && this.stageWrongCount >= 3 && this.stageCorrectCount === 0 && window.AchievementManager) {
+            // Kiểm tra thành tựu "Loser": Sai hết các câu trong 1 ải theo cấu hình
+            const loserCfg = (this.config && this.config.achievementsSettings && this.config.achievementsSettings.loser) || { enabled: true, wrongThreshold: 3 };
+            const threshold = (typeof loserCfg.wrongThreshold === "number") ? loserCfg.wrongThreshold : 3;
+            if (loserCfg.enabled !== false && this.stageQuestionsAnswered >= threshold && this.stageWrongCount >= threshold && this.stageCorrectCount === 0 && window.AchievementManager) {
                 window.AchievementManager.unlock("loser", `Ải ${this.stage}`, { stage: this.stage });
             }
 
@@ -1063,21 +1351,28 @@ class CyberSecGame {
 
             if (this.bossHP <= 0) {
                 const now = Date.now();
-                // 1. Kiểm tra thành tựu "Kratos": Đánh boss rồng < 20 giây
+                // 1. Kiểm tra thành tựu "Kratos": Đánh boss rồng < maxBossSeconds
+                const kratosCfg = (this.config && this.config.achievementsSettings && this.config.achievementsSettings.kratos) || { enabled: true, maxBossSeconds: 20 };
+                const maxBossSec = (typeof kratosCfg.maxBossSeconds === "number") ? kratosCfg.maxBossSeconds : 20;
                 const bossDuration = Math.max(0.1, (now - (this.bossStartTime || now)) / 1000);
                 this.lastBossDuration = bossDuration;
-                if (bossDuration < 20 && window.AchievementManager) {
+                if (kratosCfg.enabled !== false && bossDuration < maxBossSec && window.AchievementManager) {
                     window.AchievementManager.unlock("kratos", `${bossDuration.toFixed(1)}s`, { bossDuration });
                 }
 
-                // 2. Kiểm tra thành tựu "The Flash": Hoàn thành trò chơi < 3 phút (< 180s)
+                // 2. Kiểm tra thành tựu "The Flash": Hoàn thành trò chơi < maxSeconds
+                const flashCfg = (this.config && this.config.achievementsSettings && this.config.achievementsSettings.the_flash) || { enabled: true, maxSeconds: 180 };
+                const maxFlashSec = (typeof flashCfg.maxSeconds === "number") ? flashCfg.maxSeconds : 180;
                 const totalDuration = Math.max(0.1, (now - (this.gameStartTime || now)) / 1000);
                 this.lastTotalDuration = totalDuration;
-                if (totalDuration < 180 && window.AchievementManager) {
+                if (flashCfg.enabled !== false && totalDuration < maxFlashSec && window.AchievementManager) {
                     const m = Math.floor(totalDuration / 60);
                     const s = Math.floor(totalDuration % 60).toString().padStart(2, "0");
                     window.AchievementManager.unlock("the_flash", `${m}:${s}`, { totalDuration });
                 }
+
+                // Tự động lưu và cập nhật Bảng Xếp Hạng Live & JSON qua WebSocket
+                this.submitScoreToLeaderboard({ bossDuration, totalDuration, roses: this.roses });
 
                 setTimeout(() => {
                     this.state = "VICTORY";
@@ -1821,21 +2116,41 @@ class CyberSecGame {
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("VỆ BINH MẬT KHẨU", w / 2, h * 0.15);
+        ctx.fillText("VỆ BINH MẬT KHẨU", w / 2, h * 0.13);
 
         ctx.fillStyle = "#00d2d3";
-        ctx.font = "bold 20px 'Courier New', monospace";
-        ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.20);
+        ctx.font = "bold 18px 'Courier New', monospace";
+        ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.17);
+
+        // Khung hiển thị Tên Người Chơi tương tác nổi bật
+        const nameCardW = 460;
+        const nameCardH = 36;
+        const nameCardX = (w - nameCardW) / 2;
+        const nameCardY = h * 0.19;
+        ctx.fillStyle = "rgba(42, 28, 77, 0.88)";
+        ctx.fillRect(nameCardX, nameCardY, nameCardW, nameCardH);
+        ctx.strokeStyle = "#00d2d3";
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(nameCardX, nameCardY, nameCardW, nameCardH);
+
+        window.PixelSprites.drawPixelIcon(ctx, "sword", nameCardX + 14, nameCardY + 8, 20);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`HIỆP SĨ: ${this.playerName.toUpperCase()}`, w / 2, nameCardY + 23);
+        ctx.fillStyle = "#f1c40f";
+        ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("[ĐỔI TÊN: PHÍM N / CLICK]", nameCardX + nameCardW - 75, nameCardY + 22);
 
         // Hiển thị Vệ Binh bước đi dũng cảm ở trung tâm (kèm trang bị thích ứng thời tiết)
         const curW = this.weather ? this.weather.currentType : 'SUNNY';
-        window.PixelSprites.drawAdventurer(ctx, w / 2 - 30, h * 0.22, 68, performance.now() / 150, 1, true, 1, curW);
+        window.PixelSprites.drawAdventurer(ctx, w / 2 - 28, h * 0.25, 60, performance.now() / 150, 1, true, 1, curW);
 
         ctx.fillStyle = "#f1f2f6";
-        ctx.font = "bold 18px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
         const startX = w * 0.15;
-        let startY = h * 0.35;
+        let startY = h * 0.36;
 
         const infoItems = [
             { icon: "shield", text: "3 Thế giới phiêu lưu: Rừng Mật Mã (Cây/Chim), Biển Dữ Liệu (Cá/Rong), Tầng Mây (Đảo bay)" },
@@ -1848,36 +2163,43 @@ class CyberSecGame {
         ];
 
         infoItems.forEach(item => {
-            window.PixelSprites.drawPixelIcon(ctx, item.icon, startX - 32, startY - 18, 25);
+            window.PixelSprites.drawPixelIcon(ctx, item.icon, startX - 32, startY - 17, 23);
             ctx.fillText(item.text, startX, startY);
-            startY += 36;
+            startY += 34;
         });
 
         const blink = Math.sin(performance.now() / 250) > 0;
         if (blink) {
             ctx.fillStyle = "#2ecc71";
-            ctx.font = "bold 25px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.79);
-            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 400, h * 0.79 - 20, 26);
+            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.77);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 380, h * 0.77 - 18, 24);
             ctx.save();
-            ctx.translate(w / 2 + 400, h * 0.79 - 8);
+            ctx.translate(w / 2 + 380, h * 0.77 - 6);
             ctx.scale(-1, 1);
-            window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -12, 26);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -12, 24);
             ctx.restore();
         }
 
+        // Nút mở Bảng Xếp Hạng Live
+        ctx.fillStyle = "#00d2d3";
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        window.PixelSprites.drawPixelIcon(ctx, "star", w / 2 - 250, h * 0.825 - 13, 19);
+        ctx.fillText("📊 NHẤN PHÍM [L] HOẶC CLICK VÀO ĐÂY ĐỂ XEM BẢNG XẾP HẠNG LIVE (WS & JSON)", w / 2 + 10, h * 0.825);
+
         // Nút mở Kho Thành Tựu (Rồng bay phượng múa & Cúp Kratos)
         ctx.fillStyle = "#f1c40f";
-        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 275, h * 0.85 - 15, 22);
-        ctx.fillText("🏆 NHẤN PHÍM [C] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, h * 0.85);
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 280, h * 0.87 - 13, 19);
+        ctx.fillText("🏆 NHẤN PHÍM [C] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, h * 0.87);
 
         // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
         ctx.save();
         ctx.globalAlpha = 0.7;
-        const subY = h * 0.91;
+        const subY = h * 0.925;
         if (this.logoNBK && this.logoNBK.complete) {
             ctx.drawImage(this.logoNBK, w / 2 - 190, subY - 15, 20, 20);
         }
@@ -2525,9 +2847,9 @@ class CyberSecGame {
         const altars = [
             {
                 id: "the_flash",
-                title: "THE FLASH",
-                titleVi: "Tốc Độ Sấm Sét",
-                desc: "Hoàn thành trò chơi < 3 phút",
+                defaultTitle: "THE FLASH",
+                defaultTitleVi: "Tốc Độ Sấm Sét",
+                defaultDesc: "Hoàn thành trò chơi < 3 phút",
                 imgKey: "the_flash",
                 x: w * 0.07,
                 y: 98,
@@ -2538,9 +2860,9 @@ class CyberSecGame {
             },
             {
                 id: "kratos",
-                title: "KRATOS",
-                titleVi: "Chiến Thần Đồ Long",
-                desc: "Đánh boss rồng < 20 giây",
+                defaultTitle: "KRATOS",
+                defaultTitleVi: "Chiến Thần Đồ Long",
+                defaultDesc: "Đánh boss rồng < 20 giây",
                 imgKey: "kratos",
                 x: w * 0.36,
                 y: 86, // Đỉnh cao trung tâm, nâng cao hơn
@@ -2552,9 +2874,9 @@ class CyberSecGame {
             },
             {
                 id: "loser",
-                title: "LOSER",
-                titleVi: "Thánh Đoán Sai",
-                desc: "Sai hết cả 3 câu trong 1 ải",
+                defaultTitle: "LOSER",
+                defaultTitleVi: "Thánh Đoán Sai",
+                defaultDesc: "Sai hết cả 3 câu trong 1 ải",
                 imgKey: "loser",
                 x: w * 0.67,
                 y: 98,
@@ -2568,6 +2890,9 @@ class CyberSecGame {
         altars.forEach((alt) => {
             const ach = window.AchievementManager ? window.AchievementManager.get(alt.id) : null;
             const isUnlocked = ach && ach.unlocked;
+            const title = (ach && ach.title) ? ach.title.toUpperCase() : alt.defaultTitle;
+            const titleVi = (ach && ach.titleVi) ? ach.titleVi : alt.defaultTitleVi;
+            const desc = (ach && ach.conditionDesc) ? ach.conditionDesc : alt.defaultDesc;
 
             ctx.save();
 
@@ -2636,16 +2961,16 @@ class CyberSecGame {
             ctx.textAlign = "center";
             ctx.fillStyle = isUnlocked ? alt.accentColor : "#94a3b8";
             ctx.font = `900 ${alt.isCenter ? "26px" : "23px"} 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillText(alt.title, alt.x + alt.w / 2, textY);
+            ctx.fillText(title, alt.x + alt.w / 2, textY);
 
             ctx.fillStyle = "#cbd5e1";
             ctx.font = "italic 15px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(alt.titleVi, alt.x + alt.w / 2, textY + 22);
+            ctx.fillText(titleVi, alt.x + alt.w / 2, textY + 22);
 
             // ĐIỀU KIỆN MỞ KHÓA
             ctx.fillStyle = "#f1f2f6";
             ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText(`🎯 ${alt.desc}`, alt.x + alt.w / 2, textY + 50);
+            ctx.fillText(`🎯 ${desc}`, alt.x + alt.w / 2, textY + 50);
 
             // TRẠNG THÁI MỞ KHÓA (STATUS PILL BADGE)
             const pillW = alt.w - 50;

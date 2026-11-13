@@ -85,7 +85,23 @@
         'chkAllowSkipStory': 'Cho phép bỏ qua cốt truyện',
         'inputBossHP': 'Máu Boss (HP)',
         'inputRequiredRoses': 'Hoa hồng đánh Boss',
-        'inputBossSpeed': 'Tốc độ Boss'
+        'inputBossSpeed': 'Tốc độ Boss',
+        'chkTheFlashEnabled': 'Bật/Tắt thành tựu The Flash',
+        'inputTheFlashTitle': 'Tiêu đề The Flash',
+        'inputTheFlashTitleVi': 'Danh hiệu The Flash',
+        'inputTheFlashMaxSec': 'Thời gian đạt The Flash',
+        'inputTheFlashDesc': 'Mô tả The Flash',
+        'chkKratosEnabled': 'Bật/Tắt thành tựu Kratos',
+        'inputKratosTitle': 'Tiêu đề Kratos',
+        'inputKratosTitleVi': 'Danh hiệu Kratos',
+        'inputKratosMaxBossSec': 'Thời gian diệt Boss Kratos',
+        'inputKratosDesc': 'Mô tả Kratos',
+        'chkLoserEnabled': 'Bật/Tắt thành tựu Loser',
+        'inputLoserTitle': 'Tiêu đề Loser',
+        'inputLoserTitleVi': 'Danh hiệu Loser',
+        'inputLoserWrongThreshold': 'Số câu sai Loser',
+        'inputLoserDesc': 'Mô tả Loser',
+        'inputHelperPlayerName': 'Tên người chơi'
     };
 
     let fieldEditThrottleTimer = null;
@@ -152,6 +168,36 @@
     const rawJsonEditor = document.getElementById("rawJsonEditor");
     const btnFormatJson = document.getElementById("btnFormatJson");
     const btnApplyRawJson = document.getElementById("btnApplyRawJson");
+
+    // Achievements Tab DOM Elements
+    const chkTheFlashEnabled = document.getElementById("chkTheFlashEnabled");
+    const inputTheFlashTitle = document.getElementById("inputTheFlashTitle");
+    const inputTheFlashTitleVi = document.getElementById("inputTheFlashTitleVi");
+    const inputTheFlashMaxSec = document.getElementById("inputTheFlashMaxSec");
+    const inputTheFlashDesc = document.getElementById("inputTheFlashDesc");
+
+    const chkKratosEnabled = document.getElementById("chkKratosEnabled");
+    const inputKratosTitle = document.getElementById("inputKratosTitle");
+    const inputKratosTitleVi = document.getElementById("inputKratosTitleVi");
+    const inputKratosMaxBossSec = document.getElementById("inputKratosMaxBossSec");
+    const inputKratosDesc = document.getElementById("inputKratosDesc");
+
+    const chkLoserEnabled = document.getElementById("chkLoserEnabled");
+    const inputLoserTitle = document.getElementById("inputLoserTitle");
+    const inputLoserTitleVi = document.getElementById("inputLoserTitleVi");
+    const inputLoserWrongThreshold = document.getElementById("inputLoserWrongThreshold");
+    const inputLoserDesc = document.getElementById("inputLoserDesc");
+    const btnSaveAchievements = document.getElementById("btnSaveAchievements");
+
+    // Leaderboard Tab DOM Elements
+    const badgeLbCount = document.getElementById("badgeLbCount");
+    const helperCurrentPlayerTag = document.getElementById("helperCurrentPlayerTag");
+    const inputHelperPlayerName = document.getElementById("inputHelperPlayerName");
+    const btnHelperSetPlayerName = document.getElementById("btnHelperSetPlayerName");
+    const helperLeaderboardBody = document.getElementById("helperLeaderboardBody");
+    const btnRefreshHelperLb = document.getElementById("btnRefreshHelperLb");
+    const btnResetHelperLb = document.getElementById("btnResetHelperLb");
+    let helperLeaderboardData = [];
 
     // Modals
     const modalSection = document.getElementById("modalSection");
@@ -406,6 +452,8 @@
         renderQuestionsList();
         renderRandomSettings();
         renderCardsTable();
+        renderAchievementsSettings();
+        renderLeaderboardView();
         renderRawJsonView();
         updateBadges();
         highlightPeerEditingCards();
@@ -642,6 +690,221 @@
         currentConfig.settings.bossHP = parseInt(inputBossHP.value) || 9;
         currentConfig.settings.requiredRosesForBoss = parseInt(inputRequiredRoses.value) || 9;
         currentConfig.settings.bossSpeedMs = parseInt(inputBossSpeed.value) || 1400;
+
+        syncAchievementsFormToState();
+    }
+
+    // Render Tab 4: Achievements Settings
+    function renderAchievementsSettings() {
+        const ach = currentConfig.achievementsSettings || {};
+        const flash = ach.the_flash || {};
+        const kratos = ach.kratos || {};
+        const loser = ach.loser || {};
+        const active = document.activeElement;
+
+        // The Flash
+        if (chkTheFlashEnabled && active !== chkTheFlashEnabled) {
+            chkTheFlashEnabled.checked = (flash.enabled !== false);
+        }
+        if (inputTheFlashTitle && active !== inputTheFlashTitle) {
+            inputTheFlashTitle.value = flash.title || "The Flash";
+        }
+        if (inputTheFlashTitleVi && active !== inputTheFlashTitleVi) {
+            inputTheFlashTitleVi.value = flash.titleVi || "Tốc Độ Sấm Sét";
+        }
+        if (inputTheFlashMaxSec && active !== inputTheFlashMaxSec) {
+            inputTheFlashMaxSec.value = flash.maxSeconds || 180;
+        }
+        if (inputTheFlashDesc && active !== inputTheFlashDesc) {
+            inputTheFlashDesc.value = flash.description || "Hoàn thành toàn bộ trò chơi trong thời gian dưới 3 phút (< 180s).";
+        }
+
+        // Kratos
+        if (chkKratosEnabled && active !== chkKratosEnabled) {
+            chkKratosEnabled.checked = (kratos.enabled !== false);
+        }
+        if (inputKratosTitle && active !== inputKratosTitle) {
+            inputKratosTitle.value = kratos.title || "Kratos";
+        }
+        if (inputKratosTitleVi && active !== inputKratosTitleVi) {
+            inputKratosTitleVi.value = kratos.titleVi || "Chiến Thần Đồ Long";
+        }
+        if (inputKratosMaxBossSec && active !== inputKratosMaxBossSec) {
+            inputKratosMaxBossSec.value = kratos.maxBossSeconds || 20;
+        }
+        if (inputKratosDesc && active !== inputKratosDesc) {
+            inputKratosDesc.value = kratos.description || "Tiêu diệt Boss Rồng Hắc Ám trong thời gian chớp nhoáng dưới 20 giây (< 20s).";
+        }
+
+        // Loser
+        if (chkLoserEnabled && active !== chkLoserEnabled) {
+            chkLoserEnabled.checked = (loser.enabled !== false);
+        }
+        if (inputLoserTitle && active !== inputLoserTitle) {
+            inputLoserTitle.value = loser.title || "Loser";
+        }
+        if (inputLoserTitleVi && active !== inputLoserTitleVi) {
+            inputLoserTitleVi.value = loser.titleVi || "Thánh Đoán Sai";
+        }
+        if (inputLoserWrongThreshold && active !== inputLoserWrongThreshold) {
+            inputLoserWrongThreshold.value = loser.wrongThreshold || 3;
+        }
+        if (inputLoserDesc && active !== inputLoserDesc) {
+            inputLoserDesc.value = loser.description || "Trả lời sai toàn bộ cả 3 câu hỏi trong cùng một ải thử thách.";
+        }
+    }
+
+    // Đồng bộ Form Thành Tựu vào currentConfig
+    function syncAchievementsFormToState() {
+        if (!currentConfig.achievementsSettings) currentConfig.achievementsSettings = {};
+
+        currentConfig.achievementsSettings.the_flash = {
+            enabled: chkTheFlashEnabled ? chkTheFlashEnabled.checked : true,
+            title: (inputTheFlashTitle ? inputTheFlashTitle.value.trim() : "") || "The Flash",
+            titleVi: (inputTheFlashTitleVi ? inputTheFlashTitleVi.value.trim() : "") || "Tốc Độ Sấm Sét",
+            maxSeconds: parseInt(inputTheFlashMaxSec ? inputTheFlashMaxSec.value : 180) || 180,
+            description: inputTheFlashDesc ? inputTheFlashDesc.value.trim() : ""
+        };
+
+        currentConfig.achievementsSettings.kratos = {
+            enabled: chkKratosEnabled ? chkKratosEnabled.checked : true,
+            title: (inputKratosTitle ? inputKratosTitle.value.trim() : "") || "Kratos",
+            titleVi: (inputKratosTitleVi ? inputKratosTitleVi.value.trim() : "") || "Chiến Thần Đồ Long",
+            maxBossSeconds: parseInt(inputKratosMaxBossSec ? inputKratosMaxBossSec.value : 20) || 20,
+            description: inputKratosDesc ? inputKratosDesc.value.trim() : ""
+        };
+
+        currentConfig.achievementsSettings.loser = {
+            enabled: chkLoserEnabled ? chkLoserEnabled.checked : true,
+            title: (inputLoserTitle ? inputLoserTitle.value.trim() : "") || "Loser",
+            titleVi: (inputLoserTitleVi ? inputLoserTitleVi.value.trim() : "") || "Thánh Đoán Sai",
+            wrongThreshold: parseInt(inputLoserWrongThreshold ? inputLoserWrongThreshold.value : 3) || 3,
+            description: inputLoserDesc ? inputLoserDesc.value.trim() : ""
+        };
+    }
+
+    // Render Tab 5: Leaderboard
+    function renderLeaderboardView() {
+        if (!helperLeaderboardBody) return;
+        const list = helperLeaderboardData || [];
+        if (badgeLbCount) badgeLbCount.textContent = list.length;
+
+        if (list.length === 0) {
+            helperLeaderboardBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:30px; color:#94a3b8; font-style:italic;">
+                        Chưa có lượt chơi nào hoàn thành. Hãy mở game để các hiệp sĩ tham gia thi đấu!
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = "";
+        list.forEach((item, index) => {
+            const rank = index + 1;
+            let rankBadge = `#${rank}`;
+            if (rank === 1) rankBadge = "🥇 1";
+            else if (rank === 2) rankBadge = "🥈 2";
+            else if (rank === 3) rankBadge = "🥉 3";
+
+            const m = Math.floor((item.totalDuration || 0) / 60);
+            const s = Math.floor((item.totalDuration || 0) % 60).toString().padStart(2, "0");
+            const timeStr = `${m}:${s}`;
+            const bossStr = `${(item.bossDuration || 0).toFixed(1)}s`;
+
+            // Thành tựu đạt được
+            let achBadges = "";
+            const achs = Array.isArray(item.achievements) ? item.achievements : [];
+            if (achs.includes("the_flash")) {
+                achBadges += `<span class="lb-badge-flash">⚡ Flash</span> `;
+            }
+            if (achs.includes("kratos")) {
+                achBadges += `<span class="lb-badge-kratos">⚔️ Kratos</span> `;
+            }
+            if (achs.includes("loser")) {
+                achBadges += `<span class="lb-badge-loser">🤡 Loser</span> `;
+            }
+            if (!achBadges) achBadges = `<span style="color:#64748b; font-size:12px;">Chưa có</span>`;
+
+            let dateStr = "Vừa xong";
+            if (item.timestamp) {
+                try {
+                    const d = new Date(item.timestamp);
+                    dateStr = d.toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                } catch (e) {}
+            }
+
+            html += `
+                <tr>
+                    <td style="font-weight:bold; color:#f1c40f;">${rankBadge}</td>
+                    <td><strong style="color:#ffffff; font-size:14px;">${escapeHtml(item.playerName)}</strong></td>
+                    <td style="color:#00d2d3; font-weight:bold;">${timeStr}</td>
+                    <td style="color:#ff7675; font-weight:bold;">${bossStr}</td>
+                    <td style="color:#f39c12; font-weight:bold;">${item.roses || 0} 🌹</td>
+                    <td>${achBadges}</td>
+                    <td style="color:#94a3b8; font-size:12px;">${dateStr}</td>
+                </tr>
+            `;
+        });
+
+        helperLeaderboardBody.innerHTML = html;
+    }
+
+    async function loadLeaderboardFromHelper() {
+        try {
+            const res = await fetch("/api/leaderboard");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.playerName && helperCurrentPlayerTag) {
+                    helperCurrentPlayerTag.innerText = data.playerName;
+                }
+                helperLeaderboardData = data.leaderboard || [];
+                renderLeaderboardView();
+            }
+        } catch (e) {
+            console.warn("[Helper] Lỗi nạp bảng xếp hạng:", e);
+        }
+    }
+
+    async function setPlayerNameFromHelper(name) {
+        const cleaned = (name || "").trim();
+        if (!cleaned) {
+            alert("Vui lòng nhập tên người chơi!");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/player-name", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ playerName: cleaned })
+            });
+            if (res.ok) {
+                if (helperCurrentPlayerTag) helperCurrentPlayerTag.innerText = cleaned;
+                if (inputHelperPlayerName) inputHelperPlayerName.value = "";
+                showToast(`⚔️ Đã đổi tên người chơi thành: "${cleaned}"`);
+            }
+        } catch (e) {
+            showToast("❌ Lỗi đổi tên người chơi: " + e.message, true);
+        }
+    }
+
+    async function resetLeaderboardFromHelper() {
+        if (!confirm("⚠️ Bạn có chắc chắn muốn XÓA TOÀN BỘ dữ liệu Bảng Xếp Hạng?\nThao tác này sẽ đặt lại bảng xếp hạng về trống cho cuộc thi mới.")) {
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/leaderboard", { method: "DELETE" });
+            if (res.ok) {
+                helperLeaderboardData = [];
+                renderLeaderboardView();
+                showToast("🗑️ Đã xóa toàn bộ dữ liệu Bảng Xếp Hạng!");
+            }
+        } catch (e) {
+            showToast("❌ Lỗi reset bảng xếp hạng: " + e.message, true);
+        }
     }
 
     // ==========================================
@@ -1223,6 +1486,13 @@
                         } else if (msg.type === "TUNNEL_INFO") {
                             tunnelInfo = msg.info;
                             updateShareModalUI();
+                        } else if (msg.type === "LEADERBOARD_SYNC" || msg.type === "LEADERBOARD_UPDATED") {
+                            helperLeaderboardData = msg.leaderboard || [];
+                            renderLeaderboardView();
+                        } else if (msg.type === "PLAYER_NAME_SYNC" || msg.type === "PLAYER_NAME_UPDATED") {
+                            if (msg.playerName && helperCurrentPlayerTag) {
+                                helperCurrentPlayerTag.innerText = msg.playerName;
+                            }
                         }
                     } catch (e) {}
                 };
@@ -1405,6 +1675,9 @@
         } else if (el.closest && el.closest('#tab-random')) {
             targetType = 'settings';
             targetId = 'random_boss';
+        } else if (el.closest && el.closest('#tab-achievements')) {
+            targetType = 'settings';
+            targetId = 'achievements';
         }
 
         const val = (el.type === 'checkbox') ? (el.checked ? 'Bật' : 'Tắt') : el.value;
@@ -1470,6 +1743,9 @@
         } else if (el.closest && el.closest('#tab-random')) {
             targetType = 'settings';
             targetId = 'random_boss';
+        } else if (el.closest && el.closest('#tab-achievements')) {
+            targetType = 'settings';
+            targetId = 'achievements';
         }
 
         sendWs({
@@ -2003,6 +2279,11 @@
                 let tabLabel = 'Xem Vòng chơi';
                 if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
                 else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
+                else if (target === 'tab-achievements') tabLabel = 'Cài đặt Thành tựu';
+                else if (target === 'tab-leaderboard') {
+                    tabLabel = 'Xem Bảng xếp hạng Live';
+                    loadLeaderboardFromHelper();
+                }
                 else if (target === 'tab-json') tabLabel = 'Xem mã JSON';
 
                 updateLocation({
@@ -2046,6 +2327,33 @@
         // Card actions
         document.getElementById("btnAddCard").addEventListener("click", openCreateCard);
         document.getElementById("btnSaveCardModal").addEventListener("click", saveCardFromModal);
+
+        // Achievements actions
+        if (btnSaveAchievements) {
+            btnSaveAchievements.addEventListener("click", () => {
+                saveConfigToServer(false, 'Cài đặt Thành Tựu');
+            });
+        }
+
+        // Leaderboard actions
+        if (btnRefreshHelperLb) {
+            btnRefreshHelperLb.addEventListener("click", loadLeaderboardFromHelper);
+        }
+        if (btnResetHelperLb) {
+            btnResetHelperLb.addEventListener("click", resetLeaderboardFromHelper);
+        }
+        if (btnHelperSetPlayerName) {
+            btnHelperSetPlayerName.addEventListener("click", () => {
+                if (inputHelperPlayerName) setPlayerNameFromHelper(inputHelperPlayerName.value);
+            });
+        }
+        if (inputHelperPlayerName) {
+            inputHelperPlayerName.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    setPlayerNameFromHelper(inputHelperPlayerName.value);
+                }
+            });
+        }
 
         // Raw JSON actions
         btnFormatJson.addEventListener("click", formatJsonEditor);
@@ -2199,6 +2507,7 @@
         initEvents();
         initWebSocket();
         loadConfigFromServer();
+        loadLeaderboardFromHelper();
         renderCollaboratorsUI();
     });
 })();

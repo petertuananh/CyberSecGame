@@ -38,6 +38,14 @@
             <a href="/helper" target="_blank" id="btnOpenHelper" class="btn-helper" title="Mở Trình Quản Lý & Cấu Hình Câu Hỏi, Sections, Hoa Hồng (Helper)">
                 <span>⚙️ HELPER</span>
             </a>
+            <div id="playerBadge" class="player-badge" title="Tên người chơi (Nhấn để đổi tên hoặc nhập trên ĐT)">
+                <span class="player-icon">👤</span>
+                <span id="topPlayerNameDisplay" class="player-name-text">Hiệp Sĩ Không Gian Mạng</span>
+                <button id="btnOpenNameModal" class="btn-name-edit" title="Đổi tên người chơi">✏️</button>
+            </div>
+            <button id="btnOpenLeaderboard" class="btn-leaderboard" title="Mở Bảng Xếp Hạng Trực Tiếp (Live Leaderboard)">
+                <span>📊 BẢNG XẾP HẠNG</span>
+            </button>
             <button id="btnOpenAchievements" class="btn-achievements" title="Mở Kho Thành Tựu (Rồng bay phượng múa & Giấy chứng nhận)">
                 <span>🏆 THÀNH TỰU</span>
             </button>
@@ -160,6 +168,63 @@
                     <span>📥 TẢI VỀ GIẤY CHỨNG NHẬN (PNG CHẤT LƯỢNG CAO 2K)</span>
                 </button>
                 <button id="btnCloseCertBottom" class="btn-cert-secondary">
+                    <span>✖ ĐÓNG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hộp thoại Modal Đổi Tên Người Chơi -->
+    <div id="nameModal" class="cert-modal-backdrop hidden">
+        <div class="name-modal-card">
+            <div class="cert-modal-header">
+                <div class="cert-modal-title">👤 ĐỔI TÊN NGƯỜI CHƠI</div>
+                <button id="btnCloseNameModal" class="cert-close-btn">&times;</button>
+            </div>
+            <p class="name-modal-desc">
+                Nhập họ tên hoặc biệt danh của bạn. Tên này sẽ hiển thị trong game, trên Bảng Xếp Hạng và trên Giấy Chứng Nhận!
+            </p>
+            <div class="name-input-row">
+                <input type="text" id="pcPlayerNameInput" placeholder="Nhập tên của bạn (VD: Nguyễn Tuấn Anh - 7A1)..." maxlength="35" class="name-modal-input" />
+                <button id="btnSavePlayerName" class="btn-save-name">LƯU TÊN ↵</button>
+            </div>
+            <div class="name-hint">
+                💡 Bạn cũng có thể dùng điện thoại quét mã QR và đổi tên trực tiếp trên điện thoại!
+            </div>
+        </div>
+    </div>
+
+    <!-- Hộp thoại Modal Bảng Xếp Hạng Live -->
+    <div id="leaderboardModal" class="cert-modal-backdrop hidden">
+        <div class="leaderboard-modal-card">
+            <div class="cert-modal-header">
+                <div class="cert-modal-title">📊 BẢNG XẾP HẠNG VỆ BINH AN NINH MẠNG (LIVE)</div>
+                <button id="btnCloseLeaderboardModal" class="cert-close-btn">&times;</button>
+            </div>
+            <div class="leaderboard-meta-bar">
+                <span>🏆 Bảng thành tích được cập nhật theo thời gian thực (Live WebSocket & JSON)</span>
+                <button id="btnRefreshLeaderboard" class="btn-refresh-lb">🔄 Làm mới</button>
+            </div>
+            <div class="leaderboard-table-wrap">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>HẠNG</th>
+                            <th>HIỆP SĨ</th>
+                            <th>THỜI GIAN</th>
+                            <th>DIỆT BOSS</th>
+                            <th>HOA HỒNG</th>
+                            <th>THÀNH TỰU</th>
+                            <th>THỜI ĐIỂM</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="cert-actions-bar">
+                <button id="btnCloseLeaderboardBottom" class="btn-cert-secondary">
                     <span>✖ ĐÓNG</span>
                 </button>
             </div>

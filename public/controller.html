@@ -283,6 +283,73 @@
             padding: 8px;
             letter-spacing: 0.5px;
         }
+
+        /* KHUNG NHẬP TÊN NGƯỜI CHƠI TRÊN ĐIỆN THOẠI */
+        .player-name-card {
+            background: rgba(30, 27, 75, 0.85);
+            border: 1.5px solid #6366f1;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 8px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .player-name-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8px;
+            color: #fbbf24;
+        }
+
+        .current-name-tag {
+            color: #38bdf8;
+            font-weight: bold;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .player-name-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .player-name-input {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #4338ca;
+            border-radius: 4px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 9px;
+            padding: 7px 8px;
+            outline: none;
+        }
+
+        .player-name-input:focus {
+            border-color: #38bdf8;
+        }
+
+        .btn-set-name {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border: 1px solid #60a5fa;
+            color: #ffffff;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 8px;
+            padding: 7px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-set-name:active {
+            transform: scale(0.96);
+            background: #1e40af;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +365,18 @@
             <span id="statusText">KẾT NỐI...</span>
         </div>
     </header>
+
+    <!-- KHUNG ĐỔI TÊN NGƯỜI CHƠI TRÊN ĐIỆN THOẠI -->
+    <div class="player-name-card">
+        <div class="player-name-header">
+            <span>👤 TÊN NGƯỜI CHƠI:</span>
+            <span id="currentNameTag" class="current-name-tag">Hiệp Sĩ Không Gian Mạng</span>
+        </div>
+        <div class="player-name-row">
+            <input type="text" id="inputPlayerName" placeholder="Nhập tên bạn..." maxlength="35" class="player-name-input" />
+            <button id="btnSetPlayerName" class="btn-set-name">GỬI TÊN ↵</button>
+        </div>
+    </div>
 
     <!-- THÔNG BÁO TÍN HIỆU VỪA BẤM -->
     <div id="toastBanner" class="toast-banner">⚡ SẴN SÀNG ĐIỀU KHIỂN</div>
@@ -352,6 +431,9 @@
             const statusPill = document.getElementById('statusPill');
             const statusText = document.getElementById('statusText');
             const toastBanner = document.getElementById('toastBanner');
+            const inputPlayerName = document.getElementById('inputPlayerName');
+            const btnSetPlayerName = document.getElementById('btnSetPlayerName');
+            const currentNameTag = document.getElementById('currentNameTag');
 
             if (deviceBadge) deviceBadge.innerText = '📱 TAY CẦM #' + controllerId;
 
@@ -359,6 +441,38 @@
             let reconnectTimer = null;
             let audioCtx = null;
             let toastTimer = null;
+
+            function sendPlayerName() {
+                if (!inputPlayerName) return;
+                const name = inputPlayerName.value.trim();
+                if (!name) return;
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'SET_PLAYER_NAME',
+                        name: name,
+                        source: 'MOBILE (' + controllerId + ')'
+                    }));
+                    if (currentNameTag) currentNameTag.innerText = name;
+                    showToast('✓ ĐÃ ĐỔI TÊN: ' + name);
+                    triggerHaptic();
+                    playBeep(880, 0.08);
+                } else {
+                    showToast('⚠️ CHƯA KẾT NỐI VỚI GAME');
+                }
+            }
+
+            if (btnSetPlayerName) {
+                btnSetPlayerName.addEventListener('click', sendPlayerName);
+            }
+            if (inputPlayerName) {
+                inputPlayerName.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        sendPlayerName();
+                        inputPlayerName.blur();
+                    }
+                });
+            }
 
             // Âm thanh phản hồi ngắn giả lập nút Arcade
             function playBeep(freq = 600, duration = 0.04) {
@@ -431,7 +545,12 @@
                     ws.onmessage = (event) => {
                         try {
                             const data = JSON.parse(event.data);
-                            // Có thể nhận thêm thông báo từ Game (như round, state) nếu cần
+                            if (data.type === 'PLAYER_NAME_SYNC' || data.type === 'PLAYER_NAME_UPDATED') {
+                                if (currentNameTag) currentNameTag.innerText = data.name;
+                                if (inputPlayerName && document.activeElement !== inputPlayerName) {
+                                    inputPlayerName.value = data.name;
+                                }
+                            }
                         } catch (e) {}
                     };
 
