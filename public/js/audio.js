@@ -371,6 +371,41 @@ class SoundEngine {
             thud.stop(this.ctx.currentTime + 0.4);
         }, 800);
     }
+
+    // 11. Âm thanh mở khóa Thành tựu (Triumphant Achievement Fanfare & Golden Chime)
+    achievement() {
+        const ctx = this.ctx;
+        if (!ctx) return;
+        const notes = [
+            { f: 523.25, d: 0.10, p: 0.08 }, // C5
+            { f: 659.25, d: 0.10, p: 0.08 }, // E5
+            { f: 783.99, d: 0.10, p: 0.08 }, // G5
+            { f: 987.77, d: 0.12, p: 0.10 }, // B5
+            { f: 1046.50, d: 0.14, p: 0.11 }, // C6
+            { f: 1318.51, d: 0.45, p: 0.45 }  // E6 (vang ngân hoàng kim)
+        ];
+
+        let offset = 0;
+        notes.forEach((n, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const start = ctx.currentTime + offset;
+
+            osc.type = (idx === notes.length - 1) ? "triangle" : "sine";
+            osc.frequency.setValueAtTime(n.f, start);
+
+            const vol = (idx === notes.length - 1) ? 0.3 : 0.2;
+            gain.gain.setValueAtTime(vol, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + n.d);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + n.d);
+
+            offset += n.p;
+        });
+    }
 }
 
 window.SoundEngine = new SoundEngine();

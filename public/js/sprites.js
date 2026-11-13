@@ -1498,6 +1498,125 @@ const PixelSprites = {
                 break;
             }
 
+            case 'flash':
+            case 'lightning': {
+                // Tia sét hoàng kim thần tốc
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 8 * s, y + 1 * s, 4 * s, 3 * s);
+                ctx.fillRect(x + 6 * s, y + 3 * s, 4 * s, 3 * s);
+                ctx.fillRect(x + 4 * s, y + 6 * s, 5 * s, 3 * s);
+                ctx.fillRect(x + 3 * s, y + 8 * s, 10 * s, 2 * s);
+                ctx.fillRect(x + 5 * s, y + 9 * s, 5 * s, 3 * s);
+                ctx.fillRect(x + 4 * s, y + 11 * s, 4 * s, 2 * s);
+                ctx.fillRect(x + 3 * s, y + 13 * s, 2 * s, 2 * s);
+                // Vệt sáng trắng tâm tia sét
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(x + 7 * s, y + 2 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 5 * s, y + 5 * s, 2 * s, 4 * s);
+                ctx.fillRect(x + 4 * s, y + 10 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'loser':
+            case 'clown': {
+                // Nón hề / Biểu tượng Loser hài hước
+                ctx.fillStyle = "#9b59b6";
+                ctx.fillRect(x + 2 * s, y + 2 * s, 4 * s, 5 * s);
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 6 * s, y + 1 * s, 4 * s, 6 * s);
+                ctx.fillStyle = "#3498db";
+                ctx.fillRect(x + 10 * s, y + 2 * s, 4 * s, 5 * s);
+                // Chuông lục lạc vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 2 * s, y + 1 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 7 * s, y + 0 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 12 * s, y + 1 * s, 2 * s, 2 * s);
+                // Vành nón
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 1 * s, y + 7 * s, 14 * s, 2 * s);
+                // Mặt hề cười méo / giọt nước mắt
+                ctx.fillStyle = "#ecf0f1";
+                ctx.fillRect(x + 3 * s, y + 9 * s, 10 * s, 6 * s);
+                // Mắt x
+                ctx.fillStyle = "#2c3e50";
+                ctx.fillRect(x + 5 * s, y + 10 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 9 * s, y + 10 * s, 2 * s, 2 * s);
+                // Mũi đỏ
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 7 * s, y + 11 * s, 2 * s, 2 * s);
+                // Miệng mếu
+                ctx.fillStyle = "#c0392b";
+                ctx.fillRect(x + 5 * s, y + 13 * s, 6 * s, 1 * s);
+                // Giọt nước mắt lam
+                ctx.fillStyle = "#00d2d3";
+                ctx.fillRect(x + 4 * s, y + 12 * s, 1.5 * s, 2 * s);
+                break;
+            }
+
+            case 'kratos': {
+                // Biểu tượng Spartan Omega đỏ rực lửa & Lưỡi gươm
+                ctx.fillStyle = "#c0392b";
+                ctx.fillRect(x + 2 * s, y + 3 * s, 12 * s, 4 * s);
+                ctx.fillRect(x + 1 * s, y + 6 * s, 4 * s, 6 * s);
+                ctx.fillRect(x + 11 * s, y + 6 * s, 4 * s, 6 * s);
+                ctx.fillRect(x + 0 * s, y + 11 * s, 4 * s, 3 * s);
+                ctx.fillRect(x + 12 * s, y + 11 * s, 4 * s, 3 * s);
+                // Vệt vảy máu chiến thần
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 4 * s, y + 4 * s, 8 * s, 2 * s);
+                // Ngọn lửa vàng bốc cháy đỉnh
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 7 * s, y + 0 * s, 2 * s, 3 * s);
+                ctx.fillRect(x + 5 * s, y + 1 * s, 2 * s, 2 * s);
+                ctx.fillRect(x + 9 * s, y + 1 * s, 2 * s, 2 * s);
+                break;
+            }
+
+            case 'certificate':
+            case 'scroll': {
+                // Cuộn giấy chứng nhận hoàng gia
+                ctx.fillStyle = "#f5f6fa";
+                ctx.fillRect(x + 2 * s, y + 1 * s, 12 * s, 14 * s);
+                // Viền vàng cổ điển
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 1 * s, y + 0 * s, 14 * s, 1.5 * s);
+                ctx.fillRect(x + 1 * s, y + 14 * s, 14 * s, 1.5 * s);
+                // Dòng chữ mô phỏng
+                ctx.fillStyle = "#718093";
+                ctx.fillRect(x + 4 * s, y + 4 * s, 8 * s, 1 * s);
+                ctx.fillRect(x + 4 * s, y + 6 * s, 8 * s, 1 * s);
+                ctx.fillRect(x + 4 * s, y + 8 * s, 6 * s, 1 * s);
+                // Dấu mộc đỏ danh dự
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 8 * s, y + 10 * s, 4 * s, 3 * s);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 9 * s, y + 11 * s, 2 * s, 1 * s);
+                break;
+            }
+
+            case 'phoenix': {
+                // Phượng hoàng lửa
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 6 * s, y + 3 * s, 4 * s, 8 * s);
+                // Cánh lửa xòe
+                ctx.fillStyle = "#f39c12";
+                ctx.fillRect(x + 1 * s, y + 4 * s, 5 * s, 3 * s);
+                ctx.fillRect(x + 10 * s, y + 4 * s, 5 * s, 3 * s);
+                // Chóp lông vàng
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 0 * s, y + 2 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 13 * s, y + 2 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 7 * s, y + 0 * s, 2 * s, 3 * s);
+                // Đuôi phượng
+                ctx.fillStyle = "#e74c3c";
+                ctx.fillRect(x + 5 * s, y + 11 * s, 2 * s, 4 * s);
+                ctx.fillRect(x + 9 * s, y + 11 * s, 2 * s, 4 * s);
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(x + 4 * s, y + 14 * s, 3 * s, 2 * s);
+                ctx.fillRect(x + 9 * s, y + 14 * s, 3 * s, 2 * s);
+                break;
+            }
+
             default: {
                 // Mặc định: Ngôi sao pixel vàng
                 ctx.fillStyle = "#f1c40f";

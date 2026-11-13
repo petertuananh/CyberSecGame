@@ -80,6 +80,25 @@ class CyberSecGame {
         this.logoSoftLab = new Image();
         this.logoSoftLab.src = "images/logo_softlab_pixel.png";
 
+        // Ảnh Thành tựu chính thức từ thư mục images (Flash, Kratos Cup, Loser)
+        this.achievementImgs = {
+            the_flash: new Image(),
+            kratos: new Image(),
+            loser: new Image()
+        };
+        this.achievementImgs.the_flash.src = "images/flash.png";
+        this.achievementImgs.kratos.src = "images/trophy_kratos.jpg";
+        this.achievementImgs.loser.src = "images/loser.png";
+
+        // Hệ thống theo dõi Thành Tựu & Thời gian (Achievements System)
+        this.gameStartTime = null;
+        this.bossStartTime = null;
+        this.lastTotalDuration = 0;
+        this.lastBossDuration = 0;
+        this.stageWrongCount = 0;
+        this.stageQuestionsAnswered = 0;
+        this.totalWrongCount = 0;
+
         // Hệ thống thời tiết động (Nắng, Mưa, Tuyết) & Tự động đổi ngẫu nhiên
         this.weather = window.WeatherSystem;
         this.weatherToast = null;
@@ -434,6 +453,18 @@ class CyberSecGame {
     }
 
     _bindInputs() {
+        // Nút mở Kho Thành Tựu trên thanh Top Bar
+        const btnAch = document.getElementById("btnOpenAchievements");
+        if (btnAch) {
+            btnAch.addEventListener("click", () => {
+                if (this.state === "ACHIEVEMENTS") {
+                    this.state = "START";
+                } else {
+                    this.state = "ACHIEVEMENTS";
+                }
+            });
+        }
+
         window.addEventListener("keydown", (e) => {
             if (this.jumpscareActive) {
                 this.skipJumpscare();
@@ -445,15 +476,19 @@ class CyberSecGame {
             } else if (key === "ESCAPE") {
                 if (this.state === "STORY") {
                     this.startStage(1);
+                } else if (this.state === "ACHIEVEMENTS") {
+                    this.state = "START";
+                } else {
+                    this.handleInput("ESC");
                 }
-            } else if (["A", "B", "C", "D"].includes(key)) {
+            } else if (["A", "B", "C", "D", "G", "R"].includes(key)) {
                 this.handleInput(key);
             } else if (key === "W") {
                 this.toggleWeather();
             }
         });
 
-        // Nhấp chuột vào Canvas tương tác chuyển cốt truyện hoặc bỏ qua jumpscare
+        // Nhấp chuột vào Canvas tương tác chuyển cốt truyện, xem thành tựu hoặc nhận chứng nhận
         this.canvas.addEventListener("click", (e) => {
             if (this.jumpscareActive) {
                 this.skipJumpscare();
@@ -479,7 +514,51 @@ class CyberSecGame {
                     this.advanceStory();
                 }
             } else if (this.state === "START") {
-                this.startStory();
+                // Kiểm tra click vào nút Kho Thành tựu ở dưới
+                if (cx >= this.canvas.width / 2 - 250 && cx <= this.canvas.width / 2 + 250 && cy >= 615 && cy <= 655) {
+                    this.state = "ACHIEVEMENTS";
+                } else {
+                    this.startStory();
+                }
+            } else if (this.state === "VICTORY") {
+                // Nút Tiến vào Kho Thành Tựu
+                if (cy >= 575 && cy <= 625) {
+                    this.state = "ACHIEVEMENTS";
+                } else if (cy > 625 && cy <= 675) {
+                    // Nút Nhận Giấy Chứng Nhận
+                    if (window.CertificateGenerator) {
+                        window.CertificateGenerator.open({
+                            totalRoses: this.roses,
+                            totalDuration: this.lastTotalDuration || 140,
+                            bossDuration: this.lastBossDuration || 16
+                        });
+                    }
+                }
+            } else if (this.state === "ACHIEVEMENTS") {
+                // Nút 1: Cấp Giấy Chứng Nhận (x: 290 -> 630, y: 635 -> 695)
+                if (cx >= 280 && cx <= 640 && cy >= 635 && cy <= 695) {
+                    if (window.CertificateGenerator) {
+                        window.CertificateGenerator.open({
+                            totalRoses: this.roses,
+                            totalDuration: this.lastTotalDuration || 140,
+                            bossDuration: this.lastBossDuration || 16
+                        });
+                    }
+                } else if (cx >= 660 && cx <= 890 && cy >= 635 && cy <= 695) {
+                    // Nút 2: Về Menu Chính
+                    this.state = "START";
+                } else if (cx >= 910 && cx <= 1180 && cy >= 635 && cy <= 695) {
+                    // Nút 3: Chơi lại săn thành tựu
+                    this.stage = 1;
+                    this.roses = 0;
+                    this.gameStartTime = Date.now();
+                    this.startStage(1);
+                } else {
+                    // Click ngẫu nhiên trên màn hình thành tựu tỏa bụi sao
+                    if (window.CursorFX && window.CursorFX.burst) {
+                        window.CursorFX.burst(cx, cy, 25);
+                    }
+                }
             }
         });
 
@@ -518,6 +597,8 @@ class CyberSecGame {
                     this.startStory();
                 } else if (button === "A") {
                     this.startStage(1);
+                } else if (button === "C") {
+                    this.state = "ACHIEVEMENTS";
                 }
                 break;
 
@@ -614,10 +695,53 @@ class CyberSecGame {
                 break;
 
             case "VICTORY":
-            case "GAME_OVER":
                 if (button === "ENTER") {
+                    // Chuyển sang Kho Thành Tựu
+                    this.state = "ACHIEVEMENTS";
+                } else if (button === "G") {
+                    // Mở giấy chứng nhận
+                    if (window.CertificateGenerator) {
+                        window.CertificateGenerator.open({
+                            totalRoses: this.roses,
+                            totalDuration: this.lastTotalDuration || 140,
+                            bossDuration: this.lastBossDuration || 16
+                        });
+                    }
+                } else if (button === "A" || button === "R") {
                     this.stage = 1;
                     this.roses = 0;
+                    this.gameStartTime = Date.now();
+                    this.startStage(1);
+                }
+                break;
+
+            case "ACHIEVEMENTS":
+                if (button === "ENTER" || button === "G") {
+                    // Mở Giấy Chứng Nhận
+                    if (window.CertificateGenerator) {
+                        window.CertificateGenerator.open({
+                            totalRoses: this.roses,
+                            totalDuration: this.lastTotalDuration || 140,
+                            bossDuration: this.lastBossDuration || 16
+                        });
+                    }
+                } else if (button === "B" || button === "ESC") {
+                    this.state = "START";
+                } else if (button === "A") {
+                    this.stage = 1;
+                    this.roses = 0;
+                    this.gameStartTime = Date.now();
+                    this.startStage(1);
+                }
+                break;
+
+            case "GAME_OVER":
+                if (button === "ENTER" || button === "A") {
+                    this.stage = 1;
+                    this.roses = 0;
+                    this.gameStartTime = Date.now();
+                    this.startStage(1);
+                } else if (button === "B" || button === "ESC") {
                     this.state = "START";
                 }
                 break;
@@ -731,6 +855,12 @@ class CyberSecGame {
         this.stage = stageNum;
         this.currentQIndex = 0;
         this.stageCorrectCount = 0;
+        this.stageWrongCount = 0;
+        this.stageQuestionsAnswered = 0;
+
+        if (stageNum === 1) {
+            this.gameStartTime = Date.now();
+        }
 
         if (this.config && Array.isArray(this.config.sections)) {
             this.currentStageConfig = this.config.sections.find(s => s.id === stageNum) || null;
@@ -765,6 +895,8 @@ class CyberSecGame {
         const optionMap = { A: 0, B: 1, C: 2, D: 3 };
         const selectedIdx = optionMap[selectedOption];
 
+        this.stageQuestionsAnswered = (this.stageQuestionsAnswered || 0) + 1;
+
         if (selectedIdx === q.correct) {
             this.isAnswerCorrect = true;
             this.stageCorrectCount++;
@@ -779,6 +911,8 @@ class CyberSecGame {
             this.state = "QUESTION_RESULT";
         } else {
             this.isAnswerCorrect = false;
+            this.stageWrongCount = (this.stageWrongCount || 0) + 1;
+            this.totalWrongCount = (this.totalWrongCount || 0) + 1;
             this.resultTitle = "CHƯA CHÍNH XÁC! (0 BÔNG HỒNG)";
             this.resultExplanation = q.explanation;
             this.triggerJumpscare();
@@ -814,6 +948,11 @@ class CyberSecGame {
         if (this.currentQIndex < totalQ) {
             this.state = "QUESTION";
         } else {
+            // Kiểm tra thành tựu "Loser": Sai hết cả 3 câu trong 1 ải
+            if (this.stageQuestionsAnswered >= 3 && this.stageWrongCount >= 3 && this.stageCorrectCount === 0 && window.AchievementManager) {
+                window.AchievementManager.unlock("loser", `Ải ${this.stage}`, { stage: this.stage });
+            }
+
             if (this.stageCorrectCount >= passThreshold) {
                 this.state = "STAGE_CLEAR";
                 window.SoundEngine.play("correct");
@@ -880,6 +1019,7 @@ class CyberSecGame {
         this.bossHP = this.bossMaxHP || 9;
         this.bossHitsLanded = 0;
         this.bossTimer = 0;
+        this.bossStartTime = Date.now();
         this._pickNewBossPosition();
         window.SoundEngine.play("roar");
     }
@@ -922,6 +1062,23 @@ class CyberSecGame {
             window.SoundEngine.play("hit");
 
             if (this.bossHP <= 0) {
+                const now = Date.now();
+                // 1. Kiểm tra thành tựu "Kratos": Đánh boss rồng < 20 giây
+                const bossDuration = Math.max(0.1, (now - (this.bossStartTime || now)) / 1000);
+                this.lastBossDuration = bossDuration;
+                if (bossDuration < 20 && window.AchievementManager) {
+                    window.AchievementManager.unlock("kratos", `${bossDuration.toFixed(1)}s`, { bossDuration });
+                }
+
+                // 2. Kiểm tra thành tựu "The Flash": Hoàn thành trò chơi < 3 phút (< 180s)
+                const totalDuration = Math.max(0.1, (now - (this.gameStartTime || now)) / 1000);
+                this.lastTotalDuration = totalDuration;
+                if (totalDuration < 180 && window.AchievementManager) {
+                    const m = Math.floor(totalDuration / 60);
+                    const s = Math.floor(totalDuration % 60).toString().padStart(2, "0");
+                    window.AchievementManager.unlock("the_flash", `${m}:${s}`, { totalDuration });
+                }
+
                 setTimeout(() => {
                     this.state = "VICTORY";
                     this.chestOpen = true;
@@ -1099,6 +1256,14 @@ class CyberSecGame {
                 this.fallProgress += dt * 0.6;
             }
         }
+
+        // Cập nhật thông báo Thành Tựu & Hiệu ứng Rồng bay Phượng múa
+        if (window.AchievementManager) {
+            window.AchievementManager.updateToasts(dt);
+        }
+        if (this.state === "ACHIEVEMENTS" && window.LongPhuongFX) {
+            window.LongPhuongFX.update(dt, w, h);
+        }
     }
 
     render() {
@@ -1118,16 +1283,20 @@ class CyberSecGame {
             ctx.translate(shakeX, shakeY);
         }
 
-        // 1. Vẽ phông nền thế giới tự nhiên sống động
-        this._renderWorldBackground(ctx, w, h, time);
+        // 1. Vẽ phông nền thế giới tự nhiên sống động (trừ khi ở màn Kho Thành Tựu có nền riêng)
+        if (this.state !== "ACHIEVEMENTS") {
+            this._renderWorldBackground(ctx, w, h, time);
+        }
 
         // 2. Vẽ Vệ Binh phiêu lưu ở góc dưới nếu trong màn câu hỏi / intro
         if (["STAGE_INTRO", "QUESTION", "QUESTION_RESULT"].includes(this.state)) {
             this._renderStationedHero(ctx, w, h, time);
         }
 
-        // 3. Vẽ HUD phía trên (Số hoa hồng, Tên vòng chơi)
-        this._renderHUD(ctx, w, h);
+        // 3. Vẽ HUD phía trên (Số hoa hồng, Tên vòng chơi - trừ Kho Thành Tựu)
+        if (this.state !== "ACHIEVEMENTS") {
+            this._renderHUD(ctx, w, h);
+        }
 
         // 4. Vẽ nội dung giao diện theo từng trạng thái cụ thể
         switch (this.state) {
@@ -1174,20 +1343,34 @@ class CyberSecGame {
             case "GAME_OVER":
                 this._renderGameOverScreen(ctx, w, h);
                 break;
+            case "ACHIEVEMENTS":
+                this._renderAchievementsScreen(ctx, w, h);
+                break;
         }
 
         // 5. Vẽ bông hồng đang bay
-        this._renderProjectiles(ctx);
+        if (this.state !== "ACHIEVEMENTS") {
+            this._renderProjectiles(ctx);
+        }
 
         // 6. Watermark chìm tinh tế ở góc dưới màn hình
-        this._renderWatermark(ctx, w, h);
+        if (this.state !== "ACHIEVEMENTS") {
+            this._renderWatermark(ctx, w, h);
+        }
 
         // 7. Thông báo thời tiết Pixel nổi bật (Weather Toast)
-        this._renderWeatherToast(ctx, w, h);
+        if (this.state !== "ACHIEVEMENTS") {
+            this._renderWeatherToast(ctx, w, h);
+        }
 
         // 8. Nếu đang kích hoạt Jumpscare, vẽ hiệu ứng quỷ dữ ghê rợn đè lên toàn màn hình
         if (this.jumpscareActive) {
             this._renderJumpscare(ctx, w, h, time);
+        }
+
+        // 9. Vẽ thông báo mở khóa thành tựu Toast trên đỉnh màn hình
+        if (window.AchievementManager) {
+            window.AchievementManager.renderToast(ctx, w, h);
         }
 
         ctx.restore();
@@ -1673,21 +1856,28 @@ class CyberSecGame {
         const blink = Math.sin(performance.now() / 250) > 0;
         if (blink) {
             ctx.fillStyle = "#2ecc71";
-            ctx.font = "bold 26px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 25px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.81);
-            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 420, h * 0.81 - 20, 26);
+            ctx.fillText("NHẤN [ENTER] ĐỂ BẮT ĐẦU CỐT TRUYỆN & PHIÊU LƯU", w / 2, h * 0.79);
+            window.PixelSprites.drawPixelIcon(ctx, "arrow", w / 2 - 400, h * 0.79 - 20, 26);
             ctx.save();
-            ctx.translate(w / 2 + 420, h * 0.81 - 8);
+            ctx.translate(w / 2 + 400, h * 0.79 - 8);
             ctx.scale(-1, 1);
             window.PixelSprites.drawPixelIcon(ctx, "arrow", 0, -12, 26);
             ctx.restore();
         }
 
+        // Nút mở Kho Thành Tựu (Rồng bay phượng múa & Cúp Kratos)
+        ctx.fillStyle = "#f1c40f";
+        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 275, h * 0.85 - 15, 22);
+        ctx.fillText("🏆 NHẤN PHÍM [C] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, h * 0.85);
+
         // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
         ctx.save();
         ctx.globalAlpha = 0.7;
-        const subY = h * 0.88;
+        const subY = h * 0.91;
         if (this.logoNBK && this.logoNBK.complete) {
             ctx.drawImage(this.logoNBK, w / 2 - 190, subY - 15, 20, 20);
         }
@@ -2217,46 +2407,64 @@ class CyberSecGame {
 
     _renderVictoryScreen(ctx, w, h) {
         ctx.fillStyle = "rgba(10, 8, 20, 0.96)";
-        ctx.fillRect(w * 0.12, h * 0.08, w * 0.76, h * 0.84);
+        ctx.fillRect(w * 0.08, h * 0.06, w * 0.84, h * 0.88);
         ctx.strokeStyle = "#f1c40f";
         ctx.lineWidth = 5;
-        ctx.strokeRect(w * 0.12, h * 0.08, w * 0.76, h * 0.84);
+        ctx.strokeRect(w * 0.08, h * 0.06, w * 0.84, h * 0.88);
 
-        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 310, h * 0.20 - 30, 38);
-        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 + 272, h * 0.20 - 30, 38);
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 310, h * 0.16 - 30, 38);
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 + 272, h * 0.16 - 30, 38);
 
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 40px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("CHIẾN THẮNG TUYỆT ĐỐI!", w / 2, h * 0.20);
+        ctx.fillText("CHIẾN THẮNG TUYỆT ĐỐI!", w / 2, h * 0.16);
 
         ctx.fillStyle = "#2ecc71";
-        ctx.font = "bold 24px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("BẠN ĐÃ TIÊU DIỆT HOÀN TOÀN RỒNG HẮC ÁM!", w / 2, h * 0.27);
+        ctx.font = "bold 23px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("BẠN ĐÃ TIÊU DIỆT HOÀN TOÀN RỒNG HẮC ÁM!", w / 2, h * 0.22);
 
-        window.PixelSprites.drawTreasureChest(ctx, w / 2 - 80, h * 0.31, 160, true);
+        window.PixelSprites.drawTreasureChest(ctx, w / 2 - 80, h * 0.25, 160, true);
 
         // Vệ Binh đứng cạnh rương ăn mừng (thích ứng thời tiết)
         const curW = this.weather ? this.weather.currentType : 'SUNNY';
-        window.PixelSprites.drawAdventurer(ctx, w / 2 + 105, h * 0.38, 58, performance.now() / 200, -1, false, 5, curW);
+        window.PixelSprites.drawAdventurer(ctx, w / 2 + 105, h * 0.32, 58, performance.now() / 200, -1, false, 5, curW);
 
         for (let i = 0; i < 6; i++) {
             const rx = w * 0.22 + Math.random() * (w * 0.56);
-            const ry = h * 0.25 + Math.random() * (h * 0.4);
+            const ry = h * 0.22 + Math.random() * (h * 0.3);
             window.PixelSprites.drawPixelIcon(ctx, "rose", rx, ry, 28);
         }
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("Bạn đã đoạt được: 'KHO BÁU MẬT MÃ HOÀNG KIM'", w / 2, h * 0.63);
+        ctx.font = "bold 21px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("Bạn đã đoạt được: 'KHO BÁU MẬT MÃ HOÀNG KIM'", w / 2, h * 0.54);
         ctx.fillStyle = "#00d2d3";
-        ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("Và đạt danh hiệu cao quý: BẬC THẦY VỆ BINH AN NINH MẠNG!", w / 2, h * 0.68);
+        ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("Và đạt danh hiệu cao quý: BẬC THẦY VỆ BINH AN NINH MẠNG!", w / 2, h * 0.58);
+
+        // Thông số chiến tích
+        const minStr = Math.floor((this.lastTotalDuration || 0) / 60);
+        const secStr = Math.floor((this.lastTotalDuration || 0) % 60).toString().padStart(2, "0");
+        ctx.fillStyle = "#f1c40f";
+        ctx.font = "bold 17px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText(`⏱️ Tổng thời gian: ${minStr}:${secStr}   |   ⚔️ Đánh Boss: ${(this.lastBossDuration || 0).toFixed(1)}s   |   🌹 Hoa hồng: ${this.roses}`, w / 2, h * 0.63);
+
+        // Nút hành động 1: Tiến vào Kho Thành Tựu & Giấy Chứng Nhận
+        const blink = Math.sin(performance.now() / 250) > 0;
+        ctx.fillStyle = blink ? "#f1c40f" : "#f39c12";
+        ctx.font = "bold 24px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("👉 NHẤN [ENTER] ĐỂ TIẾN VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA) 👈", w / 2, h * 0.72);
+
+        // Nút hành động 2: Nhận Giấy Chứng Nhận & Chơi lại
+        ctx.fillStyle = "#2ecc71";
+        ctx.font = "bold 19px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("📜 NHẤN [G] ĐỂ CẤP & TẢI VỀ GIẤY CHỨNG NHẬN   |   [A / R] CHƠI LẠI TỪ ĐẦU", w / 2, h * 0.78);
 
         // Logo 2 đơn vị đồng hành chìm tinh tế
         ctx.save();
         ctx.globalAlpha = 0.7;
-        const vCreditY = h * 0.75;
+        const vCreditY = h * 0.86;
         if (this.logoNBK && this.logoNBK.complete) {
             ctx.drawImage(this.logoNBK, w / 2 - 180, vCreditY - 14, 20, 20);
         }
@@ -2268,10 +2476,262 @@ class CyberSecGame {
         ctx.textAlign = "center";
         ctx.fillText("Trường THCS Nguyễn Bỉnh Khiêm  •  SoftLab", w / 2, vCreditY);
         ctx.restore();
+    }
+
+    _renderAchievementsScreen(ctx, w, h) {
+        // 1. Phông nền Thiên Giới / Vũ trụ huyền ảo (Cosmic Midnight Gradient)
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, "#080616");
+        bgGrad.addColorStop(0.5, "#150d30");
+        bgGrad.addColorStop(1, "#080616");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. HIỆU ỨNG RỒNG BAY PHƯỢNG MÚA (LONG PHƯỢNG KỲ BẢO)
+        // Thần Long uốn lượn số 8 vô cực + Phượng Hoàng tung cánh rực lửa + Tia sáng God Rays
+        if (window.LongPhuongFX) {
+            window.LongPhuongFX.render(ctx, w, h);
+        }
+
+        // 3. KHUNG TIÊU ĐỀ HOÀNG KIM (GOLDEN SANCTUARY BANNER)
+        const bannerW = w * 0.86;
+        const bannerH = 70;
+        const bannerX = (w - bannerW) / 2;
+        const bannerY = 14;
+
+        ctx.fillStyle = "rgba(18, 12, 38, 0.92)";
+        ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+        ctx.strokeStyle = "#d4af37";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#f1c40f";
+        ctx.shadowBlur = 12;
+        ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+        ctx.shadowBlur = 0;
+
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", bannerX + 20, bannerY + 16, 38);
+        window.PixelSprites.drawPixelIcon(ctx, "trophy", bannerX + bannerW - 58, bannerY + 16, 38);
 
         ctx.fillStyle = "#f1c40f";
-        ctx.font = "bold 26px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("👉 NHẤN [ENTER] ĐỂ CHƠI LẠI TỪ ĐẦU 👈", w / 2, h * 0.84);
+        ctx.font = "900 28px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("✦ ĐIỆN THỜ THÀNH TỰU • LONG PHƯỢNG KỲ BẢO ✦", w / 2, bannerY + 36);
+
+        const unlockedCount = window.AchievementManager ? window.AchievementManager.getUnlockedCount() : 0;
+        ctx.fillStyle = "#00d2d3";
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText(`VỆ BINH AN TOÀN THÔNG TIN  •  ĐÃ MỞ KHÓA: ${unlockedCount}/3 THÀNH TỰU HUYỀN THOẠI`, w / 2, bannerY + 58);
+
+        // 4. BA BỆ THỜ VINH DANH (3 TROPHY SHRINES / ALTARS)
+        const altars = [
+            {
+                id: "the_flash",
+                title: "THE FLASH",
+                titleVi: "Tốc Độ Sấm Sét",
+                desc: "Hoàn thành trò chơi < 3 phút",
+                imgKey: "the_flash",
+                x: w * 0.07,
+                y: 98,
+                w: 340,
+                h: 520,
+                accentColor: "#f1c40f",
+                tagColor: "#f39c12"
+            },
+            {
+                id: "kratos",
+                title: "KRATOS",
+                titleVi: "Chiến Thần Đồ Long",
+                desc: "Đánh boss rồng < 20 giây",
+                imgKey: "kratos",
+                x: w * 0.36,
+                y: 86, // Đỉnh cao trung tâm, nâng cao hơn
+                w: 360,
+                h: 532,
+                accentColor: "#e74c3c",
+                tagColor: "#c0392b",
+                isCenter: true
+            },
+            {
+                id: "loser",
+                title: "LOSER",
+                titleVi: "Thánh Đoán Sai",
+                desc: "Sai hết cả 3 câu trong 1 ải",
+                imgKey: "loser",
+                x: w * 0.67,
+                y: 98,
+                w: 340,
+                h: 520,
+                accentColor: "#a855f7",
+                tagColor: "#8e44ad"
+            }
+        ];
+
+        altars.forEach((alt) => {
+            const ach = window.AchievementManager ? window.AchievementManager.get(alt.id) : null;
+            const isUnlocked = ach && ach.unlocked;
+
+            ctx.save();
+
+            // Khung nền Bệ thờ (Shrine Backplate)
+            const bgAlpha = isUnlocked ? "0.92" : "0.78";
+            ctx.fillStyle = isUnlocked ? `rgba(24, 16, 48, ${bgAlpha})` : `rgba(14, 12, 26, ${bgAlpha})`;
+            ctx.fillRect(alt.x, alt.y, alt.w, alt.h);
+
+            // Viền phát sáng hoàng kim hoặc viền tối
+            ctx.strokeStyle = isUnlocked ? alt.accentColor : "#475569";
+            ctx.lineWidth = isUnlocked ? 3.5 : 2;
+            if (isUnlocked) {
+                ctx.shadowColor = alt.accentColor;
+                ctx.shadowBlur = alt.isCenter ? 24 : 16;
+            }
+            ctx.strokeRect(alt.x, alt.y, alt.w, alt.h);
+            ctx.shadowBlur = 0;
+
+            // Chân bệ thờ đá tầng (Altar Stepped Pedestal)
+            const pedY = alt.y + alt.h - 55;
+            ctx.fillStyle = isUnlocked ? "#2c2250" : "#1e1b2e";
+            ctx.fillRect(alt.x + 15, pedY, alt.w - 30, 42);
+            ctx.fillStyle = isUnlocked ? alt.accentColor : "#334155";
+            ctx.fillRect(alt.x + 10, pedY + 32, alt.w - 20, 10);
+
+            // KHUNG HÌNH ẢNH THÀNH TỰU (ACHIEVEMENT IMAGE DISPLAY)
+            const imgBoxW = alt.isCenter ? 210 : 180;
+            const imgBoxH = alt.isCenter ? 200 : 170;
+            const imgX = alt.x + (alt.w - imgBoxW) / 2;
+            const imgY = alt.y + (alt.isCenter ? 40 : 45);
+
+            // Nền bệ đỡ cúp
+            ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+            ctx.fillRect(imgX - 8, imgY - 8, imgBoxW + 16, imgBoxH + 16);
+            ctx.strokeStyle = isUnlocked ? alt.accentColor : "#334155";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(imgX - 8, imgY - 8, imgBoxW + 16, imgBoxH + 16);
+
+            const imgObj = this.achievementImgs ? this.achievementImgs[alt.imgKey] : null;
+
+            if (imgObj && imgObj.complete && imgObj.naturalWidth > 0) {
+                ctx.save();
+                if (!isUnlocked) {
+                    ctx.globalAlpha = 0.35; // Làm mờ khi chưa mở khóa
+                    ctx.drawImage(imgObj, imgX, imgY, imgBoxW, imgBoxH);
+                    ctx.restore();
+                    // Icon ổ khóa
+                    ctx.fillStyle = "#64748b";
+                    ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("🔒", alt.x + alt.w / 2, imgY + imgBoxH / 2 + 15);
+                } else {
+                    // Mở khóa: hào quang rực rỡ
+                    ctx.shadowColor = alt.accentColor;
+                    ctx.shadowBlur = 18;
+                    ctx.drawImage(imgObj, imgX, imgY, imgBoxW, imgBoxH);
+                    ctx.restore();
+                }
+            } else {
+                // Fallback Pixel Icon nếu ảnh đang tải
+                window.PixelSprites.drawPixelIcon(ctx, alt.imgKey, alt.x + alt.w / 2 - 36, imgY + 40, 72);
+            }
+
+            // TIÊU ĐỀ THÀNH TỰU
+            const textY = imgY + imgBoxH + 34;
+            ctx.textAlign = "center";
+            ctx.fillStyle = isUnlocked ? alt.accentColor : "#94a3b8";
+            ctx.font = `900 ${alt.isCenter ? "26px" : "23px"} 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillText(alt.title, alt.x + alt.w / 2, textY);
+
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "italic 15px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(alt.titleVi, alt.x + alt.w / 2, textY + 22);
+
+            // ĐIỀU KIỆN MỞ KHÓA
+            ctx.fillStyle = "#f1f2f6";
+            ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(`🎯 ${alt.desc}`, alt.x + alt.w / 2, textY + 50);
+
+            // TRẠNG THÁI MỞ KHÓA (STATUS PILL BADGE)
+            const pillW = alt.w - 50;
+            const pillH = 34;
+            const pillX = alt.x + 25;
+            const pillY = alt.y + alt.h - 100;
+
+            if (isUnlocked) {
+                ctx.fillStyle = alt.tagColor;
+                ctx.fillRect(pillX, pillY, pillW, pillH);
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pillX, pillY, pillW, pillH);
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 14px 'Segoe UI', Tahoma, sans-serif";
+                const recordStr = ach && ach.record ? ` (${ach.record})` : "";
+                ctx.fillText(`✓ ĐÃ MỞ KHÓA${recordStr}`, alt.x + alt.w / 2, pillY + 22);
+            } else {
+                ctx.fillStyle = "rgba(44, 62, 80, 0.7)";
+                ctx.fillRect(pillX, pillY, pillW, pillH);
+                ctx.strokeStyle = "#475569";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pillX, pillY, pillW, pillH);
+
+                ctx.fillStyle = "#94a3b8";
+                ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
+                ctx.fillText("🔒 CHƯA ĐẠT ĐƯỢC", alt.x + alt.w / 2, pillY + 22);
+            }
+
+            ctx.restore();
+        });
+
+        // 5. THANH NÚT HÀNH ĐỘNG DƯỚI CÙNG (BOTTOM ACTION CONTROLS)
+        const btnY = h - 68;
+        const pulse = Math.sin(performance.now() / 200) > 0;
+
+        // Nút 1: Cấp Giấy Chứng Nhận & Tải Về
+        const b1X = w * 0.16;
+        const b1W = 390;
+        const b1H = 50;
+        const gGrad = ctx.createLinearGradient(b1X, btnY, b1X + b1W, btnY);
+        gGrad.addColorStop(0, "#f39c12");
+        gGrad.addColorStop(0.5, "#f1c40f");
+        gGrad.addColorStop(1, "#e67e22");
+        ctx.fillStyle = gGrad;
+        ctx.fillRect(b1X, btnY, b1W, b1H);
+        ctx.strokeStyle = pulse ? "#ffffff" : "#ffeaa7";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#f1c40f";
+        ctx.shadowBlur = pulse ? 18 : 8;
+        ctx.strokeRect(b1X, btnY, b1W, b1H);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#140f26";
+        ctx.font = "900 17px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("📜 [ENTER] CẤP GIẤY CHỨNG NHẬN & TẢI VỀ", b1X + b1W / 2, btnY + 32);
+
+        // Nút 2: Về Menu Chính
+        const b2X = w * 0.50;
+        const b2W = 220;
+        const b2H = 50;
+        ctx.fillStyle = "#1e272e";
+        ctx.fillRect(b2X, btnY, b2W, b2H);
+        ctx.strokeStyle = "#00d2d3";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(b2X, btnY, b2W, b2H);
+
+        ctx.fillStyle = "#00d2d3";
+        ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("🏠 [B / ESC] VỀ MENU", b2X + b2W / 2, btnY + 32);
+
+        // Nút 3: Chơi lại săn thành tựu
+        const b3X = w * 0.70;
+        const b3W = 240;
+        const b3H = 50;
+        ctx.fillStyle = "#142952";
+        ctx.fillRect(b3X, btnY, b3W, b3H);
+        ctx.strokeStyle = "#2ecc71";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(b3X, btnY, b3W, b3H);
+
+        ctx.fillStyle = "#2ecc71";
+        ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
+        ctx.fillText("🔄 [A] CHƠI LẠI TỪ ĐẦU", b3X + b3W / 2, btnY + 32);
     }
 
     _renderGameOverScreen(ctx, w, h) {

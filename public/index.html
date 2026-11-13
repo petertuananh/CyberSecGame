@@ -38,6 +38,9 @@
             <a href="/helper" target="_blank" id="btnOpenHelper" class="btn-helper" title="Mở Trình Quản Lý & Cấu Hình Câu Hỏi, Sections, Hoa Hồng (Helper)">
                 <span>⚙️ HELPER</span>
             </a>
+            <button id="btnOpenAchievements" class="btn-achievements" title="Mở Kho Thành Tựu (Rồng bay phượng múa & Giấy chứng nhận)">
+                <span>🏆 THÀNH TỰU</span>
+            </button>
             <button id="btnOpenQrModal" class="btn-mobile-qr" title="Mở mã QR cho điện thoại quét làm tay cầm">
                 <span id="mobileCountBadge">📱 0 ĐT</span>
                 <span>QUÉT QR</span>
@@ -131,12 +134,45 @@
         </div>
     </div>
 
+    <!-- Hộp thoại Modal Giấy Chứng Nhận Hiệp Sĩ An Toàn Thông Tin -->
+    <div id="certModal" class="cert-modal-backdrop hidden">
+        <div class="cert-modal-card">
+            <div class="cert-modal-header">
+                <div class="cert-modal-title">📜 GIẤY CHỨNG NHẬN CHIẾN BINH AN TOÀN MẬT KHẨU</div>
+                <button id="btnCloseCertModal" class="cert-close-btn">&times;</button>
+            </div>
+
+            <!-- Tùy chỉnh tên người nhận -->
+            <div class="cert-name-edit-bar">
+                <label for="certPlayerNameInput">👤 Tên Hiệp Sĩ nhận chứng nhận:</label>
+                <input type="text" id="certPlayerNameInput" placeholder="Nhập họ và tên học sinh / người chơi..." value="Hiệp Sĩ Không Gian Mạng" maxlength="40" />
+                <button id="btnUpdateCertPreview" class="btn-update-cert">CẬP NHẬT</button>
+            </div>
+
+            <!-- Khung xem trước giấy chứng nhận Canvas -->
+            <div class="cert-preview-frame">
+                <canvas id="certCanvasPreview" width="1200" height="750"></canvas>
+            </div>
+
+            <!-- Hàng nút hành động -->
+            <div class="cert-actions-bar">
+                <button id="btnDownloadCertPng" class="btn-download-cert">
+                    <span>📥 TẢI VỀ GIẤY CHỨNG NHẬN (PNG CHẤT LƯỢNG CAO 2K)</span>
+                </button>
+                <button id="btnCloseCertBottom" class="btn-cert-secondary">
+                    <span>✖ ĐÓNG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/audio.js"></script>
     <script src="js/question_generator.js"></script>
     <script src="js/weather.js"></script>
     <script src="js/sprites.js"></script>
     <script src="js/cursor_fx.js"></script>
+    <script src="js/achievements.js"></script>
     <script src="js/game.js"></script>
 
     <!-- Quản lý cổng COM Arduino qua giao diện -->
