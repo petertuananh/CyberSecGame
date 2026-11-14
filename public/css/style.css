@@ -700,6 +700,9 @@ button.btn-connect:hover {
     transition: all 0.2s;
     white-space: nowrap;
     box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .btn-achievements:hover {
@@ -724,18 +727,21 @@ button.btn-connect:hover {
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
+    opacity: 1;
+    pointer-events: auto;
     transition: opacity 0.25s ease;
 }
 
 .cert-modal-backdrop.show {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 .cert-modal-backdrop.hidden {
-    display: none;
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .cert-modal-card {
@@ -920,6 +926,8 @@ button.btn-connect:hover {
     font-weight: 700;
     color: #60a5fa;
     white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
 }
 
 .player-name-text {
@@ -959,6 +967,9 @@ button.btn-connect:hover {
     transition: all 0.2s;
     white-space: nowrap;
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .btn-leaderboard:hover {
