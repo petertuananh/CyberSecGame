@@ -9,60 +9,80 @@
 </head>
 <body>
 
-    <!-- Thanh trạng thái kết nối Arduino & Logo Đối tác -->
-    <div class="top-bar">
-        <div class="partner-logos">
-            <div class="logo-item" title="Trường THCS Nguyễn Bỉnh Khiêm">
-                <img src="images/logo_nbk_pixel.png" alt="Logo THCS Nguyễn Bỉnh Khiêm" class="logo-img-pixel">
-                <span class="logo-text">THCS NGUYỄN BỈNH KHIÊM</span>
+    <!-- Thanh trạng thái kết nối Arduino & Logo Đối tác (Responsive Top Bar) -->
+    <header class="top-bar">
+        <!-- Cụm 1: Logo Đối tác & Tên Trò chơi (Left) -->
+        <div class="header-brand-cluster">
+            <div class="partner-logos">
+                <div class="logo-item" title="Trường THCS Nguyễn Bỉnh Khiêm">
+                    <img src="images/logo_nbk_pixel.png" alt="Logo THCS Nguyễn Bỉnh Khiêm" class="logo-img-pixel">
+                    <span class="logo-text text-full">THCS NGUYỄN BỈNH KHIÊM</span>
+                    <span class="logo-text text-short">THCS NBK</span>
+                </div>
+                <div class="logo-item" title="SoftLab">
+                    <img src="images/logo_softlab_pixel.png" alt="Logo SoftLab" class="logo-img-pixel">
+                    <span class="logo-text">SOFTLAB</span>
+                </div>
             </div>
-            <div class="logo-item" title="SoftLab">
-                <img src="images/logo_softlab_pixel.png" alt="Logo SoftLab" class="logo-img-pixel">
-                <span class="logo-text">SOFTLAB</span>
+
+            <div class="brand-title">
+                <img id="brandIcon" class="pixel-badge-icon" alt="" />
+                <span>VỆ BINH MẬT KHẨU</span>
             </div>
         </div>
 
-        <div class="brand-title">
-            <img id="brandIcon" class="pixel-badge-icon" alt="" />
-            <span>VỆ BINH MẬT KHẨU</span>
-        </div>
-
-        <div class="arduino-panel">
-            <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">
-                <img id="weatherIconImg" class="pixel-icon-btn" alt="" />
-                <span id="weatherLabel">Nắng</span>
-            </button>
-            <button id="btnFullscreen" class="btn-fullscreen" title="Bật/Tắt Toàn Màn Hình (phím F)">
-                <img id="iconFs" class="pixel-icon-btn" style="width:14px;height:14px;image-rendering:pixelated;" alt="" />
-                <span>TOÀN MÀN HÌNH [F]</span>
-            </button>
-            <a href="/helper" target="_blank" id="btnOpenHelper" class="btn-helper" title="Mở Trình Quản Lý & Cấu Hình Câu Hỏi, Sections, Hoa Hồng (Helper)">
-                <span>⚙️ HELPER</span>
-            </a>
+        <!-- Cụm 2: Tính năng Trò chơi (Center) -->
+        <div class="header-game-cluster">
             <div id="playerBadge" class="player-badge" title="Tên người chơi (Nhấn để đổi tên hoặc nhập trên ĐT)">
                 <span class="player-icon">👤</span>
                 <span id="topPlayerNameDisplay" class="player-name-text">Hiệp Sĩ Không Gian Mạng</span>
                 <button id="btnOpenNameModal" class="btn-name-edit" title="Đổi tên người chơi">✏️</button>
             </div>
-            <button id="btnOpenLeaderboard" class="btn-leaderboard" title="Mở Bảng Xếp Hạng Trực Tiếp (Live Leaderboard)">
-                <span>📊 BẢNG XẾP HẠNG</span>
+            <button id="btnOpenLeaderboard" class="btn-leaderboard" title="Mở Bảng Xếp Hạng Trực Tiếp (Live Leaderboard) - Phím L">
+                <span>📊</span>
+                <span class="label-full">BẢNG XẾP HẠNG</span>
+                <span class="label-short">BXH</span>
             </button>
-            <button id="btnOpenAchievements" class="btn-achievements" title="Mở Kho Thành Tựu (Rồng bay phượng múa & Giấy chứng nhận)">
-                <span>🏆 THÀNH TỰU</span>
+            <button id="btnOpenAchievements" class="btn-achievements" title="Mở Kho Thành Tựu (Rồng bay phượng múa & Giấy chứng nhận) - Phím C">
+                <span>🏆</span>
+                <span class="label-full">THÀNH TỰU</span>
+                <span class="label-short">CÚP</span>
             </button>
             <button id="btnOpenQrModal" class="btn-mobile-qr" title="Mở mã QR cho điện thoại quét làm tay cầm">
                 <span id="mobileCountBadge">📱 0 ĐT</span>
-                <span>QUÉT QR</span>
+                <span class="label-full">QUÉT QR</span>
+                <span class="label-short">QR</span>
             </button>
-            <span id="arduinoStatus" class="disconnected">Arduino: Đang quét...</span>
-            <div class="port-select-box">
-                <select id="portSelect">
-                    <option value="">Chọn cổng COM...</option>
-                </select>
-                <button id="btnConnectPort" class="btn-connect">Kết nối</button>
+        </div>
+
+        <!-- Cụm 3: Tiện ích & Kết nối Phần cứng (Right) -->
+        <div class="header-tools-cluster">
+            <a href="/helper" target="_blank" id="btnOpenHelper" class="btn-helper" title="Mở Trình Quản Lý & Cấu Hình Câu Hỏi, Sections, Hoa Hồng (Helper)">
+                <span>⚙️</span>
+                <span class="label-full">HELPER</span>
+            </a>
+            <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">
+                <img id="weatherIconImg" class="pixel-icon-btn" alt="" />
+                <span id="weatherLabel" class="label-full">Nắng</span>
+            </button>
+            <button id="btnFullscreen" class="btn-fullscreen" title="Bật/Tắt Toàn Màn Hình (phím F)">
+                <img id="iconFs" class="pixel-icon-btn" style="width:14px;height:14px;image-rendering:pixelated;" alt="" />
+                <span class="label-full">TOÀN MÀN HÌNH</span>
+                <span class="label-short">[F]</span>
+            </button>
+
+            <!-- Cụm Arduino & COM -->
+            <div class="arduino-cluster">
+                <span id="arduinoStatus" class="disconnected" title="Trạng thái kết nối phần cứng Arduino">Arduino...</span>
+                <div class="port-select-box">
+                    <select id="portSelect" title="Chọn cổng COM kết nối mạch nút bấm Arcade">
+                        <option value="">Chọn cổng...</option>
+                    </select>
+                    <button id="btnConnectPort" class="btn-connect" title="Kết nối cổng COM">Nối</button>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Khung máy Arcade Pixel -->
     <div class="arcade-wrapper">

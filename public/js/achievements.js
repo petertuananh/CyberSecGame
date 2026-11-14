@@ -835,6 +835,12 @@
         drawCertificate(ctx, w, h, stats) {
             ctx.save();
 
+            // Tính toán tỷ lệ co giãn (Dynamic Proportional Scaling)
+            // Chuẩn hóa dựa trên kích thước cơ sở 1200 x 750 (hoặc 2048 x 1280 khi xuất 2K)
+            const scale = Math.min(w / 1200, h / 750);
+            const scaleX = w / 1200;
+            const scaleY = h / 750;
+
             // 1. Nền giấy chứng nhận Hoàng gia cổ điển sang trọng (Royal Parchment Texture)
             const bgGrad = ctx.createLinearGradient(0, 0, w, h);
             bgGrad.addColorStop(0, "#fdfcf9");
@@ -847,8 +853,9 @@
             ctx.save();
             ctx.globalAlpha = 0.035;
             ctx.strokeStyle = "#1e3799";
-            ctx.lineWidth = 1;
-            for (let i = 0; i < w; i += 28) {
+            ctx.lineWidth = Math.max(1, Math.round(1 * scale));
+            const meshStep = Math.round(28 * scale);
+            for (let i = 0; i < w; i += meshStep) {
                 ctx.beginPath();
                 ctx.moveTo(i, 0);
                 ctx.lineTo(w - i, h);
@@ -857,258 +864,332 @@
             ctx.restore();
 
             // 2. Viền đôi Hoàng kim sang trọng (Dual Golden Ornamental Border)
-            const margin = 28;
+            const margin = Math.round(24 * scale);
             ctx.strokeStyle = "#b8860b";
-            ctx.lineWidth = 6;
+            ctx.lineWidth = Math.max(3, Math.round(5 * scale));
             ctx.strokeRect(margin, margin, w - margin * 2, h - margin * 2);
 
+            const innerMargin = margin + Math.round(7 * scale);
             ctx.strokeStyle = "#f1c40f";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(margin + 7, margin + 7, w - (margin + 7) * 2, h - (margin + 7) * 2);
+            ctx.lineWidth = Math.max(1.5, Math.round(2 * scale));
+            ctx.strokeRect(innerMargin, innerMargin, w - innerMargin * 2, h - innerMargin * 2);
 
             // 4 Góc trang trí hoa văn cổ điển (Classical Corner Ornaments)
-            this._drawCornerOrnament(ctx, margin + 12, margin + 12, 1, 1);
-            this._drawCornerOrnament(ctx, w - margin - 12, margin + 12, -1, 1);
-            this._drawCornerOrnament(ctx, margin + 12, h - margin - 12, 1, -1);
-            this._drawCornerOrnament(ctx, w - margin - 12, h - margin - 12, -1, -1);
+            this._drawCornerOrnament(ctx, innerMargin + Math.round(5 * scale), innerMargin + Math.round(5 * scale), 1, 1, scale);
+            this._drawCornerOrnament(ctx, w - innerMargin - Math.round(5 * scale), innerMargin + Math.round(5 * scale), -1, 1, scale);
+            this._drawCornerOrnament(ctx, innerMargin + Math.round(5 * scale), h - innerMargin - Math.round(5 * scale), 1, -1, scale);
+            this._drawCornerOrnament(ctx, w - innerMargin - Math.round(5 * scale), h - innerMargin - Math.round(5 * scale), -1, -1, scale);
 
-            // 3. TIÊU ĐỀ QUỐC GIA & ĐƠN VỊ ĐỒNG HÀNH
-            const topY = margin + 38;
+            // 3. TIÊU ĐỀ QUỐC GIA & ĐƠN VỊ ĐỒNG HÀNH (TOP 12%)
+            const topY = margin + Math.round(34 * scaleY);
 
             // Logo Trường NBK (Góc trái)
+            const logoSize = Math.round(66 * scale);
             if (this.logoNBK && this.logoNBK.complete) {
-                ctx.drawImage(this.logoNBK, margin + 28, topY - 14, 60, 60);
+                ctx.drawImage(this.logoNBK, margin + Math.round(26 * scaleX), topY - Math.round(10 * scaleY), logoSize, logoSize);
             }
             // Logo SoftLab (Góc phải)
             if (this.logoSoftLab && this.logoSoftLab.complete) {
-                ctx.drawImage(this.logoSoftLab, w - margin - 88, topY - 14, 60, 60);
+                ctx.drawImage(this.logoSoftLab, w - margin - Math.round(26 * scaleX) - logoSize, topY - Math.round(10 * scaleY), logoSize, logoSize);
             }
 
             // Quốc hiệu & Tiêu ngữ trang trọng
             ctx.fillStyle = "#1e272e";
             ctx.textAlign = "center";
-            ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillText("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", w / 2, topY);
 
-            ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `bold ${Math.round(12.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2c3e50";
-            ctx.fillText("Độc lập - Tự do - Hạnh phúc", w / 2, topY + 20);
+            ctx.fillText("Độc lập - Tự do - Hạnh phúc", w / 2, topY + Math.round(19 * scaleY));
 
             // Dòng gạch chân Quốc hiệu
             ctx.strokeStyle = "#e74c3c";
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = Math.max(1, Math.round(1.5 * scale));
             ctx.beginPath();
-            ctx.moveTo(w / 2 - 90, topY + 28);
-            ctx.lineTo(w / 2 + 90, topY + 28);
+            ctx.moveTo(w / 2 - Math.round(90 * scale), topY + Math.round(27 * scaleY));
+            ctx.lineTo(w / 2 + Math.round(90 * scale), topY + Math.round(27 * scaleY));
             ctx.stroke();
 
             // Đơn vị tổ chức
-            ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#0984e3";
-            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM  •  SOFTLAB", w / 2, topY + 50);
+            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM  •  SOFTLAB", w / 2, topY + Math.round(48 * scaleY));
 
-            // 4. TIÊU ĐỀ GIẤY CHỨNG NHẬN (CERTIFICATE TITLE)
-            const titleY = topY + 104;
-            ctx.font = "900 38px 'Segoe UI', Georgia, serif";
+            // 4. TIÊU ĐỀ GIẤY CHỨNG NHẬN (CERTIFICATE TITLE - CHIẾM VỊ TRÍ TRUNG TÂM)
+            const titleY = topY + Math.round(94 * scaleY);
+            ctx.font = `900 ${Math.round(38 * scale)}px 'Segoe UI', Georgia, serif`;
             ctx.fillStyle = "#b8860b";
-            ctx.shadowColor = "rgba(184, 134, 11, 0.4)";
-            ctx.shadowBlur = 8;
+            ctx.shadowColor = "rgba(184, 134, 11, 0.45)";
+            ctx.shadowBlur = Math.round(8 * scale);
             ctx.fillText("GIẤY CHỨNG NHẬN", w / 2, titleY);
             ctx.shadowBlur = 0;
 
-            ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `bold ${Math.round(16 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2d3436";
-            ctx.fillText("VINH DANH HIỆP SĨ AN TOÀN KHÔNG GIAN MẠNG", w / 2, titleY + 26);
+            ctx.fillText("VINH DANH HIỆP SĨ AN TOÀN KHÔNG GIAN MẠNG", w / 2, titleY + Math.round(26 * scaleY));
 
-            ctx.font = "italic 13.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `italic ${Math.round(13 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#636e72";
-            ctx.fillText("CERTIFICATE OF EXCELLENCE - CYBERSECURITY HERO", w / 2, titleY + 44);
+            ctx.fillText("CERTIFICATE OF EXCELLENCE - CYBERSECURITY HERO", w / 2, titleY + Math.round(44 * scaleY));
 
-            // Dải ruy băng hoàng gia chia dòng
+            // Dải ruy băng hoàng gia chia dòng với ngôi sao vàng ở giữa
+            const divLineW = Math.round(240 * scale);
+            const divLineY = titleY + Math.round(54 * scaleY);
             ctx.strokeStyle = "#d4af37";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = Math.max(1, Math.round(1.8 * scale));
             ctx.beginPath();
-            ctx.moveTo(w / 2 - 240, titleY + 54);
-            ctx.lineTo(w / 2 + 240, titleY + 54);
+            ctx.moveTo(w / 2 - divLineW, divLineY);
+            ctx.lineTo(w / 2 - Math.round(20 * scale), divLineY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(w / 2 + Math.round(20 * scale), divLineY);
+            ctx.lineTo(w / 2 + divLineW, divLineY);
             ctx.stroke();
 
+            ctx.fillStyle = "#f1c40f";
+            ctx.font = `bold ${Math.round(14 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillText("★", w / 2, divLineY + Math.round(5 * scaleY));
+
             // 5. THÔNG TIN NGƯỜI NHẬN (RECIPIENT)
-            const honorY = titleY + 86;
-            ctx.font = "italic 16px 'Segoe UI', Tahoma, sans-serif";
+            const honorY = titleY + Math.round(86 * scaleY);
+            ctx.font = `italic ${Math.round(15.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2f3542";
             ctx.fillText("Chứng nhận trao tặng cho Hiệp Sĩ:", w / 2, honorY);
 
             // Tên người chơi nổi bật lớn
-            const name = stats.playerName || "Hiệp Sĩ Không Gian Mạng";
-            ctx.font = "900 34px 'Segoe UI', Tahoma, sans-serif";
+            const name = (stats.playerName || "Hiệp Sĩ Không Gian Mạng").trim();
+            const nameY = honorY + Math.round(36 * scaleY);
+            ctx.font = `900 ${Math.round(34 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#0c2461";
-            ctx.fillText(name.toUpperCase(), w / 2, honorY + 40);
+            ctx.shadowColor = "rgba(12, 36, 97, 0.25)";
+            ctx.shadowBlur = Math.round(6 * scale);
+            ctx.fillText(name.toUpperCase(), w / 2, nameY);
+            ctx.shadowBlur = 0;
 
             // Lời khen thưởng
-            ctx.font = "15.5px 'Segoe UI', Tahoma, sans-serif";
+            const descY = nameY + Math.round(30 * scaleY);
+            ctx.font = `${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2f3542";
-            ctx.fillText("Đã xuất sắc vượt qua khóa thử thách Vệ Binh Mật Khẩu, dũng cảm chinh phục 3 thế giới", w / 2, honorY + 70);
-            ctx.fillText("Rừng Mật Mã, Biển Dữ Liệu, Tầng Mây và phong ấn thành công Rồng Hắc Ám!", w / 2, honorY + 92);
+            ctx.fillText("Đã xuất sắc vượt qua khóa thử thách Vệ Binh Mật Khẩu, dũng cảm chinh phục 3 thế giới", w / 2, descY);
+            ctx.fillText("Rừng Mật Mã, Biển Dữ Liệu, Tầng Mây và phong ấn thành công Rồng Hắc Ám!", w / 2, descY + Math.round(20 * scaleY));
 
-            // 6. KHỐI THÀNH TỰU ĐẠT ĐƯỢC (ACHIEVEMENTS BADGES PANEL)
-            const badgeY = honorY + 116;
-            const badgeW = 740;
-            const badgeH = 96;
+            // 6. KHỐI THÀNH TỰU ĐẠT ĐƯỢC (BẢNG TRƯNG BÀY CÚP & HUY HIỆU ĐẦY ĐỦ, HOÀNG KIM)
+            const badgeY = descY + Math.round(36 * scaleY);
+            const badgeW = Math.round(w * 0.84);
+            const badgeH = Math.round(140 * scaleY);
             const badgeX = (w - badgeW) / 2;
 
-            ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
             ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
             ctx.strokeStyle = "#d4af37";
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = Math.max(1, Math.round(1.8 * scale));
             ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
 
+            // Tiêu đề nhỏ bên trong khung thành tựu
+            ctx.fillStyle = "#b8860b";
+            ctx.font = `bold ${Math.round(11.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillText("✦ DANH HIỆU & THÀNH TỰU ĐẶC BIỆT ĐÃ MỞ KHÓA TRONG CUỘC CHIẾN ✦", w / 2, badgeY + Math.round(18 * scaleY));
+
             const allAch = this.achievements.getAll();
-            const colW = badgeW / 3;
+            const colW = (badgeW - Math.round(24 * scale)) / 3;
 
             allAch.forEach((ach, idx) => {
-                const cx = badgeX + idx * colW + colW / 2;
-                const cy = badgeY + 48;
+                const cardX = badgeX + Math.round(12 * scale) + idx * colW;
+                const cardY = badgeY + Math.round(26 * scaleY);
+                const cardW = colW - Math.round(10 * scale);
+                const cardH = badgeH - Math.round(34 * scaleY);
 
-                // Khung viền nhỏ từng thành tựu
+                // Khung viền từng thành tựu
                 ctx.save();
-                if (ach.unlocked) {
-                    ctx.fillStyle = "rgba(241, 196, 15, 0.12)";
-                    ctx.fillRect(badgeX + idx * colW + 6, badgeY + 6, colW - 12, badgeH - 12);
-                    ctx.strokeStyle = ach.color || "#f1c40f";
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(badgeX + idx * colW + 6, badgeY + 6, colW - 12, badgeH - 12);
-                }
+                ctx.fillStyle = ach.unlocked ? "rgba(241, 196, 15, 0.14)" : "rgba(238, 240, 242, 0.65)";
+                ctx.fillRect(cardX, cardY, cardW, cardH);
+                ctx.strokeStyle = ach.unlocked ? (ach.color || "#f1c40f") : "#bdc3c7";
+                ctx.lineWidth = Math.max(1, Math.round(1.2 * scale));
+                ctx.strokeRect(cardX, cardY, cardW, cardH);
 
-                // Vẽ ảnh thành tựu chính thức từ thư mục images
+                // Vẽ ảnh thành tựu chính thức từ thư mục images (kích thước lớn, sắc nét)
                 const achImg = (ach.id === "kratos") ? this.trophyKratos :
                     (ach.id === "the_flash") ? this.imgFlash :
                         (ach.id === "loser") ? this.imgLoser : null;
 
+                const imgSize = Math.round(54 * scale);
+                const imgDrawX = cardX + Math.round(12 * scale);
+                const imgDrawY = cardY + (cardH - imgSize) / 2;
+
                 if (achImg && achImg.complete && achImg.naturalWidth > 0) {
                     ctx.save();
                     if (!ach.unlocked) ctx.globalAlpha = 0.35;
-                    ctx.drawImage(achImg, cx - 100, cy - 36, 52, 52);
+                    ctx.drawImage(achImg, imgDrawX, imgDrawY, imgSize, imgSize);
                     ctx.restore();
                 } else {
-                    window.PixelSprites.drawPixelIcon(ctx, ach.icon, cx - 85, cy - 20, 36);
+                    window.PixelSprites.drawPixelIcon(ctx, ach.icon, imgDrawX, imgDrawY + Math.round(6 * scale), imgSize);
                 }
 
+                const textLeft = imgDrawX + imgSize + Math.round(12 * scale);
+                const textCenterY = cardY + cardH / 2;
+
                 ctx.textAlign = "left";
-                ctx.fillStyle = ach.unlocked ? "#2c3e50" : "#7f8c8d";
-                ctx.font = "bold 14px 'Segoe UI', Tahoma, sans-serif";
-                ctx.fillText(ach.title, cx - 34, cy - 8);
+                ctx.fillStyle = ach.unlocked ? "#1e272e" : "#7f8c8d";
+                ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+                ctx.fillText(ach.title, textLeft, textCenterY - Math.round(16 * scaleY));
 
-                ctx.font = "italic 11px 'Segoe UI', Tahoma, sans-serif";
+                ctx.font = `italic ${Math.round(11 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
                 ctx.fillStyle = "#636e72";
-                ctx.fillText(ach.titleVi, cx - 34, cy + 8);
+                ctx.fillText(ach.titleVi, textLeft, textCenterY);
 
-                ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
+                // Trạng thái đạt được
+                ctx.font = `bold ${Math.round(11.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
                 if (ach.unlocked) {
                     ctx.fillStyle = "#27ae60";
-                    ctx.fillText(`✓ ĐÃ ĐẠT ${ach.record ? `(${ach.record})` : ""}`, cx - 34, cy + 24);
+                    const recText = ach.record ? ` (${ach.record})` : "";
+                    ctx.fillText(`✓ ĐÃ MỞ KHÓA${recText}`, textLeft, textCenterY + Math.round(18 * scaleY));
                 } else {
                     ctx.fillStyle = "#95a5a6";
-                    ctx.fillText("✕ CHƯA ĐẠT", cx - 34, cy + 24);
+                    ctx.fillText("🔒 CHƯA ĐẠT ĐƯỢC", textLeft, textCenterY + Math.round(18 * scaleY));
                 }
                 ctx.restore();
             });
 
-            // 7. THÔNG SỐ VÒNG CHƠI (Stats Summary)
-            const statsY = badgeY + badgeH + 24;
+            // 7. THÔNG SỐ VÒNG CHƠI (Stats Summary Banner - Lấp đầy hài hòa)
+            const statsY = badgeY + badgeH + Math.round(16 * scaleY);
+            const statsW = Math.round(w * 0.78);
+            const statsH = Math.round(32 * scaleY);
+            const statsX = (w - statsW) / 2;
+
+            ctx.fillStyle = "rgba(241, 196, 15, 0.12)";
+            ctx.fillRect(statsX, statsY, statsW, statsH);
+            ctx.strokeStyle = "#d4af37";
+            ctx.lineWidth = Math.max(1, Math.round(1.2 * scale));
+            ctx.strokeRect(statsX, statsY, statsW, statsH);
+
             const minStr = Math.floor((stats.totalDuration || 0) / 60);
             const secStr = Math.floor((stats.totalDuration || 0) % 60).toString().padStart(2, "0");
             const durationText = `${minStr}:${secStr}`;
+            const bossSec = typeof stats.bossDuration === "number" ? stats.bossDuration.toFixed(1) : "16.0";
             const rosesText = `${stats.totalRoses || 0} Bông hồng`;
 
-            ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillStyle = "#2c3e50";
+            ctx.font = `bold ${Math.round(13 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillStyle = "#1e272e";
             ctx.textAlign = "center";
-            ctx.fillText(`Tổng thời gian hoàn thành: ${durationText}   |   Hoa hồng tích lũy: ${rosesText}`, w / 2, statsY);
+            ctx.fillText(`⏱️ Tổng thời gian: ${durationText}   •   ⚔️ Thời gian diệt Boss: ${bossSec}s   •   🌹 Hoa hồng tích lũy: ${rosesText}`, w / 2, statsY + Math.round(21 * scaleY));
 
-            // 8. CHỮ KÝ, CON DẤU & NGÀY CẤP (SEALS & SIGNATURES)
-            const sigY = h - margin - 95;
+            // 8. CHỮ KÝ, CON DẤU & NGÀY CẤP (SEALS & SIGNATURES - CÂN XỨNG HOÀN MỸ DƯỚI ĐÁY)
+            const sigY = statsY + statsH + Math.round(26 * scaleY);
 
             // Ngày cấp
             const now = stats.completedDate || new Date();
             const dateStr = `Hà Nội, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
-            ctx.font = "italic 13.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `italic ${Math.round(13 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2c3e50";
             ctx.textAlign = "right";
-            ctx.fillText(dateStr, w - margin - 70, sigY - 14);
+            ctx.fillText(dateStr, w - margin - Math.round(60 * scaleX), sigY);
 
             // Chữ ký bên trái: Chuyên gia SoftLab
+            const leftColX = margin + Math.round(190 * scaleX);
             ctx.textAlign = "center";
-            ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#1e272e";
-            ctx.fillText("ĐẠI DIỆN CHUYÊN MÔN", margin + 180, sigY + 12);
-            ctx.font = "italic 12px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("ĐẠI DIỆN CHUYÊN MÔN SOFTLAB", leftColX, sigY + Math.round(22 * scaleY));
+
+            ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#57606f";
-            ctx.fillText("(Ký & đóng dấu số)", margin + 180, sigY + 30);
-            ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("(Ký & đóng dấu số)", leftColX, sigY + Math.round(40 * scaleY));
+
+            // Huy hiệu xác thực điện tử SoftLab
+            const stampW = Math.round(170 * scale);
+            const stampH = Math.round(24 * scaleY);
+            ctx.fillStyle = "rgba(41, 128, 185, 0.12)";
+            ctx.fillRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
+            ctx.strokeStyle = "#2980b9";
+            ctx.lineWidth = Math.max(1, Math.round(1 * scale));
+            ctx.strokeRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
+
+            ctx.font = `bold ${Math.round(10.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillStyle = "#2980b9";
+            ctx.fillText("✓ SOFTLAB CYBERSEC VERIFIED", leftColX, sigY + Math.round(68 * scaleY));
+
+            ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#0c2461";
-            ctx.fillText("Ban An Toàn Thông Tin", margin + 180, sigY + 80);
+            ctx.fillText("Ban An Toàn Thông Tin SoftLab", leftColX, sigY + Math.round(100 * scaleY));
+
+            // Con dấu đỏ chứng nhận danh dự (Official Red Seal) ở chính giữa
+            this._drawOfficialRedSeal(ctx, w / 2, sigY + Math.round(56 * scaleY), scale);
 
             // Chữ ký bên phải: THCS Nguyễn Bỉnh Khiêm
-            ctx.font = "bold 13.5px 'Segoe UI', Tahoma, sans-serif";
+            const rightColX = w - margin - Math.round(190 * scaleX);
+            ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#1e272e";
-            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM", w - margin - 180, sigY + 12);
-            ctx.font = "italic 12px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillStyle = "#57606f";
-            ctx.fillText("(Ban Giám Hiệu xác nhận)", w - margin - 180, sigY + 30);
-            ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillStyle = "#0c2461";
-            ctx.fillText("Ban Tổ Chức Hội Thi", w - margin - 180, sigY + 80);
+            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM", rightColX, sigY + Math.round(22 * scaleY));
 
-            // Con dấu đỏ chứng nhận danh dự (Official Red Seal)
-            this._drawOfficialRedSeal(ctx, w / 2, sigY + 45);
+            ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillStyle = "#57606f";
+            ctx.fillText("(Ban Giám Hiệu xác nhận)", rightColX, sigY + Math.round(40 * scaleY));
+
+            // Nét ký trang trọng
+            ctx.strokeStyle = "#2c3e50";
+            ctx.lineWidth = Math.max(1.5, Math.round(2 * scale));
+            ctx.beginPath();
+            ctx.moveTo(rightColX - Math.round(60 * scale), sigY + Math.round(68 * scaleY));
+            ctx.bezierCurveTo(
+                rightColX - Math.round(20 * scale), sigY + Math.round(54 * scaleY),
+                rightColX + Math.round(20 * scale), sigY + Math.round(78 * scaleY),
+                rightColX + Math.round(60 * scale), sigY + Math.round(64 * scaleY)
+            );
+            ctx.stroke();
+
+            ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            ctx.fillStyle = "#0c2461";
+            ctx.fillText("Ban Tổ Chức Hội Thi", rightColX, sigY + Math.round(100 * scaleY));
 
             ctx.restore();
         }
 
-        _drawCornerOrnament(ctx, x, y, dirX, dirY) {
+        _drawCornerOrnament(ctx, x, y, dirX, dirY, scale = 1) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.scale(dirX, dirY);
+            ctx.scale(dirX * scale, dirY * scale);
             ctx.fillStyle = "#b8860b";
-            ctx.fillRect(0, 0, 20, 3);
-            ctx.fillRect(0, 0, 3, 20);
-            ctx.fillRect(5, 5, 12, 2);
-            ctx.fillRect(5, 5, 2, 12);
+            ctx.fillRect(0, 0, 22, 3.5);
+            ctx.fillRect(0, 0, 3.5, 22);
+            ctx.fillRect(6, 6, 13, 2.5);
+            ctx.fillRect(6, 6, 2.5, 13);
             ctx.fillStyle = "#f1c40f";
-            ctx.fillRect(8, 8, 4, 4);
+            ctx.fillRect(9, 9, 5, 5);
             ctx.restore();
         }
 
-        _drawOfficialRedSeal(ctx, cx, cy) {
+        _drawOfficialRedSeal(ctx, cx, cy, scale = 1) {
             ctx.save();
             ctx.translate(cx, cy);
-            ctx.rotate(-0.06); // Dấu mộc hơi nghiêng tự nhiên
+            ctx.rotate(-0.05); // Dấu mộc hơi nghiêng tự nhiên
+            ctx.scale(scale, scale);
 
             // Vòng tròn đỏ son ngoài
             ctx.strokeStyle = "#e84118";
             ctx.lineWidth = 3.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 48, 0, Math.PI * 2);
+            ctx.arc(0, 0, 50, 0, Math.PI * 2);
             ctx.stroke();
 
             // Vòng tròn đỏ trong
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.8;
             ctx.beginPath();
-            ctx.arc(0, 0, 42, 0, Math.PI * 2);
+            ctx.arc(0, 0, 44, 0, Math.PI * 2);
             ctx.stroke();
 
             // Chữ uốn quanh con dấu
             ctx.fillStyle = "#e84118";
             ctx.font = "900 8.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("★ THCS NGUYỄN BỈNH KHIÊM ★", 0, -22);
-            ctx.fillText("SOFTLAB CYBERSEC", 0, -10);
+            ctx.fillText("★ THCS NGUYỄN BỈNH KHIÊM ★", 0, -24);
+            ctx.fillText("SOFTLAB CYBERSEC", 0, -12);
 
             // Ngôi sao vàng / chữ ĐÃ CHỨNG THỰC
-            ctx.font = "bold 11px 'Segoe UI', Tahoma, sans-serif";
+            ctx.font = "bold 11.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("CHỨNG THỰC", 0, 8);
-            ctx.font = "bold 9px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("VỆ BINH MẬT KHẨU", 0, 23);
+            ctx.font = "bold 9.5px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("VỆ BINH MẬT KHẨU", 0, 24);
 
             ctx.restore();
         }

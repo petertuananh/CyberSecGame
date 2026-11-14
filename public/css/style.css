@@ -31,27 +31,65 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 12px;
+    padding: 4px 10px;
 }
 
 /* ========================================================
-   HEADER & ARDUINO BAR (COMPACT FHD)
+   HEADER & ARDUINO BAR (RESPONSIVE TOP BAR)
    ======================================================== */
 .top-bar {
     width: 100%;
-    max-width: 1320px;
-    height: 42px;
-    min-height: 42px;
+    max-width: 1600px;
+    height: 44px;
+    min-height: 44px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 10px;
     background: var(--panel-bg);
     border: 2px solid var(--border-color);
     border-radius: 8px;
-    font-size: 14px;
-    gap: 12px;
+    font-size: 13px;
+    gap: 8px;
     z-index: 100;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+.top-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.header-brand-cluster,
+.header-game-cluster,
+.header-tools-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.label-short {
+    display: none;
+}
+.label-full {
+    display: inline;
+}
+.text-short {
+    display: none;
+}
+.text-full {
+    display: inline;
+}
+
+.arduino-cluster {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .partner-logos {
@@ -254,27 +292,30 @@ button.btn-connect:hover {
 .arcade-wrapper {
     position: relative;
     background: var(--bezel-color);
-    padding: 8px;
+    padding: 6px;
     border-radius: 10px;
     border: 3px solid #3c325c;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
-    margin: 4px 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
+    margin: 2px 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    max-height: calc(100vh - 142px);
+    flex: 1 1 auto;
+    min-height: 0;
     max-width: 100%;
+    width: auto;
 }
 
 #gameCanvas {
     display: block;
     background: #000;
     border-radius: 6px;
-    max-height: calc(100vh - 158px);
-    max-width: 95vw;
+    max-height: 100%;
+    max-width: 100%;
     width: auto;
     height: auto;
     aspect-ratio: 16 / 9;
+    object-fit: contain;
     image-rendering: pixelated;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
 }
@@ -410,44 +451,105 @@ button.btn-connect:hover {
 }
 
 /* ========================================================
-   MEDIA QUERIES (LAPTOP MÀN HÌNH NHỎ HOẶC SCALING CAO)
+   MEDIA QUERIES (RESPONSIVE CHO LAPTOP, TABLET & CÁC KÍCH THƯỚC MÀN HÌNH)
    ======================================================== */
-@media (max-height: 800px) {
-    .top-bar {
-        height: 34px;
-        min-height: 34px;
-        font-size: 12px;
-        padding: 0 10px;
+@media (max-width: 1560px) {
+    .label-full { display: none !important; }
+    .label-short { display: inline !important; }
+    .text-full { display: none !important; }
+    .text-short { display: inline !important; }
+    .top-bar { gap: 6px; padding: 0 8px; }
+    .header-brand-cluster,
+    .header-game-cluster,
+    .header-tools-cluster { gap: 6px; }
+    .btn-leaderboard, .btn-achievements, .btn-mobile-qr, .btn-fullscreen, .weather-btn, .btn-helper {
+        padding: 3px 8px;
+        font-size: 11.5px;
     }
-    .brand-title {
+    .player-name-text { max-width: 110px; }
+    select#portSelect { max-width: 95px; font-size: 11px; padding: 2px 4px; }
+    .brand-title { font-size: 11px; gap: 6px; }
+    .logo-item { padding: 3px 6px; gap: 5px; }
+    .logo-img-pixel { width: 17px; height: 17px; }
+}
+
+@media (max-width: 1200px) {
+    .brand-title span { display: none; }
+    .logo-text { display: none !important; }
+    .logo-item { padding: 2px 5px; }
+    .player-name-text { max-width: 85px; }
+    #arduinoStatus { font-size: 10.5px; padding: 2px 5px; }
+    button.btn-connect { padding: 2px 7px; font-size: 11px; }
+}
+
+@media (max-width: 900px) {
+    .top-bar {
+        justify-content: flex-start;
+        overflow-x: auto;
+    }
+}
+
+@media (max-height: 820px) {
+    html, body {
+        padding: 2px 8px;
+    }
+    .top-bar {
+        height: 36px;
+        min-height: 36px;
         font-size: 11px;
     }
-    .arcade-wrapper {
-        padding: 6px;
-        margin: 2px 0;
-        max-height: calc(100vh - 120px);
+    .brand-title {
+        font-size: 10px;
     }
-    #gameCanvas {
-        max-height: calc(100vh - 132px);
+    .arcade-wrapper {
+        padding: 4px;
+        margin: 1px 0;
     }
     .controls-dock {
-        height: 50px;
-        min-height: 50px;
+        height: 48px;
+        min-height: 48px;
         padding: 2px 14px;
     }
     .arcade-btn {
-        width: 42px;
-        height: 42px;
+        width: 40px;
+        height: 40px;
         font-size: 12px;
     }
     .arcade-btn-enter {
         width: 110px;
-        height: 42px;
+        height: 40px;
         font-size: 10px;
     }
     .hint-text {
         font-size: 10px;
-        margin-top: 1px;
+        margin: 1px 0;
+    }
+}
+
+@media (max-height: 680px) {
+    .top-bar {
+        height: 32px;
+        min-height: 32px;
+    }
+    .controls-dock {
+        height: 40px;
+        min-height: 40px;
+    }
+    .arcade-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 10px;
+    }
+    .arcade-btn .sub-text {
+        display: none;
+    }
+    .arcade-btn-enter {
+        width: 90px;
+        height: 36px;
+        font-size: 9px;
+    }
+    .hint-text {
+        display: none;
     }
 }
 
@@ -750,12 +852,12 @@ button.btn-connect:hover {
     box-shadow: 0 0 35px rgba(212, 175, 55, 0.4), 0 20px 50px rgba(0, 0, 0, 0.8);
     border-radius: 12px;
     width: 92vw;
-    max-width: 1120px;
-    max-height: 94vh;
+    max-width: 980px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
-    padding: 18px 24px;
-    gap: 12px;
+    padding: 12px 18px;
+    gap: 8px;
     overflow-y: auto;
 }
 
@@ -764,12 +866,12 @@ button.btn-connect:hover {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1.5px solid rgba(212, 175, 55, 0.35);
-    padding-bottom: 10px;
+    padding-bottom: 6px;
 }
 
 .cert-modal-title {
     color: #f1c40f;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     letter-spacing: 0.5px;
     display: flex;
@@ -781,7 +883,7 @@ button.btn-connect:hover {
     background: transparent;
     border: none;
     color: #cbd5e1;
-    font-size: 26px;
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     transition: color 0.15s, transform 0.15s;
@@ -795,15 +897,15 @@ button.btn-connect:hover {
 .cert-name-edit-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     background: rgba(255, 255, 255, 0.05);
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .cert-name-edit-bar label {
-    font-size: 13.5px;
+    font-size: 12.5px;
     font-weight: bold;
     color: #f1c40f;
     white-space: nowrap;
@@ -814,8 +916,8 @@ button.btn-connect:hover {
     background: #0d0a1a;
     border: 1.5px solid #4338ca;
     color: #00d2d3;
-    padding: 7px 12px;
-    font-size: 14px;
+    padding: 5px 10px;
+    font-size: 13.5px;
     font-weight: bold;
     border-radius: 5px;
     outline: none;
@@ -831,7 +933,7 @@ button.btn-connect:hover {
     background: #27ae60;
     color: #ffffff;
     border: 1px solid #2ecc71;
-    padding: 7px 16px;
+    padding: 6px 14px;
     font-size: 12px;
     font-weight: bold;
     border-radius: 5px;
@@ -851,14 +953,18 @@ button.btn-connect:hover {
     background: #0a0714;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
-    padding: 10px;
+    padding: 6px;
     overflow: hidden;
+    max-height: 48vh;
 }
 
 .cert-preview-frame canvas {
     max-width: 100%;
-    max-height: 52vh;
+    max-height: 46vh;
+    width: auto;
     height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
@@ -867,16 +973,16 @@ button.btn-connect:hover {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 14px;
-    padding-top: 6px;
+    gap: 12px;
+    padding-top: 4px;
 }
 
 .btn-download-cert {
     background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%);
     color: #140f26;
     border: 2px solid #ffeaa7;
-    padding: 10px 24px;
-    font-size: 14px;
+    padding: 8px 20px;
+    font-size: 13px;
     font-weight: 900;
     border-radius: 6px;
     cursor: pointer;
@@ -898,8 +1004,8 @@ button.btn-connect:hover {
     background: #2d3436;
     color: #dfe6e9;
     border: 1px solid #636e72;
-    padding: 10px 20px;
-    font-size: 13.5px;
+    padding: 8px 16px;
+    font-size: 12.5px;
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
