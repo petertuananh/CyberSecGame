@@ -328,6 +328,11 @@ class CyberSecGame {
             this.currentStageConfig = cfg.sections.find(s => s.id === this.stage) || null;
         }
 
+        // Cập nhật các hồi cốt truyện mở đầu từ cấu hình
+        if (Array.isArray(cfg.storySlides) && cfg.storySlides.length > 0) {
+            this.storySlides = cfg.storySlides;
+        }
+
         // Cập nhật cấu hình Thành Tựu
         if (cfg.achievementsSettings && window.AchievementManager && window.AchievementManager.applyConfig) {
             window.AchievementManager.applyConfig(cfg.achievementsSettings);
@@ -863,7 +868,7 @@ class CyberSecGame {
                     this.openLeaderboardModal();
                 }
                 return;
-            } else if (key === "C") {
+            } else if (key === "T") {
                 this.state = (this.state === "ACHIEVEMENTS") ? "START" : "ACHIEVEMENTS";
                 return;
             }
@@ -1031,7 +1036,7 @@ class CyberSecGame {
             case "START":
                 if (button === "ENTER" || button === "A") {
                     this.openNameModal(true);
-                } else if (button === "C") {
+                } else if (button === "T") {
                     this.state = "ACHIEVEMENTS";
                 } else if (button === "N") {
                     this.openNameModal(false);
@@ -1163,7 +1168,7 @@ class CyberSecGame {
                             bossDuration: this.lastBossDuration || 16
                         });
                     }
-                } else if (button === "B" || button === "ESC") {
+                } else if (button === "B" || button === "ESC" || button === "T") {
                     this.state = "START";
                 } else if (button === "A") {
                     this.stage = 1;
@@ -1179,7 +1184,7 @@ class CyberSecGame {
                     this.roses = 0;
                     this.gameStartTime = Date.now();
                     this.startStage(1);
-                } else if (button === "B" || button === "ESC") {
+                } else if (button === "B" || button === "ESC" || button === "T") {
                     this.state = "START";
                 }
                 break;
@@ -1198,6 +1203,9 @@ class CyberSecGame {
     }
 
     _initStorySlides() {
+        if (this.config && Array.isArray(this.config.storySlides) && this.config.storySlides.length > 0) {
+            return this.config.storySlides;
+        }
         return [
             {
                 chapter: "HỒI 1: VỆ BINH MẬT KHẨU XUẤT HIỆN",
@@ -1257,6 +1265,9 @@ class CyberSecGame {
     }
 
     startStory() {
+        if (this.config && Array.isArray(this.config.storySlides) && this.config.storySlides.length > 0) {
+            this.storySlides = this.config.storySlides;
+        }
         this.state = "STORY";
         this.storySlideIndex = 0;
         this.storyCharProgress = 0;
@@ -1421,11 +1432,18 @@ class CyberSecGame {
         }, 1200);
     }
 
+    _getMaxStages() {
+        if (this.config && Array.isArray(this.config.sections) && this.config.sections.length > 0) {
+            const valid = this.config.sections.filter(s => Array.isArray(s.questions) && s.questions.length > 0);
+            if (valid.length > 0) return valid.length;
+            return this.config.sections.length;
+        }
+        return 3;
+    }
+
     // Bắt đầu hành trình phiêu lưu bước đi từ thế giới này sang thế giới khác
     proceedAfterDice() {
-        const maxStages = (this.config && Array.isArray(this.config.sections) && this.config.sections.length > 0)
-            ? this.config.sections.length
-            : 3;
+        const maxStages = this._getMaxStages();
 
         if (this.stage < maxStages) {
             this.startTravel(this.stage, this.stage + 1);
@@ -1443,9 +1461,7 @@ class CyberSecGame {
     }
 
     _finishTravel() {
-        const maxStages = (this.config && Array.isArray(this.config.sections) && this.config.sections.length > 0)
-            ? this.config.sections.length
-            : 3;
+        const maxStages = this._getMaxStages();
 
         if (this.travelTo <= maxStages) {
             this.startStage(this.travelTo);
@@ -2377,7 +2393,7 @@ class CyberSecGame {
         ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
         window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 280, achBtnY + 8, 18);
-        ctx.fillText("🏆 NHẤN PHÍM [C] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, achBtnY + 24);
+        ctx.fillText("🏆 NHẤN PHÍM [T] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, achBtnY + 24);
 
         // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
         ctx.save();

@@ -83,22 +83,27 @@
                 <span class="tab-text">2. Ngân Hàng Câu Hỏi & Hoa Hồng</span>
                 <span id="badgeQuestionsCount" class="tab-badge">15</span>
             </button>
+            <button class="nav-tab" data-tab="tab-story">
+                <span class="tab-icon">📜</span>
+                <span class="tab-text">3. Cốt Truyện (Story)</span>
+                <span id="badgeStoryCount" class="tab-badge">5</span>
+            </button>
             <button class="nav-tab" data-tab="tab-random">
                 <span class="tab-icon">🎲</span>
-                <span class="tab-text">3. Cài Đặt Ngẫu Nhiên & Boss</span>
+                <span class="tab-text">4. Cài Đặt Ngẫu Nhiên & Boss</span>
             </button>
             <button class="nav-tab" data-tab="tab-achievements">
                 <span class="tab-icon">🏆</span>
-                <span class="tab-text">4. Cài Đặt Thành Tựu</span>
+                <span class="tab-text">5. Cài Đặt Thành Tựu</span>
             </button>
             <button class="nav-tab" data-tab="tab-leaderboard">
                 <span class="tab-icon">📊</span>
-                <span class="tab-text">5. Bảng Xếp Hạng Live</span>
+                <span class="tab-text">6. Bảng Xếp Hạng Live</span>
                 <span id="badgeLbCount" class="tab-badge">0</span>
             </button>
             <button class="nav-tab" data-tab="tab-json">
                 <span class="tab-icon">📄</span>
-                <span class="tab-text">6. Trình Xem Mã JSON</span>
+                <span class="tab-text">7. Trình Xem Mã JSON</span>
             </button>
         </nav>
 
@@ -147,7 +152,29 @@
                 </div>
             </section>
 
-            <!-- TAB 3: RANDOM SETTINGS & MINIGAMES -->
+            <!-- TAB 3: STORY SLIDES (CÁC HỒI CỐT TRUYỆN MỞ ĐẦU) -->
+            <section id="tab-story" class="tab-pane">
+                <div class="pane-header">
+                    <div class="pane-intro">
+                        <h2>📖 QUẢN LÝ CỐT TRUYỆN MỞ ĐẦU (STORY SLIDES / CÁC HỒI)</h2>
+                        <p>Tùy chỉnh các hồi truyện RPG khi bắt đầu game: Giới thiệu hiệp sĩ, truyền thuyết Rồng Hắc Ám, thử thách 3 thế giới và bảng hướng dẫn điều khiển.</p>
+                    </div>
+                    <div class="pane-actions">
+                        <button id="btnResetStoryDefault" class="btn-secondary" style="margin-right: 8px;">
+                            🔄 KHÔI PHỤC MẶC ĐỊNH
+                        </button>
+                        <button id="btnAddStorySlide" class="btn-create">
+                            ➕ THÊM HỒI MỚI
+                        </button>
+                    </div>
+                </div>
+
+                <div id="storySlidesList" class="story-slides-list">
+                    <!-- Dynamic Story Slide Cards Rendered via JS -->
+                </div>
+            </section>
+
+            <!-- TAB 4: RANDOM SETTINGS & MINIGAMES -->
             <section id="tab-random" class="tab-pane">
                 <div class="settings-grid">
                     <!-- Box 1: Cấu hình Random -->
@@ -587,6 +614,55 @@
             <div class="modal-footer">
                 <button class="btn-secondary" data-close="modalCard">HỦY BỎ</button>
                 <button id="btnSaveCardModal" class="btn-create">LƯU THẺ BÀI</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SOẠN THẢO HỒI CỐT TRUYỆN -->
+    <div id="modalStorySlide" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px;">
+            <div class="modal-header">
+                <h3 id="modalStorySlideTitle">CHỈNH SỬA HỒI CỐT TRUYỆN</h3>
+                <button class="modal-close" data-close="modalStorySlide">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="storyInputId">
+                <div class="form-row">
+                    <label>Tên Tiêu Đề Hồi (Chapter Title):</label>
+                    <input type="text" id="storyInputChapter" class="form-input" placeholder="VD: HỒI 1: VỆ BINH MẬT KHẨU XUẤT HIỆN">
+                    <small>Tiêu đề sẽ hiển thị ở thanh ruy-băng đầu khung thoại RPG.</small>
+                </div>
+                <div class="form-row form-cols-2">
+                    <div>
+                        <label>Người Nói (Speaker):</label>
+                        <input type="text" id="storyInputSpeaker" class="form-input" placeholder="VD: VỆ BINH AN NINH MẠNG" value="VỆ BINH AN NINH MẠNG">
+                    </div>
+                    <div>
+                        <label>Biểu Tượng Pixel (Icon):</label>
+                        <select id="storySelectIcon" class="custom-select">
+                            <option value="shield">🛡️ Khiên Bảo Mật (shield)</option>
+                            <option value="dragon">🐉 Rồng Hắc Ám (dragon)</option>
+                            <option value="tree">🌲 Khu Rừng (tree)</option>
+                            <option value="rose">🌹 Hoa Hồng (rose)</option>
+                            <option value="gamepad">🎮 Bàn Phím / Tay Cầm (gamepad)</option>
+                            <option value="sword">⚔️ Gươm Chiến Binh (sword)</option>
+                            <option value="star">⭐ Ngôi Sao Vinh Quang (star)</option>
+                            <option value="wave">🌊 Biển Sâu (wave)</option>
+                            <option value="cloud">☁️ Tầng Mây (cloud)</option>
+                            <option value="lightbulb">💡 Ý Tưởng / Lưu Ý (lightbulb)</option>
+                            <option value="phone">📱 Điện Thoại (phone)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Nội Dung Lời Thoại (Các đoạn văn đối thoại):</label>
+                    <textarea id="storyInputParagraphs" class="form-textarea" rows="8" placeholder="Nhập nội dung các đoạn văn đối thoại.&#10;Mỗi đoạn văn cách nhau bằng một dòng trống (ấn Enter 2 lần).&#10;VD:&#10;Xin chào dũng sĩ! Ta là VỆ BINH MẬT KHẨU (CyberSec Guardian)...&#10;&#10;Được tôi luyện từ các thuật toán mã hóa hiện đại nhất..."></textarea>
+                    <small>💡 <strong>Mẹo:</strong> Nhập mỗi đoạn thoại cách nhau bằng 1 dòng trống (Enter 2 lần). Hệ thống sẽ tự động tách thành từng đoạn thoại hiển thị lần lượt trong game.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-close="modalStorySlide">HỦY BỎ</button>
+                <button id="btnSaveStoryModal" class="btn-create">💾 LƯU HỒI TRUYỆN</button>
             </div>
         </div>
     </div>

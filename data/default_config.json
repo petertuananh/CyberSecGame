@@ -38,6 +38,67 @@
       "description": "Trả lời sai từ số câu cấu hình trở lên trong cùng một ải thử thách."
     }
   },
+  "storySlides": [
+    {
+      "id": "story_1",
+      "chapter": "HỒI 1: VỆ BINH MẬT KHẨU XUẤT HIỆN",
+      "icon": "shield",
+      "speaker": "VỆ BINH AN NINH MẠNG",
+      "paragraphs": [
+        "Xin chào dũng sĩ! Ta là VỆ BINH MẬT KHẨU (CyberSec Guardian) - hiệp sĩ số bảo vệ Vương Quốc Dữ Liệu Hoàng Kim.",
+        "Được tôi luyện từ các thuật toán mã hóa hiện đại nhất, ta mang trên mình giáp hộ mệnh và đóa Hoa Hồng Năng Lượng có thể thanh tẩy mọi lỗ hổng bảo mật.",
+        "Hôm nay, ta rất vinh hạnh được đồng hành cùng bạn trong một sứ mệnh an ninh mạng vô cùng hệ trọng và vinh quang!"
+      ]
+    },
+    {
+      "id": "story_2",
+      "chapter": "HỒI 2: HIỂM HỌA TỪ RỒNG HẮC ÁM",
+      "icon": "dragon",
+      "speaker": "VỆ BINH AN NINH MẠNG",
+      "paragraphs": [
+        "Một thảm họa khủng khiếp vừa giáng xuống! Từ vực thẳm sâu nhất của không gian mạng, RỒNG HẮC ÁM (Cyber Dragon) đã thức giấc!",
+        "Nó chỉ huy các đàn mã độc nguy hiểm, liên tục tấn công dò quét và bẻ khóa các tài khoản có mật khẩu yếu nhằm chiếm đoạt KHO BÁU DỮ LIỆU HOÀNG KIM!",
+        "Nếu Kho Báu bị chiếm đoạt, toàn bộ hệ thống thông tin của chúng ta sẽ sụp đổ. Chúng ta phải chặn đứng dã tâm của nó trước khi quá muộn!"
+      ]
+    },
+    {
+      "id": "story_3",
+      "chapter": "HỒI 3: THỬ THÁCH QUA 3 THẾ GIỚI",
+      "icon": "tree",
+      "speaker": "VỆ BINH AN NINH MẠNG",
+      "paragraphs": [
+        "Để tiến đến sào huyệt của Rồng, chúng ta phải vượt qua 3 Vùng Đất Thử Thách cam go:",
+        "• KHU RỪNG MẬT MÃ: Cây cối rợp bóng & chim hót! Rèn luyện độ dài mật khẩu (12-16 ký tự), kết hợp hoa - thường - số & ký tự đặc biệt.",
+        "• VÙNG BIỂN DỮ LIỆU: Bơi lội cùng đàn cá & rong rêu! Cảnh giác bẫy câu trộm Phishing và kích hoạt xác thực đa yếu tố (2FA).",
+        "• TẦNG MÂY THƯỢNG ĐỈNH: Bay cùng những hòn đảo bồng bềnh! Thiết lập cụm mật khẩu (Passphrase) ngẫu nhiên để khắc chế tấn công Brute-force."
+      ]
+    },
+    {
+      "id": "story_4",
+      "chapter": "HỒI 4: BÍ THUẬT HOA HỒNG & XÚC XẮC",
+      "icon": "rose",
+      "speaker": "VỆ BINH AN NINH MẠNG",
+      "paragraphs": [
+        "Hãy ghi lòng tạc dạ những quy luật sinh tử của cuộc phiêu lưu:",
+        "• MỖI CÂU TRẢ LỜI ĐÚNG = 1 BÔNG HỒNG BẢO MẬT. Bạn cần trả lời đúng cả 3/3 câu mới pass mỗi vòng!",
+        "• SAU MỖI VÒNG: Gieo Xúc Xắc định mệnh. Số LẺ (1, 3, 5) đi tiếp, số CHẴN (2, 4, 6) mở khóa BỐC THẺ BÍ ẨN tặng thêm 1-3 hoa hồng!",
+        "• QUYẾT CHIẾN BOSS: Rồng Boss có 9 HP máu. Bạn BẮT BUỘC phải tích lũy >= 9 đóa hồng để tiêu diệt Rồng! Thiếu hoa hồng sẽ bị ném thẳng xuống vực thẳm!"
+      ]
+    },
+    {
+      "id": "story_5",
+      "chapter": "HỒI 5: BẢNG ĐIỀU KHIỂN & XUẤT KÍCH!",
+      "icon": "gamepad",
+      "speaker": "VỆ BINH AN NINH MẠNG",
+      "paragraphs": [
+        "Hệ thống điều khiển 5 nút bấm vật lý Arduino (hoặc Bàn phím máy tính) đã kết nối:",
+        "• 4 NÚT A, B, C, D: Dùng để chọn đáp án câu hỏi & ngắm bắn hoa hồng vào Boss Rồng theo 4 cổng tương ứng.",
+        "• NÚT ENTER (hoặc Space): Mở cửa, xác nhận hành động, gieo xúc xắc và lật thẻ bí ẩn.",
+        "• PHÍM W: Đổi thời tiết (Nắng, Mưa, Tuyết)  |  PHÍM F: Bật / Tắt Toàn Màn Hình.",
+        "Vũ khí đã sẵn sàng! Hiệp sĩ, hãy cùng ta XUẤT TRẬN BẢO VỆ VƯƠNG QUỐC!"
+      ]
+    }
+  ],
   "sections": [
     {
       "id": 1,

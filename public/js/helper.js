@@ -107,6 +107,68 @@
     let fieldEditThrottleTimer = null;
     let lastFieldEditSentTime = 0;
 
+    const DEFAULT_STORY_SLIDES = [
+        {
+            id: "story_1",
+            chapter: "HỒI 1: VỆ BINH MẬT KHẨU XUẤT HIỆN",
+            icon: "shield",
+            speaker: "VỆ BINH AN NINH MẠNG",
+            paragraphs: [
+                "Xin chào dũng sĩ! Ta là VỆ BINH MẬT KHẨU (CyberSec Guardian) - hiệp sĩ số bảo vệ Vương Quốc Dữ Liệu Hoàng Kim.",
+                "Được tôi luyện từ các thuật toán mã hóa hiện đại nhất, ta mang trên mình giáp hộ mệnh và đóa Hoa Hồng Năng Lượng có thể thanh tẩy mọi lỗ hổng bảo mật.",
+                "Hôm nay, ta rất vinh hạnh được đồng hành cùng bạn trong một sứ mệnh an ninh mạng vô cùng hệ trọng và vinh quang!"
+            ]
+        },
+        {
+            id: "story_2",
+            chapter: "HỒI 2: HIỂM HỌA TỪ RỒNG HẮC ÁM",
+            icon: "dragon",
+            speaker: "VỆ BINH AN NINH MẠNG",
+            paragraphs: [
+                "Một thảm họa khủng khiếp vừa giáng xuống! Từ vực thẳm sâu nhất của không gian mạng, RỒNG HẮC ÁM (Cyber Dragon) đã thức giấc!",
+                "Nó chỉ huy các đàn mã độc nguy hiểm, liên tục tấn công dò quét và bẻ khóa các tài khoản có mật khẩu yếu nhằm chiếm đoạt KHO BÁU DỮ LIỆU HOÀNG KIM!",
+                "Nếu Kho Báu bị chiếm đoạt, toàn bộ hệ thống thông tin của chúng ta sẽ sụp đổ. Chúng ta phải chặn đứng dã tâm của nó trước khi quá muộn!"
+            ]
+        },
+        {
+            id: "story_3",
+            chapter: "HỒI 3: THỬ THÁCH QUA 3 THẾ GIỚI",
+            icon: "tree",
+            speaker: "VỆ BINH AN NINH MẠNG",
+            paragraphs: [
+                "Để tiến đến sào huyệt của Rồng, chúng ta phải vượt qua 3 Vùng Đất Thử Thách cam go:",
+                "• KHU RỪNG MẬT MÃ: Cây cối rợp bóng & chim hót! Rèn luyện độ dài mật khẩu (12-16 ký tự), kết hợp hoa - thường - số & ký tự đặc biệt.",
+                "• VÙNG BIỂN DỮ LIỆU: Bơi lội cùng đàn cá & rong rêu! Cảnh giác bẫy câu trộm Phishing và kích hoạt xác thực đa yếu tố (2FA).",
+                "• TẦNG MÂY THƯỢNG ĐỈNH: Bay cùng những hòn đảo bồng bềnh! Thiết lập cụm mật khẩu (Passphrase) ngẫu nhiên để khắc chế tấn công Brute-force."
+            ]
+        },
+        {
+            id: "story_4",
+            chapter: "HỒI 4: BÍ THUẬT HOA HỒNG & XÚC XẮC",
+            icon: "rose",
+            speaker: "VỆ BINH AN NINH MẠNG",
+            paragraphs: [
+                "Hãy ghi lòng tạc dạ những quy luật sinh tử của cuộc phiêu lưu:",
+                "• MỖI CÂU TRẢ LỜI ĐÚNG = 1 BÔNG HỒNG BẢO MẬT. Bạn cần trả lời đúng cả 3/3 câu mới pass mỗi vòng!",
+                "• SAU MỖI VÒNG: Gieo Xúc Xắc định mệnh. Số LẺ (1, 3, 5) đi tiếp, số CHẴN (2, 4, 6) mở khóa BỐC THẺ BÍ ẨN tặng thêm 1-3 hoa hồng!",
+                "• QUYẾT CHIẾN BOSS: Rồng Boss có 9 HP máu. Bạn BẮT BUỘC phải tích lũy >= 9 đóa hồng để tiêu diệt Rồng! Thiếu hoa hồng sẽ bị ném thẳng xuống vực thẳm!"
+            ]
+        },
+        {
+            id: "story_5",
+            chapter: "HỒI 5: BẢNG ĐIỀU KHIỂN & XUẤT KÍCH!",
+            icon: "gamepad",
+            speaker: "VỆ BINH AN NINH MẠNG",
+            paragraphs: [
+                "Hệ thống điều khiển 5 nút bấm vật lý Arduino (hoặc Bàn phím máy tính) đã kết nối:",
+                "• 4 NÚT A, B, C, D: Dùng để chọn đáp án câu hỏi & ngắm bắn hoa hồng vào Boss Rồng theo 4 cổng tương ứng.",
+                "• NÚT ENTER (hoặc Space): Mở cửa, xác nhận hành động, gieo xúc xắc và lật thẻ bí ẩn.",
+                "• PHÍM W: Đổi thời tiết (Nắng, Mưa, Tuyết)  |  PHÍM F: Bật / Tắt Toàn Màn Hình.",
+                "Vũ khí đã sẵn sàng! Hiệp sĩ, hãy cùng ta XUẤT TRẬN BẢO VỆ VƯƠNG QUỐC!"
+            ]
+        }
+    ];
+
     function escapeHtml(str) {
         if (!str) return '';
         return String(str)
@@ -164,6 +226,20 @@
     const inputRequiredRoses = document.getElementById("inputRequiredRoses");
     const inputBossSpeed = document.getElementById("inputBossSpeed");
     const cardsListEl = document.getElementById("cardsList");
+
+    // Story Tab DOM Elements
+    const badgeStoryCount = document.getElementById("badgeStoryCount");
+    const storySlidesListEl = document.getElementById("storySlidesList");
+    const btnAddStorySlide = document.getElementById("btnAddStorySlide");
+    const btnResetStoryDefault = document.getElementById("btnResetStoryDefault");
+    const modalStorySlide = document.getElementById("modalStorySlide");
+    const storyInputId = document.getElementById("storyInputId");
+    const storyInputChapter = document.getElementById("storyInputChapter");
+    const storyInputSpeaker = document.getElementById("storyInputSpeaker");
+    const storySelectIcon = document.getElementById("storySelectIcon");
+    const storyInputParagraphs = document.getElementById("storyInputParagraphs");
+    const btnSaveStoryModal = document.getElementById("btnSaveStoryModal");
+    let editingStoryIndex = -1;
 
     const rawJsonEditor = document.getElementById("rawJsonEditor");
     const btnFormatJson = document.getElementById("btnFormatJson");
@@ -454,6 +530,7 @@
         renderSectionsTab();
         renderQuestionsFilter();
         renderQuestionsList();
+        renderStoryTab();
         renderRandomSettings();
         renderCardsTable();
         renderAchievementsSettings();
@@ -473,6 +550,12 @@
         }
         badgeSectionsCount.textContent = totalSec;
         badgeQuestionsCount.textContent = totalQ;
+        if (badgeStoryCount) {
+            const count = (currentConfig.storySlides && Array.isArray(currentConfig.storySlides))
+                ? currentConfig.storySlides.length
+                : 0;
+            badgeStoryCount.textContent = count;
+        }
     }
 
     // Render Tab 1: Sections
@@ -615,7 +698,88 @@
         highlightPeerEditingCards();
     }
 
-    // Render Tab 3: Settings & Cards
+    // Render Tab 3: Story Slides (Các Hồi Cốt Truyện Mở Đầu)
+    function renderStoryTab() {
+        if (!storySlidesListEl) return;
+        storySlidesListEl.innerHTML = "";
+
+        if (!currentConfig.storySlides) {
+            currentConfig.storySlides = JSON.parse(JSON.stringify(DEFAULT_STORY_SLIDES));
+        }
+
+        const slides = currentConfig.storySlides;
+
+        if (!Array.isArray(slides) || slides.length === 0) {
+            storySlidesListEl.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #94a3b8; background: var(--card-bg); border-radius: 10px; border: 2px dashed var(--border-color);">
+                    <p style="font-size: 16px;">Hiện chưa có hồi cốt truyện nào.</p>
+                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+                        <button class="btn-secondary" onclick="window.HelperApp.resetStorySlidesDefault()">
+                            🔄 Khôi phục Mặc định (5 Hồi)
+                        </button>
+                        <button class="btn-create" onclick="window.HelperApp.openCreateStorySlide()">
+                            ➕ Thêm Hồi Đầu Tiên
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const iconMap = {
+            shield: "🛡️", dragon: "🐉", tree: "🌲", rose: "🌹", gamepad: "🎮",
+            sword: "⚔️", star: "⭐", wave: "🌊", cloud: "☁️", lightbulb: "💡", phone: "📱"
+        };
+
+        slides.forEach((slide, idx) => {
+            const card = document.createElement("div");
+            card.className = "story-card";
+            card.setAttribute("data-story-idx", idx);
+
+            const iconEmoji = iconMap[slide.icon] || "🛡️";
+            const speakerName = slide.speaker || "VỆ BINH AN NINH MẠNG";
+            const paragraphs = Array.isArray(slide.paragraphs) ? slide.paragraphs : [];
+            const paragraphsHtml = paragraphs.map(p => `
+                <div class="story-paragraph-bubble">
+                    <p>${escapeHtml(p)}</p>
+                </div>
+            `).join("");
+
+            card.innerHTML = `
+                <div class="story-card-header">
+                    <div class="story-badge-group">
+                        <span class="story-step-badge">HỒI ${idx + 1} / ${slides.length}</span>
+                        <span class="story-icon-badge">${iconEmoji}</span>
+                        <span class="story-chapter-title">${escapeHtml(slide.chapter || `HỒI ${idx + 1}`)}</span>
+                    </div>
+                    <span class="story-speaker-pill">👤 ${escapeHtml(speakerName)}</span>
+                </div>
+
+                <div class="story-card-body">
+                    ${paragraphsHtml || '<p style="color: #64748b; font-style: italic;">Chưa có nội dung lời thoại.</p>'}
+                </div>
+
+                <div class="story-card-footer">
+                    <div class="story-order-actions">
+                        <button class="btn-move" title="Di chuyển lên trên" ${idx === 0 ? 'disabled' : ''} onclick="window.HelperApp.moveStorySlide(${idx}, -1)">
+                            ⬆️ Lên
+                        </button>
+                        <button class="btn-move" title="Di chuyển xuống dưới" ${idx === slides.length - 1 ? 'disabled' : ''} onclick="window.HelperApp.moveStorySlide(${idx}, 1)">
+                            ⬇️ Xuống
+                        </button>
+                    </div>
+                    <div class="story-edit-actions">
+                        <button class="btn-icon" onclick="window.HelperApp.openEditStorySlide(${idx})">✏️ Chỉnh Sửa</button>
+                        <button class="btn-icon btn-danger" onclick="window.HelperApp.deleteStorySlide(${idx})">🗑️ Xóa</button>
+                    </div>
+                </div>
+            `;
+
+            storySlidesListEl.appendChild(card);
+        });
+    }
+
+    // Render Tab 4: Settings & Cards
     function renderRandomSettings() {
         const s = currentConfig.settings || {};
         const active = document.activeElement;
@@ -1277,6 +1441,143 @@
 
         // Tự động lưu lên server và phát ngay lập tức cho tất cả mọi người
         saveConfigToServer(false, `xóa câu hỏi #${qId}`, qId);
+    }
+
+    // ==========================================
+    // 7b. THAO TÁC CỐT TRUYỆN MỞ ĐẦU (STORY SLIDES)
+    // ==========================================
+    function openCreateStorySlide() {
+        editingStoryIndex = -1;
+        updateLocation({
+            type: 'story',
+            storyId: 'new',
+            label: 'Tạo hồi cốt truyện mới'
+        });
+        document.getElementById("modalStorySlideTitle").textContent = "THÊM HỒI CỐT TRUYỆN MỚI";
+        const nextNum = (currentConfig.storySlides || []).length + 1;
+        storyInputId.value = `story_${Date.now()}`;
+        storyInputChapter.value = `HỒI ${nextNum}: TIÊU ĐỀ HỒI MỚI`;
+        storyInputSpeaker.value = "VỆ BINH AN NINH MẠNG";
+        storySelectIcon.value = "shield";
+        storyInputParagraphs.value = "";
+        modalStorySlide.classList.add("active");
+        setTimeout(() => storyInputChapter.focus(), 100);
+    }
+
+    function openEditStorySlide(index) {
+        const slide = (currentConfig.storySlides || [])[index];
+        if (!slide) return;
+        editingStoryIndex = index;
+        updateLocation({
+            type: 'story',
+            storyId: slide.id || `story_${index + 1}`,
+            label: `Sửa ${slide.chapter || 'Hồi truyện'}`
+        });
+        document.getElementById("modalStorySlideTitle").textContent = `CHỈNH SỬA ${slide.chapter || 'HỒI TRUYỆN'}`;
+        storyInputId.value = slide.id || `story_${index + 1}`;
+        storyInputChapter.value = slide.chapter || "";
+        storyInputSpeaker.value = slide.speaker || "VỆ BINH AN NINH MẠNG";
+        storySelectIcon.value = slide.icon || "shield";
+        storyInputParagraphs.value = Array.isArray(slide.paragraphs) ? slide.paragraphs.join("\n\n") : "";
+        modalStorySlide.classList.add("active");
+        setTimeout(() => storyInputChapter.focus(), 100);
+    }
+
+    function saveStorySlideFromModal() {
+        const chapter = storyInputChapter.value.trim();
+        if (!chapter) {
+            alert("Vui lòng nhập tên tiêu đề hồi truyện!");
+            storyInputChapter.focus();
+            return;
+        }
+
+        const speaker = storyInputSpeaker.value.trim() || "VỆ BINH AN NINH MẠNG";
+        const icon = storySelectIcon.value || "shield";
+        const rawPara = storyInputParagraphs.value.trim();
+        if (!rawPara) {
+            alert("Vui lòng nhập ít nhất một đoạn văn lời thoại!");
+            storyInputParagraphs.focus();
+            return;
+        }
+
+        const paragraphs = rawPara
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+
+        if (paragraphs.length === 0) {
+            alert("Vui lòng nhập nội dung đoạn văn hợp lệ!");
+            return;
+        }
+
+        if (!currentConfig.storySlides) currentConfig.storySlides = [];
+
+        if (editingStoryIndex >= 0 && editingStoryIndex < currentConfig.storySlides.length) {
+            const currentId = currentConfig.storySlides[editingStoryIndex].id || storyInputId.value || `story_${editingStoryIndex + 1}`;
+            currentConfig.storySlides[editingStoryIndex] = {
+                id: currentId,
+                chapter: chapter,
+                icon: icon,
+                speaker: speaker,
+                paragraphs: paragraphs
+            };
+        } else {
+            const newId = storyInputId.value || `story_${Date.now()}`;
+            currentConfig.storySlides.push({
+                id: newId,
+                chapter: chapter,
+                icon: icon,
+                speaker: speaker,
+                paragraphs: paragraphs
+            });
+        }
+
+        modalStorySlide.classList.remove("active");
+        updateLocation({
+            type: 'tab',
+            tab: 'tab-story',
+            label: 'Quản lý Cốt truyện (Story)'
+        });
+        renderStoryTab();
+        updateBadges();
+
+        saveConfigToServer(false, `hồi truyện "${chapter}"`);
+    }
+
+    function deleteStorySlide(index) {
+        const slide = (currentConfig.storySlides || [])[index];
+        if (!slide) return;
+        if (!confirm(`Bạn có chắc chắn muốn xóa "${slide.chapter || 'hồi này'}" khỏi cốt truyện mở đầu?`)) return;
+
+        currentConfig.storySlides.splice(index, 1);
+        renderStoryTab();
+        updateBadges();
+
+        saveConfigToServer(false, `xóa hồi truyện #${index + 1} (${slide.chapter || ''})`);
+    }
+
+    function moveStorySlide(index, direction) {
+        if (!currentConfig.storySlides) return;
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= currentConfig.storySlides.length) return;
+
+        const temp = currentConfig.storySlides[index];
+        currentConfig.storySlides[index] = currentConfig.storySlides[targetIndex];
+        currentConfig.storySlides[targetIndex] = temp;
+
+        renderStoryTab();
+        updateBadges();
+
+        saveConfigToServer(false, `thay đổi thứ tự hồi truyện "${temp.chapter}"`);
+    }
+
+    function resetStorySlidesDefault() {
+        if (!confirm("Bạn có chắc chắn muốn khôi phục danh sách các hồi cốt truyện về 5 hồi mặc định ban đầu?")) return;
+        currentConfig.storySlides = JSON.parse(JSON.stringify(DEFAULT_STORY_SLIDES));
+        renderStoryTab();
+        updateBadges();
+
+        saveConfigToServer(false, "khôi phục 5 hồi cốt truyện mặc định");
     }
 
     // ==========================================
@@ -2292,6 +2593,7 @@
 
                 let tabLabel = 'Xem Vòng chơi';
                 if (target === 'tab-questions') tabLabel = `Xem Câu hỏi Vòng ${selectedStageId}`;
+                else if (target === 'tab-story') tabLabel = 'Quản lý Cốt truyện (Story)';
                 else if (target === 'tab-random') tabLabel = 'Cài đặt Boss & Ngẫu nhiên';
                 else if (target === 'tab-achievements') tabLabel = 'Cài đặt Thành tựu';
                 else if (target === 'tab-leaderboard') {
@@ -2337,6 +2639,11 @@
         // Question actions
         document.getElementById("btnAddQuestion").addEventListener("click", openCreateQuestion);
         document.getElementById("btnSaveQuestionModal").addEventListener("click", saveQuestionFromModal);
+
+        // Story actions
+        if (btnAddStorySlide) btnAddStorySlide.addEventListener("click", openCreateStorySlide);
+        if (btnSaveStoryModal) btnSaveStoryModal.addEventListener("click", saveStorySlideFromModal);
+        if (btnResetStoryDefault) btnResetStoryDefault.addEventListener("click", resetStorySlidesDefault);
 
         // Card actions
         document.getElementById("btnAddCard").addEventListener("click", openCreateCard);
@@ -2511,6 +2818,11 @@
         openEditQuestion,
         duplicateQuestion,
         deleteQuestion,
+        openCreateStorySlide,
+        openEditStorySlide,
+        deleteStorySlide,
+        moveStorySlide,
+        resetStorySlidesDefault,
         openEditCard,
         deleteCard
     };
