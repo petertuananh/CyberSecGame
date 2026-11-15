@@ -560,6 +560,14 @@ const updateManager = {
     abortController: null
 };
 
+// Dọn dẹp thư mục tạm temp_update khi khởi động server
+try {
+    const startupTempDir = path.join(__dirname, 'temp_update');
+    if (fs.existsSync(startupTempDir)) {
+        fs.rmSync(startupTempDir, { recursive: true, force: true });
+    }
+} catch (e) {}
+
 function formatUpdateBytes(bytes) {
     if (!bytes || bytes <= 0) return '0 B';
     const units = ['B', 'KB', 'MB', 'GB'];
