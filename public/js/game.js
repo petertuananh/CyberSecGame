@@ -869,6 +869,8 @@ class CyberSecGame {
         const notesEl = document.getElementById("updateReleaseNotes");
         const btnExe = document.getElementById("btnDownloadUpdateExe");
         const btnZip = document.getElementById("btnDownloadUpdateZip");
+        const btnMacArm = document.getElementById("btnDownloadMacArmDmg");
+        const btnMacX64 = document.getElementById("btnDownloadMacX64Dmg");
         const btnAutoTitle = document.getElementById("btnAutoUpdateTitle");
         const btnAutoSub = document.getElementById("btnAutoUpdateSub");
 
@@ -885,13 +887,27 @@ class CyberSecGame {
             }
         }
 
+        const isMac = data.isMac || (navigator.platform && navigator.platform.toUpperCase().includes('MAC')) || (navigator.userAgent && navigator.userAgent.includes('Mac'));
+
         if (btnAutoTitle) {
             if (data.hasUpdate) {
-                btnAutoTitle.innerText = `CẬP NHẬT TRỰC TIẾP LÊN v${data.latestVersion} (1-CLICK)`;
-                if (btnAutoSub) btnAutoSub.innerText = "Tự động tải gói cài đặt và nâng cấp ngay lập tức không cần vào GitHub";
+                btnAutoTitle.innerText = isMac
+                    ? `CẬP NHẬT TRỰC TIẾP LÊN v${data.latestVersion} (MACOS .DMG 1-CLICK)`
+                    : `CẬP NHẬT TRỰC TIẾP LÊN v${data.latestVersion} (WINDOWS SETUP 1-CLICK)`;
+                if (btnAutoSub) {
+                    btnAutoSub.innerText = isMac
+                        ? "Tự động tải gói cài đặt .DMG chuẩn macOS và mở giao diện kéo vào Applications"
+                        : "Tự động tải gói cài đặt và nâng cấp ngay lập tức với quyền Administrator UAC";
+                }
             } else {
-                btnAutoTitle.innerText = `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
-                if (btnAutoSub) btnAutoSub.innerText = "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
+                btnAutoTitle.innerText = isMac
+                    ? `TẢI LẠI BẢN MACOS .DMG (FORCE REINSTALL)`
+                    : `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
+                if (btnAutoSub) {
+                    btnAutoSub.innerText = isMac
+                        ? "Tải lại gói cài đặt .DMG mới nhất từ GitHub"
+                        : "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
+                }
             }
         }
 
@@ -903,8 +919,14 @@ class CyberSecGame {
         if (notesEl) {
             notesEl.innerHTML = (data.releaseNotes || 'Không có ghi chú phiên bản.').replace(/\n/g, '<br>');
         }
-        if (btnExe && data.downloadUrl) {
-            btnExe.href = data.directSetupUrl || data.downloadUrl;
+        if (btnMacArm) {
+            btnMacArm.href = data.macArmDmgUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-arm64.dmg";
+        }
+        if (btnMacX64) {
+            btnMacX64.href = data.macX64DmgUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-x64.dmg";
+        }
+        if (btnExe) {
+            btnExe.href = data.winSetupUrl || data.directSetupUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame_Setup.exe";
         }
         if (btnZip && data.directZipUrl) {
             btnZip.href = data.directZipUrl;
@@ -1019,6 +1041,16 @@ class CyberSecGame {
                 const fName = data.fileName || "Bản cập nhật";
                 const fSize = data.downloadedFormatted || "";
                 completeDesc.innerText = `Tệp ${fName} (${fSize}) đã được tải về an toàn và sẵn sàng nâng cấp.`;
+            }
+            const btnApply = document.getElementById("btnApplyUpdateNow");
+            if (btnApply) {
+                if (data.fileType === "dmg") {
+                    btnApply.innerHTML = '<span>🍏 MỞ GÓI CÀI ĐẶT MACOS (.DMG)</span>';
+                } else if (data.fileType === "exe") {
+                    btnApply.innerHTML = '<span>🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI (ADMIN UAC)</span>';
+                } else {
+                    btnApply.innerHTML = '<span>📦 NÂNG CẤP DỮ LIỆU & KHỞI ĐỘNG LẠI</span>';
+                }
             }
             if (this.isUserDownloadingUpdate) {
                 this.isUserDownloadingUpdate = false;

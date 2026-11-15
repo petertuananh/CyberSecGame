@@ -572,23 +572,27 @@ app.get('/api/check-update', async (req, res) => {
                     downloadUrl = releaseData.html_url || `https://github.com/${repo}/releases/latest`;
                     source = 'github_release';
 
+                    let macArmDmgUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-arm64.dmg`;
+                    let macX64DmgUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-x64.dmg`;
+                    let winSetupUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`;
+
                     if (Array.isArray(releaseData.assets)) {
                         const isMac = process.platform === 'darwin';
                         const isArm = process.arch === 'arm64';
 
+                        const armAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg') && a.name.includes('arm64'));
+                        if (armAsset && armAsset.browser_download_url) macArmDmgUrl = armAsset.browser_download_url;
+
+                        const x64Asset = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg') && a.name.includes('x64'));
+                        if (x64Asset && x64Asset.browser_download_url) macX64DmgUrl = x64Asset.browser_download_url;
+
+                        const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
+                        if (setupAsset && setupAsset.browser_download_url) winSetupUrl = setupAsset.browser_download_url;
+
                         if (isMac) {
-                            const macDmg = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg'));
-                            const macZip = releaseData.assets.find(a => a.name && a.name.endsWith('.zip') && (isArm ? a.name.includes('arm64') : a.name.includes('x64')));
-                            const anyMacZip = releaseData.assets.find(a => a.name && a.name.endsWith('.zip') && (a.name.includes('mac') || a.name.includes('darwin')));
-                            const chosenMac = macDmg || macZip || anyMacZip;
-                            if (chosenMac && chosenMac.browser_download_url) {
-                                directSetupUrl = chosenMac.browser_download_url;
-                            }
+                            directSetupUrl = isArm ? macArmDmgUrl : macX64DmgUrl;
                         } else {
-                            const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
-                            if (setupAsset && setupAsset.browser_download_url) {
-                                directSetupUrl = setupAsset.browser_download_url;
-                            }
+                            directSetupUrl = winSetupUrl;
                         }
 
                         const zipAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.zip'));
@@ -625,6 +629,16 @@ app.get('/api/check-update', async (req, res) => {
         }
 
         const hasUpdate = compareVersions(latestVersion, CURRENT_VERSION) > 0;
+        const isMac = process.platform === 'darwin';
+        const isArm = process.arch === 'arm64';
+
+        if (!directSetupUrl) {
+            directSetupUrl = isMac
+                ? (isArm
+                    ? `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-arm64.dmg`
+                    : `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-x64.dmg`)
+                : `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`;
+        }
 
         res.json({
             success: true,
@@ -635,12 +649,17 @@ app.get('/api/check-update', async (req, res) => {
             releaseNotes: releaseNotes || (hasUpdate ? 'Đã có bản phát hành mới trên GitHub.' : 'Bạn đang sử dụng phiên bản mới nhất!'),
             publishedAt,
             downloadUrl,
-            directSetupUrl: directSetupUrl || `https://github.com/${repo}/releases`,
+            directSetupUrl,
+            macArmDmgUrl: `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-arm64.dmg`,
+            macX64DmgUrl: `https://github.com/${repo}/releases/latest/download/CyberSecGame-macOS-x64.dmg`,
+            winSetupUrl: `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`,
             directZipUrl: directZipUrl || `https://github.com/${repo}/archive/refs/heads/main.zip`,
             repoUrl: `https://github.com/${repo}`,
             source,
             platform: process.platform,
-            arch: process.arch
+            arch: process.arch,
+            isMac,
+            isArm
         });
     } catch (err) {
         res.status(500).json({
@@ -764,16 +783,32 @@ app.post('/api/update/start', async (req, res) => {
         let targetVersion = req.body && req.body.version ? req.body.version.trim() : CURRENT_VERSION;
         let preferredType = req.body && req.body.type ? req.body.type.toLowerCase() : 'auto';
 
-        let downloadUrl = '';
-        let fileType = 'exe';
-        let fileName = 'CyberSecGame_Setup.exe';
+        const isMac = process.platform === 'darwin';
+        const isArm = process.arch === 'arm64';
 
-        // 1. Nếu client chỉ định URL trực tiếp dạng file (.exe hoặc .zip)
-        if (reqUrl && (reqUrl.endsWith('.exe') || reqUrl.endsWith('.zip'))) {
-            downloadUrl = reqUrl;
-            fileType = reqUrl.endsWith('.exe') ? 'exe' : 'zip';
-            fileName = fileType === 'exe' ? 'CyberSecGame_Setup.exe' : 'CyberSecGame_Update.zip';
-        } else {
+        let downloadUrl = '';
+        let fileType = isMac ? 'dmg' : 'exe';
+        let fileName = isMac ? (isArm ? 'CyberSecGame-macOS-arm64.dmg' : 'CyberSecGame-macOS-x64.dmg') : 'CyberSecGame_Setup.exe';
+
+        // 1. Nếu client chỉ định URL trực tiếp dạng file (.dmg, .exe hoặc .zip)
+        if (reqUrl) {
+            const cleanUrl = reqUrl.split('?')[0].toLowerCase();
+            if (cleanUrl.endsWith('.dmg')) {
+                downloadUrl = reqUrl;
+                fileType = 'dmg';
+                fileName = path.basename(reqUrl.split('?')[0]) || (isArm ? 'CyberSecGame-macOS-arm64.dmg' : 'CyberSecGame-macOS-x64.dmg');
+            } else if (cleanUrl.endsWith('.exe')) {
+                downloadUrl = reqUrl;
+                fileType = 'exe';
+                fileName = path.basename(reqUrl.split('?')[0]) || 'CyberSecGame_Setup.exe';
+            } else if (cleanUrl.endsWith('.zip')) {
+                downloadUrl = reqUrl;
+                fileType = 'zip';
+                fileName = path.basename(reqUrl.split('?')[0]) || 'CyberSecGame_Update.zip';
+            }
+        }
+
+        if (!downloadUrl) {
             // 2. Tự động truy vấn nguồn tải tốt nhất từ GitHub
             try {
                 const releaseRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -782,13 +817,33 @@ app.post('/api/update/start', async (req, res) => {
                 });
                 if (releaseRes.ok) {
                     const releaseData = await releaseRes.json();
-                    if (releaseData && releaseData.assets && releaseData.assets.length > 0) {
-                        const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
-                        if (setupAsset && setupAsset.browser_download_url) {
-                            downloadUrl = setupAsset.browser_download_url;
-                            fileType = 'exe';
-                            fileName = setupAsset.name || 'CyberSecGame_Setup.exe';
+                    if (releaseData && Array.isArray(releaseData.assets) && releaseData.assets.length > 0) {
+                        if (isMac) {
+                            const armAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg') && a.name.includes('arm64'));
+                            const x64Asset = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg') && a.name.includes('x64'));
+                            const chosenDmg = (isArm ? armAsset : x64Asset) || releaseData.assets.find(a => a.name && a.name.endsWith('.dmg'));
+                            if (chosenDmg && chosenDmg.browser_download_url) {
+                                downloadUrl = chosenDmg.browser_download_url;
+                                fileType = 'dmg';
+                                fileName = chosenDmg.name;
+                            } else {
+                                const macZip = releaseData.assets.find(a => a.name && a.name.endsWith('.zip') && (isArm ? a.name.includes('arm64') : a.name.includes('x64')));
+                                if (macZip && macZip.browser_download_url) {
+                                    downloadUrl = macZip.browser_download_url;
+                                    fileType = 'zip';
+                                    fileName = macZip.name;
+                                }
+                            }
                         } else {
+                            const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
+                            if (setupAsset && setupAsset.browser_download_url) {
+                                downloadUrl = setupAsset.browser_download_url;
+                                fileType = 'exe';
+                                fileName = setupAsset.name || 'CyberSecGame_Setup.exe';
+                            }
+                        }
+
+                        if (!downloadUrl) {
                             const zipAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.zip'));
                             if (zipAsset && zipAsset.browser_download_url) {
                                 downloadUrl = zipAsset.browser_download_url;
@@ -802,16 +857,23 @@ app.post('/api/update/start', async (req, res) => {
                 console.warn('[AutoUpdate] Không thể lấy thông tin release asset:', relErr.message);
             }
 
-            // Nếu chưa có asset release chính thức, dùng gói mã nguồn nhánh main (ZIP) hoặc link release mặc định
+            // Fallback nếu không có asset
             if (!downloadUrl) {
-                if (preferredType === 'exe') {
-                    downloadUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`;
-                    fileType = 'exe';
-                    fileName = 'CyberSecGame_Setup.exe';
+                if (isMac) {
+                    const targetDmgName = isArm ? 'CyberSecGame-macOS-arm64.dmg' : 'CyberSecGame-macOS-x64.dmg';
+                    downloadUrl = `https://github.com/${repo}/releases/latest/download/${targetDmgName}`;
+                    fileType = 'dmg';
+                    fileName = targetDmgName;
                 } else {
-                    downloadUrl = `https://github.com/${repo}/archive/refs/heads/main.zip`;
-                    fileType = 'zip';
-                    fileName = 'CyberSecGame_Update.zip';
+                    if (preferredType === 'zip') {
+                        downloadUrl = `https://github.com/${repo}/archive/refs/heads/main.zip`;
+                        fileType = 'zip';
+                        fileName = 'CyberSecGame_Update.zip';
+                    } else {
+                        downloadUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`;
+                        fileType = 'exe';
+                        fileName = 'CyberSecGame_Setup.exe';
+                    }
                 }
             }
         }
@@ -964,11 +1026,18 @@ app.post('/api/update/apply', (req, res) => {
             if (process.platform === 'darwin') {
                 console.log(`[AutoUpdate] 🍎 Đang mở tệp cài đặt macOS (.dmg) trong Finder: ${updateManager.filePath}`);
                 exec(`open "${updateManager.filePath}"`);
+                updateManager.state = 'completed';
+                broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
                 res.json({
                     success: true,
-                    message: 'Đã mở gói cài đặt macOS (.dmg)! Vui lòng kéo biểu tượng CyberSecGame vào thư mục Applications.'
+                    message: 'Đã mở gói cài đặt macOS (.dmg) trong Finder! Vui lòng kéo biểu tượng CyberSecGame vào thư mục Applications để hoàn tất nâng cấp.'
                 });
                 return;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Tệp tải về là bản macOS (.dmg), không thể cài đặt trên Windows. Vui lòng tải bản Windows Setup (.exe)!'
+                });
             }
         }
 

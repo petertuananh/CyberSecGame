@@ -230,7 +230,7 @@
                 Nhập họ tên hoặc lớp của bạn để ghi danh Bảng Xếp Hạng Live và in Giấy Chứng Nhận! Bạn có thể nhập trực tiếp tại đây trên máy tính hoặc mở điện thoại quét mã QR để nhập.
             </p>
             <div class="name-input-row">
-                <input type="text" id="pcPlayerNameInput" placeholder="Nhập tên của bạn (VD: Nguyễn Tuấn Anh - 7A1)..." maxlength="35" class="name-modal-input" />
+                <input type="text" id="pcPlayerNameInput" placeholder="Nhập tên của bạn (VD: Phan Trần Tuấn Anh - 12A)..." maxlength="35" class="name-modal-input" />
                 <button id="btnRandomPlayerName" class="btn-cert-secondary" style="padding:10px 14px; font-size:13px;" title="Gợi ý tên ngẫu nhiên">🎲 Tên Vui</button>
                 <button id="btnSavePlayerName" class="btn-save-name">VÀO GAME ↵</button>
             </div>
@@ -462,18 +462,24 @@
                     </div>
                 </div>
 
-                <!-- Tùy chọn tải thủ công khác -->
+                <!-- Tùy chọn tải thủ công cho từng nền tảng -->
                 <div class="update-manual-options">
-                    <div class="manual-opts-label">Tùy chọn tải thủ công khác:</div>
+                    <div class="manual-opts-label">Tùy chọn tải thủ công theo hệ điều hành (macOS & Windows):</div>
                     <div id="updateActionsRow" class="update-actions-row">
-                        <a id="btnDownloadUpdateExe" href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
-                            <span id="btnDownloadUpdateExeText">📥 BẢN CÀI ĐẶT (.EXE / .DMG)</span>
+                        <a id="btnDownloadMacArmDmg" href="https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-arm64.dmg" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm" title="Tải gói .DMG cho máy Mac chip Apple Silicon (M1/M2/M3/M4)">
+                            <span id="btnDownloadMacArmDmgText">🍏 MAC DMG (APPLE SILICON)</span>
                         </a>
-                        <a id="btnDownloadUpdateZip" href="https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
-                            <span>📦 TẢI .ZIP THỦ CÔNG</span>
+                        <a id="btnDownloadMacX64Dmg" href="https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-x64.dmg" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm" title="Tải gói .DMG cho máy Mac chip Intel Core">
+                            <span id="btnDownloadMacX64DmgText">💻 MAC DMG (INTEL)</span>
                         </a>
-                        <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
-                            <span>🐙 XEM GITHUB</span>
+                        <a id="btnDownloadUpdateExe" href="https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame_Setup.exe" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm" title="Tải bộ cài đặt Windows (.exe)">
+                            <span id="btnDownloadUpdateExeText">🪟 WINDOWS SETUP (.EXE)</span>
+                        </a>
+                        <a id="btnDownloadUpdateZip" href="https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm" title="Tải mã nguồn và bản portable .ZIP">
+                            <span>📦 TẢI .ZIP</span>
+                        </a>
+                        <a href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm" title="Xem tất cả các bản phát hành trên GitHub">
+                            <span>🐙 TẤT CẢ RELEASES</span>
                         </a>
                     </div>
                 </div>

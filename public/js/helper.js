@@ -691,13 +691,13 @@
                     helperReleaseNotesBox.innerHTML = `<strong>${data.releaseName || 'Chi tiết bản phát hành'}</strong><br>${(data.releaseNotes || 'Không có mô tả chi tiết.').replace(/\n/g, '<br>')}`;
                 }
 
-                // Cập nhật các liên kết tải thủ công
-                if (btnHelperDownloadManualExe) {
-                    btnHelperDownloadManualExe.href = data.directSetupUrl || data.downloadUrl || "https://github.com/petertuananh/CyberSecGame/releases";
-                }
-                if (btnHelperDownloadManualZip) {
-                    btnHelperDownloadManualZip.href = data.directZipUrl || data.downloadUrl || "https://github.com/petertuananh/CyberSecGame/releases";
-                }
+                const isMac = data.isMac || (navigator.platform && navigator.platform.toUpperCase().includes('MAC')) || (navigator.userAgent && navigator.userAgent.includes('Mac'));
+                const btnMacArm = document.getElementById("btnHelperDownloadMacArmDmg");
+                const btnMacX64 = document.getElementById("btnHelperDownloadMacX64Dmg");
+                if (btnMacArm) btnMacArm.href = data.macArmDmgUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-arm64.dmg";
+                if (btnMacX64) btnMacX64.href = data.macX64DmgUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame-macOS-x64.dmg";
+                if (btnHelperDownloadManualExe) btnHelperDownloadManualExe.href = data.winSetupUrl || data.directSetupUrl || "https://github.com/petertuananh/CyberSecGame/releases/latest/download/CyberSecGame_Setup.exe";
+                if (btnHelperDownloadManualZip) btnHelperDownloadManualZip.href = data.directZipUrl || "https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip";
 
                 if (data.hasUpdate) {
                     if (helperUpdateBadge) {
@@ -710,10 +710,14 @@
                         btnHelperCheckUpdate.innerText = `🚀 CÓ BẢN MỚI v${data.latestVersion}`;
                     }
                     if (btnHelperAutoUpdateTitle) {
-                        btnHelperAutoUpdateTitle.innerText = `CẬP NHẬT LÊN PHIÊN BẢN v${data.latestVersion} (1-CLICK)`;
+                        btnHelperAutoUpdateTitle.innerText = isMac
+                            ? `CẬP NHẬT LÊN PHIÊN BẢN v${data.latestVersion} (MACOS .DMG 1-CLICK)`
+                            : `CẬP NHẬT LÊN PHIÊN BẢN v${data.latestVersion} (WINDOWS SETUP 1-CLICK)`;
                     }
                     if (btnHelperAutoUpdateSub) {
-                        btnHelperAutoUpdateSub.innerText = "Tự động tải gói cài đặt chính thức từ GitHub và nâng cấp ngay lập tức";
+                        btnHelperAutoUpdateSub.innerText = isMac
+                            ? "Tự động tải gói cài đặt .DMG chuẩn macOS và mở giao diện kéo vào Applications"
+                            : "Tự động tải gói cài đặt chính thức từ GitHub và nâng cấp ngay lập tức";
                     }
                     setHelperUpdateUIState("ready");
                     if (modalUpdateHelper) modalUpdateHelper.classList.add("active");
@@ -723,10 +727,14 @@
                         helperUpdateBadge.innerText = "✅ BẢN MỚI NHẤT";
                     }
                     if (btnHelperAutoUpdateTitle) {
-                        btnHelperAutoUpdateTitle.innerText = `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
+                        btnHelperAutoUpdateTitle.innerText = isMac
+                            ? `TẢI LẠI GÓI CÀI ĐẶT MACOS .DMG (FORCE REINSTALL)`
+                            : `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
                     }
                     if (btnHelperAutoUpdateSub) {
-                        btnHelperAutoUpdateSub.innerText = "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
+                        btnHelperAutoUpdateSub.innerText = isMac
+                            ? "Tải lại gói cài đặt .DMG mới nhất từ GitHub"
+                            : "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
                     }
                     setHelperUpdateUIState("ready");
                     if (isManual) {
@@ -815,6 +823,15 @@
                 const fName = data.fileName || "Bản cập nhật";
                 const fSize = data.downloadedFormatted || "";
                 completeDesc.innerText = `Tệp ${fName} (${fSize}) đã được tải về an toàn và sẵn sàng nâng cấp.`;
+            }
+            if (btnHelperApplyUpdateNow) {
+                if (data.fileType === "dmg") {
+                    btnHelperApplyUpdateNow.innerHTML = '<span>🍏 MỞ GÓI CÀI ĐẶT MACOS (.DMG)</span>';
+                } else if (data.fileType === "exe") {
+                    btnHelperApplyUpdateNow.innerHTML = '<span>🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI (ADMIN UAC)</span>';
+                } else {
+                    btnHelperApplyUpdateNow.innerHTML = '<span>📦 NÂNG CẤP DỮ LIỆU & KHỞI ĐỘNG LẠI</span>';
+                }
             }
             if (isHelperDownloadingUpdate) {
                 isHelperDownloadingUpdate = false;
