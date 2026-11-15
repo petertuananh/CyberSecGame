@@ -572,6 +572,21 @@ class CyberSecGame {
                 if (e.target === modalLb) this.closeLeaderboardModal();
             });
         }
+
+        // Gắn sự kiện Modal Thông Tin & Bản Quyền (About)
+        const btnOpenAb = document.getElementById("btnOpenAbout");
+        const modalAb = document.getElementById("aboutModal");
+        const btnCloseAb = document.getElementById("btnCloseAboutModal");
+        const btnCloseAbBtm = document.getElementById("btnCloseAboutBottom");
+
+        if (btnOpenAb) btnOpenAb.addEventListener("click", () => this.openAboutModal());
+        if (btnCloseAb) btnCloseAb.addEventListener("click", () => this.closeAboutModal());
+        if (btnCloseAbBtm) btnCloseAbBtm.addEventListener("click", () => this.closeAboutModal());
+        if (modalAb) {
+            modalAb.addEventListener("click", (e) => {
+                if (e.target === modalAb) this.closeAboutModal();
+            });
+        }
     }
 
     openNameModal(isStarting = false) {
@@ -630,6 +645,22 @@ class CyberSecGame {
 
     closeLeaderboardModal() {
         const modal = document.getElementById("leaderboardModal");
+        if (modal) {
+            modal.classList.remove("show");
+            modal.classList.add("hidden");
+        }
+    }
+
+    openAboutModal() {
+        const modal = document.getElementById("aboutModal");
+        if (modal) {
+            modal.classList.remove("hidden");
+            modal.classList.add("show");
+        }
+    }
+
+    closeAboutModal() {
+        const modal = document.getElementById("aboutModal");
         if (modal) {
             modal.classList.remove("show");
             modal.classList.add("hidden");
@@ -828,6 +859,11 @@ class CyberSecGame {
             }
             let key = e.key.toUpperCase();
             if (key === "ESCAPE") {
+                const aboutModal = document.getElementById("aboutModal");
+                if (aboutModal && !aboutModal.classList.contains("hidden")) {
+                    this.closeAboutModal();
+                    return;
+                }
                 const lbModal = document.getElementById("leaderboardModal");
                 if (lbModal && !lbModal.classList.contains("hidden")) {
                     this.closeLeaderboardModal();
@@ -870,6 +906,14 @@ class CyberSecGame {
                 return;
             } else if (key === "T") {
                 this.state = (this.state === "ACHIEVEMENTS") ? "START" : "ACHIEVEMENTS";
+                return;
+            } else if (key === "I") {
+                const aboutModal = document.getElementById("aboutModal");
+                if (aboutModal && !aboutModal.classList.contains("hidden")) {
+                    this.closeAboutModal();
+                } else {
+                    this.openAboutModal();
+                }
                 return;
             }
             if (key === "ENTER" || key === " ") {
@@ -940,8 +984,11 @@ class CyberSecGame {
                 } else if (cx >= w / 2 - 350 && cx <= w / 2 + 350 && cy >= 614 && cy <= 656) {
                     // 3. Click vào nút Kho Thành tựu
                     this.state = "ACHIEVEMENTS";
+                } else if (cy >= 657 && cy <= 695) {
+                    // 4. Click vào dòng thông tin bản quyền & tác giả
+                    this.openAboutModal();
                 } else if (cy >= 520 && cy <= 568) {
-                    // 4. Click vào nút Bắt đầu game
+                    // 5. Click vào nút Bắt đầu game
                     this.openNameModal(true);
                 } else {
                     // Nhấp vào bất kỳ đâu để vào game -> hiện hộp thoại nhập tên người chơi
@@ -2395,20 +2442,20 @@ class CyberSecGame {
         window.PixelSprites.drawPixelIcon(ctx, "trophy", w / 2 - 280, achBtnY + 8, 18);
         ctx.fillText("🏆 NHẤN PHÍM [T] HOẶC CLICK VÀO ĐÂY ĐỂ VÀO KHO THÀNH TỰU (RỒNG BAY PHƯỢNG MÚA)", w / 2 + 10, achBtnY + 24);
 
-        // Chữ đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
+        // Chữ bản quyền & đơn vị đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
         ctx.save();
-        ctx.globalAlpha = 0.7;
-        const subY = h * 0.925;
+        ctx.globalAlpha = 0.85;
+        const subY = h * 0.935;
         if (this.logoNBK && this.logoNBK.complete) {
-            ctx.drawImage(this.logoNBK, w / 2 - 190, subY - 15, 20, 20);
+            ctx.drawImage(this.logoNBK, w / 2 - 315, subY - 15, 20, 20);
         }
         if (this.logoSoftLab && this.logoSoftLab.complete) {
-            ctx.drawImage(this.logoSoftLab, w / 2 + 175, subY - 15, 20, 20);
+            ctx.drawImage(this.logoSoftLab, w / 2 + 295, subY - 15, 20, 20);
         }
         ctx.fillStyle = "#cbd5e1";
-        ctx.font = "bold 14px 'Segoe UI', Tahoma, sans-serif";
+        ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("Đồng hành phát triển: THCS Nguyễn Bỉnh Khiêm  •  SoftLab", w / 2, subY);
+        ctx.fillText("Tác giả: Peter Tuan Anh • SoftLab & THCS Nguyễn Bỉnh Khiêm  |  [I] Thông Tin Game & Bản Quyền", w / 2, subY);
         ctx.restore();
     }
 

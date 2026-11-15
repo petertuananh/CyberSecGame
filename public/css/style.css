@@ -234,6 +234,32 @@ html, body {
     box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
 }
 
+/* Nút Thông Tin Giới Thiệu & Bản Quyền */
+.btn-about {
+    background: #1b2838;
+    color: var(--accent-cyan);
+    border: 1.5px solid #2980b9;
+    padding: 4px 11px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+.btn-about:hover {
+    background: #243447;
+    border-color: var(--accent-cyan);
+    color: #ffffff;
+    transform: scale(1.04);
+    box-shadow: 0 0 10px rgba(0, 210, 211, 0.4);
+}
+
 #arduinoStatus {
     padding: 4px 9px;
     border-radius: 5px;
@@ -462,7 +488,7 @@ button.btn-connect:hover {
     .header-brand-cluster,
     .header-game-cluster,
     .header-tools-cluster { gap: 6px; }
-    .btn-leaderboard, .btn-achievements, .btn-mobile-qr, .btn-fullscreen, .weather-btn, .btn-helper {
+    .btn-leaderboard, .btn-achievements, .btn-mobile-qr, .btn-fullscreen, .weather-btn, .btn-helper, .btn-about {
         padding: 3px 8px;
         font-size: 11.5px;
     }
@@ -1268,3 +1294,115 @@ button.btn-connect:hover {
 .lb-ach-flash { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; }
 .lb-ach-kratos { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
 .lb-ach-loser { background: rgba(168, 85, 247, 0.2); color: #a855f7; border: 1px solid #a855f7; }
+
+/* ========================================================
+   MODAL THÔNG TIN GAME & BẢN QUYỀN (ABOUT MODAL)
+   ======================================================== */
+.about-modal-card {
+    background: #100b24;
+    border: 2.5px solid #6c5ce7;
+    border-radius: 14px;
+    padding: 22px 28px;
+    width: 90vw;
+    max-width: 680px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 35px rgba(108, 92, 231, 0.45);
+    animation: lbFadeIn 0.25s ease-out;
+    overflow-y: auto;
+}
+
+.about-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 14px 0 20px;
+}
+
+.about-brand-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.about-logo-pixel {
+    height: 38px;
+    width: auto;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.about-game-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 13px;
+    color: var(--accent-gold);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.about-free-tag {
+    font-size: 11.5px;
+    color: #2ecc71;
+    font-weight: 700;
+}
+
+.about-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px 16px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px 18px;
+}
+
+.about-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+}
+
+.about-meta-item.full-col {
+    grid-column: 1 / -1;
+}
+
+.about-meta-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.about-meta-val {
+    color: #f1f2f6;
+    word-break: break-word;
+}
+
+.about-github-link {
+    color: var(--accent-cyan);
+    font-family: 'Consolas', monospace;
+    font-size: 12.5px;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.about-github-link:hover {
+    color: var(--accent-gold);
+    text-decoration: underline;
+}
+
+.about-note-box {
+    background: rgba(39, 174, 96, 0.12);
+    border: 1px dashed rgba(46, 204, 113, 0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #2ecc71;
+    line-height: 1.5;
+}

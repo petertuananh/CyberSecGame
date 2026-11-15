@@ -187,6 +187,15 @@ app.get('/editor', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'helper.html'));
 });
 
+// Định tuyến trang Giới thiệu, Tác giả & Bản quyền
+app.get('/about', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'about.html'));
+});
+
+app.get('/info', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'about.html'));
+});
+
 // API lấy cấu hình game hiện tại
 app.get('/api/config', (req, res) => {
     const cfg = loadGameConfig();

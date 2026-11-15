@@ -61,6 +61,11 @@
                 <span>⚙️</span>
                 <span class="label-full">HELPER</span>
             </a>
+            <button id="btnOpenAbout" class="btn-about" title="Thông tin game, tác giả Peter Tuan Anh & Bản quyền SoftLab - Phím I">
+                <span>ℹ️</span>
+                <span class="label-full">GIỚI THIỆU</span>
+                <span class="label-short">[I]</span>
+            </button>
             <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">
                 <img id="weatherIconImg" class="pixel-icon-btn" alt="" />
                 <span id="weatherLabel" class="label-full">Nắng</span>
@@ -249,6 +254,69 @@
             <div class="cert-actions-bar">
                 <button id="btnCloseLeaderboardBottom" class="btn-cert-secondary">
                     <span>✖ ĐÓNG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hộp thoại Modal Thông Tin Tác Giả & Bản Quyền -->
+    <div id="aboutModal" class="cert-modal-backdrop hidden">
+        <div class="about-modal-card">
+            <div class="cert-modal-header">
+                <div class="cert-modal-title">ℹ️ THÔNG TIN GAME & BẢN QUYỀN (ABOUT)</div>
+                <button id="btnCloseAboutModal" class="cert-close-btn">&times;</button>
+            </div>
+            <div class="about-modal-body">
+                <div class="about-brand-row">
+                    <img src="images/logo_softlab_pixel.png" alt="SoftLab" class="about-logo-pixel">
+                    <img src="images/logo_nbk_pixel.png" alt="THCS NBK" class="about-logo-pixel">
+                    <div>
+                        <div class="about-game-title">VỆ BINH MẬT KHẨU</div>
+                        <div class="about-free-tag">🎁 SẢN PHẨM MIỄN PHÍ 100% CHO GIÁO DỤC</div>
+                    </div>
+                </div>
+
+                <div class="about-meta-grid">
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">👨‍💻 Tác giả:</span>
+                        <strong class="about-meta-val text-gold">Peter Tuan Anh</strong>
+                    </div>
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">🏢 Đơn vị chủ quản:</span>
+                        <strong class="about-meta-val">CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB</strong>
+                    </div>
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">📑 Mã số thuế:</span>
+                        <strong class="about-meta-val text-cyan">3604049476</strong>
+                    </div>
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">📍 Trụ sở:</span>
+                        <span class="about-meta-val">59 Đặng Đại Độ, P. Trấn Biên, TP. Đồng Nai</span>
+                    </div>
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">📞 Hotline:</span>
+                        <span class="about-meta-val text-green font-mono">0845656869 - 0888866548</span>
+                    </div>
+                    <div class="about-meta-item">
+                        <span class="about-meta-label">🏫 Đơn vị đồng hành:</span>
+                        <span class="about-meta-val">Trường THCS Nguyễn Bỉnh Khiêm</span>
+                    </div>
+                    <div class="about-meta-item full-col">
+                        <span class="about-meta-label">🐙 GitHub Dự án:</span>
+                        <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" rel="noopener noreferrer" class="about-github-link">https://github.com/petertuananh/CyberSecGame</a>
+                    </div>
+                </div>
+
+                <div class="about-note-box">
+                    🛡️ Trò chơi được phát hành phi thương mại nhằm hỗ trợ công tác giảng dạy kỹ năng an toàn số và bảo vệ an ninh mạng cho học sinh. Mọi cơ sở giáo dục đều được phép sử dụng miễn phí hoàn toàn.
+                </div>
+            </div>
+            <div class="cert-actions-bar">
+                <a href="/about" target="_blank" class="btn-cert-primary" style="text-decoration:none;">
+                    <span>🌐 MỞ TRANG ĐẦY ĐỦ (/about)</span>
+                </a>
+                <button id="btnCloseAboutBottom" class="btn-cert-secondary">
+                    <span>✖ ĐÓNG [ESC]</span>
                 </button>
             </div>
         </div>

@@ -5,8 +5,9 @@
 
 #define MyAppName "Vệ Binh Mật Khẩu"
 #define MyAppEnglishName "CyberSec Password Guardian"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Trường THCS Nguyễn Bỉnh Khiêm × SoftLab"
+#define MyAppVersion "2.5.0"
+#define MyAppPublisher "CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB × Peter Tuan Anh"
+#define MyAppURL "https://github.com/petertuananh/CyberSecGame"
 #define MyAppExeName "CyberSecGame.exe"
 
 [Setup]
@@ -15,6 +16,9 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} v{#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\CyberSecPasswordGuardian
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
