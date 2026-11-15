@@ -667,6 +667,11 @@ app.post('/api/update/start', async (req, res) => {
         }
         const destPath = path.join(updateDir, fileName);
 
+        // Xóa file cũ nếu có để tải lại từ đầu sạch sẽ
+        if (fs.existsSync(destPath)) {
+            try { fs.rmSync(destPath, { force: true }); } catch (e) {}
+        }
+
         // Khởi tạo trạng thái
         updateManager.state = 'downloading';
         updateManager.progress = 0;
@@ -845,13 +850,13 @@ app.post('/api/update/apply', (req, res) => {
                         rootSource = path.join(extractDir, subEntries[0]);
                     }
 
-                    // Sao chép tệp mới, giữ nguyên tuyệt đối thư mục data/ (dữ liệu người chơi)
+                    // Sao chép tệp mới, giữ nguyên tuyệt đối thư mục data/ (dữ liệu người chơi) và không đè các file exe đang chạy
                     fs.cpSync(rootSource, __dirname, {
                         recursive: true,
                         force: true,
                         filter: (src) => {
                             const rel = path.relative(rootSource, src).replace(/\\/g, '/');
-                            if (rel.startsWith('data/') || rel === 'data' || rel.startsWith('temp_update')) {
+                            if (rel.startsWith('data/') || rel === 'data' || rel.startsWith('temp_update') || rel.toLowerCase().endsWith('.exe')) {
                                 return false;
                             }
                             return true;
@@ -867,24 +872,19 @@ app.post('/api/update/apply', (req, res) => {
                         message: 'Đã nâng cấp xong dữ liệu game! Đang tự động khởi chạy lại...'
                     });
 
-                    // Khởi động lại ứng dụng
+                    // Khởi động lại ứng dụng an toàn với độ trễ để tránh xung đột cổng
                     setTimeout(() => {
                         const exePath = process.execPath;
                         if (exePath.toLowerCase().endsWith('cybersecgame.exe')) {
-                            const child = spawn(exePath, process.argv.slice(1), {
-                                detached: true,
-                                stdio: 'ignore'
-                            });
-                            child.unref();
+                            const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${exePath}'"`;
+                            exec(restartCmd);
                         } else {
-                            const child = spawn(process.argv[0], process.argv.slice(1), {
-                                detached: true,
-                                stdio: 'ignore'
-                            });
-                            child.unref();
+                            const script = process.argv[1] || 'server.js';
+                            const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${process.argv[0]}' -ArgumentList '${script}'"`;
+                            exec(restartCmd);
                         }
                         process.exit(0);
-                    }, 1800);
+                    }, 1200);
                 } catch (copyErr) {
                     console.error('[AutoUpdate] ❌ Lỗi sao chép tệp mới:', copyErr);
                     updateManager.state = 'error';

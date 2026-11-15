@@ -622,12 +622,14 @@ class CyberSecGame {
         const btnApplyUp = document.getElementById("btnApplyUpdateNow");
         const btnOpenFolder = document.getElementById("btnOpenUpdateFolder");
         const btnRetryUp = document.getElementById("btnRetryUpdate");
+        const btnRedownload = document.getElementById("btnRedownloadUpdate");
 
         if (btnAutoUpdate) btnAutoUpdate.addEventListener("click", () => this.startInAppUpdate());
         if (btnCancelDl) btnCancelDl.addEventListener("click", () => this.cancelInAppUpdate());
         if (btnApplyUp) btnApplyUp.addEventListener("click", () => this.applyInAppUpdate());
         if (btnOpenFolder) btnOpenFolder.addEventListener("click", () => this.openUpdateFolder());
         if (btnRetryUp) btnRetryUp.addEventListener("click", () => this.startInAppUpdate());
+        if (btnRedownload) btnRedownload.addEventListener("click", () => this.startInAppUpdate(true));
 
         // Tự động kiểm tra bản cập nhật khi khởi động game (nếu có mạng)
         setTimeout(() => this.checkUpdateOnStartup(), 2500);
@@ -752,7 +754,6 @@ class CyberSecGame {
             modal.classList.remove("hidden");
             modal.classList.add("show");
         }
-        this.checkUpdateStatus();
         if (shouldFetch || !this.updateData) {
             this.performUpdateCheck(true);
         } else {
@@ -866,17 +867,16 @@ class CyberSecGame {
             const res = await fetch("/api/update/status");
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.success && data.state && data.state !== "idle") {
+                if (data && data.success && data.state === "downloading") {
                     this.handleUpdateProgress(data);
-                    if (data.state === "downloading") {
-                        this.startUpdatePolling();
-                    }
+                    this.startUpdatePolling();
                 }
             }
         } catch (e) {}
     }
 
-    async startInAppUpdate() {
+    async startInAppUpdate(isForce = false) {
+        this.isUserDownloadingUpdate = true;
         const boxReady = document.getElementById("updateReadyBox");
         const boxDl = document.getElementById("updateDownloadingBox");
         const boxDone = document.getElementById("updateCompleteBox");
@@ -900,6 +900,10 @@ class CyberSecGame {
         if (sizeText) sizeText.innerText = "0 MB / 0 MB";
 
         try {
+            if (isForce) {
+                await fetch("/api/update/cancel", { method: "POST" });
+            }
+
             const targetUrl = (this.updateData && this.updateData.directSetupUrl) || "";
             const targetVer = (this.updateData && this.updateData.latestVersion) || "";
 
@@ -963,7 +967,10 @@ class CyberSecGame {
                 const fSize = data.downloadedFormatted || "";
                 completeDesc.innerText = `Tệp ${fName} (${fSize}) đã được tải về an toàn và sẵn sàng nâng cấp.`;
             }
-            this._showToast("🎉 Tải bản cập nhật hoàn tất! Nhấn Cài Đặt Ngay để hoàn tất.", "star");
+            if (this.isUserDownloadingUpdate) {
+                this.isUserDownloadingUpdate = false;
+                this._showToast("🎉 Tải bản cập nhật hoàn tất! Nhấn Cài Đặt Ngay để hoàn tất.", "star");
+            }
         } else if (data.state === "installing") {
             this.stopUpdatePolling();
             if (boxReady) boxReady.classList.add("hidden");
@@ -989,6 +996,7 @@ class CyberSecGame {
 
     async cancelInAppUpdate() {
         this.stopUpdatePolling();
+        this.isUserDownloadingUpdate = false;
         try {
             await fetch("/api/update/cancel", { method: "POST" });
         } catch (e) {}
@@ -1006,16 +1014,45 @@ class CyberSecGame {
 
     async applyInAppUpdate() {
         const btnApply = document.getElementById("btnApplyUpdateNow");
+        const statusText = document.getElementById("downloadStatusText");
+        const boxDl = document.getElementById("updateDownloadingBox");
+        const boxDone = document.getElementById("updateCompleteBox");
+
         if (btnApply) {
             btnApply.disabled = true;
-            btnApply.innerText = "⏳ ĐANG KHỞI CHẠY...";
+            btnApply.innerText = "⏳ ĐANG NÂNG CẤP...";
         }
 
         try {
             const res = await fetch("/api/update/apply", { method: "POST" });
             const data = await res.json();
             if (data.success) {
-                this._showToast("🚀 " + (data.message || "Đang mở trình cài đặt..."), "star");
+                this._showToast("🚀 " + (data.message || "Đang nâng cấp..."), "star");
+
+                if (boxDone) boxDone.classList.add("hidden");
+                if (boxDl) boxDl.classList.remove("hidden");
+
+                const percentText = document.getElementById("downloadPercentText");
+                const progressBar = document.getElementById("downloadProgressBar");
+                const speedText = document.getElementById("downloadSpeedText");
+                const sizeText = document.getElementById("downloadSizeText");
+
+                if (progressBar) progressBar.style.width = "100%";
+                if (percentText) percentText.innerText = "100%";
+                if (speedText) speedText.innerText = "Hoàn tất";
+                if (sizeText) sizeText.innerText = "Đã cập nhật xong";
+
+                let countdown = 3;
+                if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+
+                const cdTimer = setInterval(() => {
+                    countdown--;
+                    if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+                    if (countdown <= 0) {
+                        clearInterval(cdTimer);
+                        window.location.href = window.location.pathname + '?v=' + Date.now();
+                    }
+                }, 1000);
             } else {
                 throw new Error(data.error || "Không thể áp dụng bản cập nhật");
             }
