@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Giới Thiệu & Bản Quyền | Vệ Binh Mật Khẩu (CyberSecGame)</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" href="/images/logo_nbk.png">
+    <link rel="shortcut icon" type="image/png" href="/images/logo_nbk.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -844,16 +845,22 @@
 
     <!-- Header Navigation -->
     <header class="navbar">
-        <a href="/" class="nav-brand" title="Quay lại Game">
+        <div style="display:flex; align-items:center; gap:16px;">
             <div class="brand-logos">
-                <img src="/images/logo_nbk_pixel.png" alt="THCS Nguyễn Bỉnh Khiêm" class="logo-img" onerror="this.src='/images/logo_nbk.png'">
-                <img src="/images/logo_softlab_pixel.png" alt="SoftLab" class="logo-img" onerror="this.src='/images/logo_softlab.png'">
+                <a href="https://nguyenbinhkhiemtranbien.edu.vn" target="_blank" rel="noopener noreferrer" title="Mở trang web Trường THCS Nguyễn Bỉnh Khiêm: https://nguyenbinhkhiemtranbien.edu.vn">
+                    <img src="/images/logo_nbk_pixel.png" alt="THCS Nguyễn Bỉnh Khiêm" class="logo-img" onerror="this.src='/images/logo_nbk.png'">
+                </a>
+                <a href="https://softlab.vn" target="_blank" rel="noopener noreferrer" title="Mở trang web SoftLab: https://softlab.vn">
+                    <img src="/images/logo_softlab_pixel.png" alt="SoftLab" class="logo-img" onerror="this.src='/images/logo_softlab.png'">
+                </a>
             </div>
-            <div class="nav-title">
-                <span class="nav-title-main">VỆ BINH MẬT KHẨU</span>
-                <span class="nav-title-sub">DỰ ÁN GIÁO DỤC AN TOÀN SỐ</span>
-            </div>
-        </a>
+            <a href="/" class="nav-brand" title="Quay lại Game">
+                <div class="nav-title">
+                    <span class="nav-title-main">VỆ BINH MẬT KHẨU</span>
+                    <span class="nav-title-sub">DỰ ÁN GIÁO DỤC AN TOÀN SỐ</span>
+                </div>
+            </a>
+        </div>
 
         <div class="nav-actions">
             <a href="/" class="nav-btn nav-btn-play" title="Mở và chơi Game ngay trên trình duyệt">
@@ -943,18 +950,23 @@
                 </div>
 
                 <div class="info-grid">
-                    <!-- Trụ sở -->
+                    <!-- Trụ sở & Website SoftLab -->
                     <div class="info-card">
                         <div class="info-card-header">
                             <div class="info-card-icon gold">📍</div>
                             <div>
-                                <div class="info-card-title">Địa Chỉ Trụ Sở</div>
+                                <div class="info-card-title">Địa Chỉ & Website SoftLab</div>
                                 <div class="info-card-value" style="font-size:16px;">59 Đặng Đại Độ</div>
                             </div>
                         </div>
                         <p class="info-card-desc">
                             Phường Trấn Biên, Thành phố Đồng Nai, Việt Nam.
                         </p>
+                        <div style="margin-top:10px;">
+                            <a href="https://softlab.vn" target="_blank" rel="noopener noreferrer" class="phone-chip" style="color:var(--accent-cyan); border-color:#00d2d3;">
+                                🌐 Website: softlab.vn
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Hotline -->
@@ -993,7 +1005,7 @@
                         </p>
                     </div>
 
-                    <!-- Đơn vị đồng hành -->
+                    <!-- Đơn vị đồng hành & Website trường -->
                     <div class="info-card">
                         <div class="info-card-header">
                             <div class="info-card-icon" style="background:rgba(235,68,90,0.15); border-color:rgba(235,68,90,0.3); color:#eb445a;">🏫</div>
@@ -1005,7 +1017,27 @@
                         <p class="info-card-desc">
                             Đơn vị cố vấn nội dung giáo dục an toàn không gian mạng, thực nghiệm hội thi học sinh và triển khai giảng dạy thực tế.
                         </p>
+                        <div style="margin-top:10px;">
+                            <a href="https://nguyenbinhkhiemtranbien.edu.vn" target="_blank" rel="noopener noreferrer" class="phone-chip" style="color:#eb445a; border-color:rgba(235,68,90,0.4);">
+                                🌐 nguyenbinhkhiemtranbien.edu.vn
+                            </a>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Card Vinh Danh Ý Tưởng Sáng Tạo -->
+                <div style="margin-top:20px; background:linear-gradient(135deg, rgba(241,196,15,0.12), rgba(230,126,34,0.08)); border:1.5px dashed var(--accent-gold); border-radius:14px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <span style="font-size:32px;">💡</span>
+                        <div>
+                            <div style="font-size:12px; color:var(--accent-gold); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">ĐÓNG GÓP Ý TƯỞNG & ĐỀ XUẤT SÁNG TẠO</div>
+                            <h4 style="font-size:17px; font-weight:800; color:#ffffff; margin:3px 0;">Ý tưởng bởi Nhóm 2 lớp 9/5 niên khóa 2023 - 2027, k12</h4>
+                            <p style="font-size:13.5px; color:var(--text-muted); margin:0;">
+                                Trường THCS Nguyễn Bỉnh Khiêm — Nhóm học sinh khởi xướng ý tưởng thiết kế trò chơi giáo dục bảo vệ mật khẩu và rèn luyện kỹ năng an toàn không gian mạng.
+                            </p>
+                        </div>
+                    </div>
+                    <span class="badge badge-version" style="font-size:10px; background:rgba(241,196,15,0.2);">✨ SÁNG TẠO TRẺ K12</span>
                 </div>
 
                 <!-- GitHub Card -->
@@ -1194,6 +1226,7 @@
                     <p><strong>CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB</strong></p>
                     <p>Mã số thuế: <strong>3604049476</strong></p>
                     <p>Địa chỉ: 59 Đặng Đại Độ, Phường Trấn Biên, Thành phố Đồng Nai</p>
+                    <p>Website: <a href="https://softlab.vn" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:none;">https://softlab.vn</a></p>
                 </div>
 
                 <div class="footer-col">
@@ -1207,8 +1240,9 @@
                 <div class="footer-col">
                     <h5>Đơn Vị Đồng Hành Giáo Dục</h5>
                     <p><strong>TRƯỜNG THCS NGUYỄN BỈNH KHIÊM</strong></p>
-                    <p>Phối hợp thử nghiệm chuyên môn và ứng dụng thực tiễn trong công tác giáo dục kỹ năng số cho học sinh.</p>
-                    <p style="color:#2ecc71; margin-top:6px;">✔ Miễn phí 100% • Không thương mại hóa</p>
+                    <p>Website: <a href="https://nguyenbinhkhiemtranbien.edu.vn" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:none;">nguyenbinhkhiemtranbien.edu.vn</a></p>
+                    <p style="color:#f1c40f; margin-top:4px;">💡 Ý tưởng bởi Nhóm 2 lớp 9/5 niên khóa 2023 - 2027, k12</p>
+                    <p style="color:#2ecc71; margin-top:4px;">✔ Miễn phí 100% • Không thương mại hóa</p>
                 </div>
             </div>
 

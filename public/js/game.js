@@ -1159,8 +1159,14 @@ class CyberSecGame {
                     // 3. Click vào nút Kho Thành tựu
                     this.state = "ACHIEVEMENTS";
                 } else if (cy >= 657 && cy <= 695) {
-                    // 4. Click vào dòng thông tin bản quyền & tác giả
-                    this.openAboutModal();
+                    // 4. Click vào logo NBK, SoftLab hoặc dòng thông tin bản quyền
+                    if (cx >= w / 2 - 370 && cx <= w / 2 - 310) {
+                        window.open("https://nguyenbinhkhiemtranbien.edu.vn", "_blank");
+                    } else if (cx >= w / 2 + 310 && cx <= w / 2 + 370) {
+                        window.open("https://softlab.vn", "_blank");
+                    } else {
+                        this.openAboutModal();
+                    }
                 } else if (cy >= 520 && cy <= 568) {
                     // 5. Click vào nút Bắt đầu game
                     this.openNameModal(true);
@@ -2618,18 +2624,18 @@ class CyberSecGame {
 
         // Chữ bản quyền & đơn vị đồng hành chìm nhẹ tinh tế ở góc dưới Start Screen
         ctx.save();
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.9;
         const subY = h * 0.935;
         if (this.logoNBK && this.logoNBK.complete) {
-            ctx.drawImage(this.logoNBK, w / 2 - 315, subY - 15, 20, 20);
+            ctx.drawImage(this.logoNBK, w / 2 - 340, subY - 15, 20, 20);
         }
         if (this.logoSoftLab && this.logoSoftLab.complete) {
-            ctx.drawImage(this.logoSoftLab, w / 2 + 295, subY - 15, 20, 20);
+            ctx.drawImage(this.logoSoftLab, w / 2 + 320, subY - 15, 20, 20);
         }
         ctx.fillStyle = "#cbd5e1";
         ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("Tác giả: Peter Tuan Anh • SoftLab & THCS Nguyễn Bỉnh Khiêm  |  [I] Thông Tin Game & Bản Quyền", w / 2, subY);
+        ctx.fillText("Tác giả: Peter Tuan Anh • SoftLab & THCS Nguyễn Bỉnh Khiêm  |  [I] Giới Thiệu & Bản Quyền", w / 2, subY);
         ctx.restore();
     }
 

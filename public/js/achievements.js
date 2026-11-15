@@ -748,6 +748,8 @@
             this.logoNBK.src = "images/logo_nbk.png";
             this.logoSoftLab = new Image();
             this.logoSoftLab.src = "images/logo_softlab.png";
+            this.imgSoftLabSigned = new Image();
+            this.imgSoftLabSigned.src = "images/softlab_signed.png";
             this.trophyKratos = new Image();
             this.trophyKratos.src = "images/trophy_kratos.jpg";
             this.imgFlash = new Image();
@@ -1079,7 +1081,7 @@
 
             // Ngày cấp
             const now = stats.completedDate || new Date();
-            const dateStr = `Hà Nội, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+            const dateStr = `Trấn Biên, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
             ctx.font = `italic ${Math.round(13 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2c3e50";
             ctx.textAlign = "right";
@@ -1090,28 +1092,35 @@
             ctx.textAlign = "center";
             ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#1e272e";
-            ctx.fillText("ĐẠI DIỆN CHUYÊN MÔN SOFTLAB", leftColX, sigY + Math.round(22 * scaleY));
+            ctx.fillText("ĐẠI DIỆN SOFTLAB", leftColX, sigY + Math.round(22 * scaleY));
 
-            ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#57606f";
-            ctx.fillText("(Ký & đóng dấu số)", leftColX, sigY + Math.round(40 * scaleY));
+            // Vẽ ảnh chữ ký & con dấu thực tế của SoftLab (softlab_signed.png)
+            if (this.imgSoftLabSigned && this.imgSoftLabSigned.complete && this.imgSoftLabSigned.naturalWidth > 0) {
+                const signW = Math.round(145 * scale);
+                const signH = Math.round(signW / 1.6);
+                ctx.drawImage(this.imgSoftLabSigned, leftColX - signW / 2, sigY + Math.round(28 * scaleY), signW, signH);
+            } else {
+                ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+                ctx.fillStyle = "#57606f";
+                ctx.fillText("(Ký & đóng dấu số)", leftColX, sigY + Math.round(40 * scaleY));
 
-            // Huy hiệu xác thực điện tử SoftLab
-            const stampW = Math.round(170 * scale);
-            const stampH = Math.round(24 * scaleY);
-            ctx.fillStyle = "rgba(41, 128, 185, 0.12)";
-            ctx.fillRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
-            ctx.strokeStyle = "#2980b9";
-            ctx.lineWidth = Math.max(1, Math.round(1 * scale));
-            ctx.strokeRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
+                // Huy hiệu xác thực điện tử SoftLab fallback
+                const stampW = Math.round(170 * scale);
+                const stampH = Math.round(24 * scaleY);
+                ctx.fillStyle = "rgba(41, 128, 185, 0.12)";
+                ctx.fillRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
+                ctx.strokeStyle = "#2980b9";
+                ctx.lineWidth = Math.max(1, Math.round(1 * scale));
+                ctx.strokeRect(leftColX - stampW / 2, sigY + Math.round(52 * scaleY), stampW, stampH);
 
-            ctx.font = `bold ${Math.round(10.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#2980b9";
-            ctx.fillText("✓ SOFTLAB CYBERSEC VERIFIED", leftColX, sigY + Math.round(68 * scaleY));
+                ctx.font = `bold ${Math.round(10.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+                ctx.fillStyle = "#2980b9";
+                ctx.fillText("✓ SOFTLAB CYBERSEC VERIFIED", leftColX, sigY + Math.round(68 * scaleY));
+            }
 
-            ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#0c2461";
-            ctx.fillText("Ban An Toàn Thông Tin SoftLab", leftColX, sigY + Math.round(100 * scaleY));
+            // ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            // ctx.fillStyle = "#0c2461";
+            // ctx.fillText("Ban An Toàn Thông Tin SoftLab", leftColX, sigY + Math.round(102 * scaleY));
 
             // Con dấu đỏ chứng nhận danh dự (Official Red Seal) ở chính giữa
             this._drawOfficialRedSeal(ctx, w / 2, sigY + Math.round(56 * scaleY), scale);

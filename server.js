@@ -200,6 +200,11 @@ function saveGameConfig(cfg) {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Favicon chính thức của game: Logo THCS Nguyễn Bỉnh Khiêm
+app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'images', 'logo_nbk.png'));
+});
+
 // Định tuyến đường dẫn ngắn cho điện thoại
 app.get('/controller', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'controller.html'));
