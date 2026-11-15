@@ -5,7 +5,7 @@
 
 #define MyAppName "Vệ Binh Mật Khẩu"
 #define MyAppEnglishName "CyberSec Password Guardian"
-#define MyAppVersion "2.5.6"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB × Peter Tuan Anh"
 #define MyAppURL "https://github.com/petertuananh/CyberSecGame"
 #define MyAppExeName "CyberSecGame.exe"

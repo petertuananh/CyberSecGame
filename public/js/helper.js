@@ -542,7 +542,7 @@
             btnGrantAdminPerms.onclick = async () => {
                 btnGrantAdminPerms.disabled = true;
                 btnGrantAdminPerms.innerText = "⏳ Đang gửi lệnh UAC...";
-                showToast("🛡️ Đang kích hoạt hộp thoại Windows UAC... Hãy bấm 'Yes' trên màn hình!", false, 5000);
+                showToast("🛡️ Đang kích hoạt hộp thoại Quản trị viên (UAC / macOS)... Hãy bấm 'Yes' hoặc nhập mật khẩu trên màn hình!", false, 5000);
                 
                 try {
                     const res = await fetch("/api/admin/grant-permissions", { method: "POST" });
@@ -865,7 +865,7 @@
             btnApply.disabled = true;
             btnApply.innerText = "⏳ ĐANG XIN QUYỀN ADMIN...";
         }
-        showToast("🛡️ Đang mở hộp thoại Windows UAC... Hãy bấm 'Yes' (Đồng ý) trên màn hình!", false, 5000);
+        showToast("🛡️ Đang mở hộp thoại Quản trị viên (UAC / macOS)... Hãy bấm 'Yes' hoặc nhập mật khẩu trên màn hình!", false, 5000);
 
         try {
             const res = await fetch("/api/update/apply", {

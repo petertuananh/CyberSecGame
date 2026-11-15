@@ -44,7 +44,7 @@ class TunnelManager extends EventEmitter {
         this._isDownloadingCf = false;
     }
 
-    // Phát hiện IP mạng Wi-Fi/Ethernet nội bộ (ưu tiên Wi-Fi/Ethernet thật, bỏ qua adapter ảo)
+    // Phát hiện IP mạng Wi-Fi/Ethernet nội bộ (ưu tiên Wi-Fi/Ethernet thật, hỗ trợ cả Windows và macOS en0/en1)
     _detectLocalIp() {
         const interfaces = os.networkInterfaces();
         let wifiOrEthIp = null;
@@ -59,16 +59,22 @@ class TunnelManager extends EventEmitter {
                               lowerName.includes('loopback') ||
                               lowerName.includes('wt0') ||
                               lowerName.includes('tap') ||
-                              lowerName.includes('tun');
+                              lowerName.includes('tun') ||
+                              lowerName.includes('bridge') ||
+                              lowerName.includes('p2p') ||
+                              lowerName.includes('awdl');
 
             for (const iface of interfaces[name]) {
                 if (iface.family === 'IPv4' && !iface.internal) {
                     if (isVirtual) continue;
 
+                    // Nhận diện Wi-Fi/Ethernet trên cả Windows (Wi-Fi, Ethernet, LAN) và macOS/Linux (en0, en1, eth0, wlan0)
                     const isWifiOrEth = lowerName.includes('wi') || 
                                        lowerName.includes('wlan') || 
                                        lowerName.includes('ethernet') || 
-                                       lowerName.includes('lan');
+                                       lowerName.includes('lan') ||
+                                       lowerName.startsWith('en') ||
+                                       lowerName.startsWith('eth');
 
                     if (isWifiOrEth && !wifiOrEthIp) {
                         wifiOrEthIp = iface.address;
@@ -106,17 +112,30 @@ class TunnelManager extends EventEmitter {
     }
 
     _getCloudflaredPath() {
-        const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Local') : '');
+        const isWin = process.platform === 'win32';
+        const binName = isWin ? 'cloudflared.exe' : 'cloudflared';
+        const homeDir = os.homedir();
+
+        let appDataBin = '';
+        if (isWin) {
+            const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Local') : '');
+            appDataBin = path.join(localAppData, 'CyberSecGame', 'bin', binName);
+        } else {
+            appDataBin = path.join(homeDir, 'Library', 'Application Support', 'CyberSecGame', 'bin', binName);
+        }
+
         const candidates = [
-            path.join(localAppData, 'CyberSecGame', 'bin', 'cloudflared.exe'),
-            path.join(__dirname, 'bin', 'cloudflared.exe'),
-            'cloudflared.exe',
+            appDataBin,
+            path.join(__dirname, 'bin', binName),
+            '/opt/homebrew/bin/cloudflared', // macOS Apple Silicon (Homebrew)
+            '/usr/local/bin/cloudflared',     // macOS Intel / Linux (Homebrew/apt)
+            binName,
             'cloudflared'
         ];
 
         for (const candidate of candidates) {
             try {
-                if (fs.existsSync(candidate)) return candidate;
+                if (candidate && fs.existsSync(candidate)) return candidate;
             } catch (e) {}
         }
         return null;
@@ -126,10 +145,23 @@ class TunnelManager extends EventEmitter {
         if (this._isDownloadingCf) return;
         this._isDownloadingCf = true;
 
-        const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Local') : os.tmpdir());
-        const binDir = path.join(localAppData, 'CyberSecGame', 'bin');
-        const targetPath = path.join(binDir, 'cloudflared.exe');
+        const isWin = process.platform === 'win32';
+        const isMac = process.platform === 'darwin';
+        const isArm = process.arch === 'arm64';
+        const binName = isWin ? 'cloudflared.exe' : 'cloudflared';
+        const homeDir = os.homedir();
 
+        let binDir = '';
+        if (isWin) {
+            const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Local') : os.tmpdir());
+            binDir = path.join(localAppData, 'CyberSecGame', 'bin');
+        } else if (isMac) {
+            binDir = path.join(homeDir, 'Library', 'Application Support', 'CyberSecGame', 'bin');
+        } else {
+            binDir = path.join(homeDir, '.cybersec', 'bin');
+        }
+
+        const targetPath = path.join(binDir, binName);
         if (fs.existsSync(targetPath)) {
             this._isDownloadingCf = false;
             return;
@@ -140,14 +172,31 @@ class TunnelManager extends EventEmitter {
                 if (!fs.existsSync(binDir)) {
                     fs.mkdirSync(binDir, { recursive: true });
                 }
-                console.log('[TunnelManager] ⬇️ Đang tải Cloudflare Quick Tunnel (cloudflared) ngầm để tối ưu kết nối...');
-                const downloadUrl = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe';
+                console.log(`[TunnelManager] ⬇️ Đang tải Cloudflare Quick Tunnel (${process.platform}-${process.arch}) ngầm để tối ưu kết nối...`);
+                
+                let downloadUrl = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe';
+                if (isMac) {
+                    downloadUrl = isArm
+                        ? 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64'
+                        : 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64';
+                } else if (!isWin) {
+                    downloadUrl = isArm
+                        ? 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64'
+                        : 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64';
+                }
+
                 const res = await fetch(downloadUrl);
                 if (res.ok) {
                     const buf = await res.arrayBuffer();
                     const tmpFile = targetPath + '.tmp';
                     fs.writeFileSync(tmpFile, Buffer.from(buf));
+                    if (!isWin) {
+                        try { fs.chmodSync(tmpFile, 0o755); } catch (e) {}
+                    }
                     fs.renameSync(tmpFile, targetPath);
+                    if (!isWin) {
+                        try { fs.chmodSync(targetPath, 0o755); } catch (e) {}
+                    }
                     console.log('[TunnelManager] ⚡ Đã tải xong Cloudflare Quick Tunnel! Sẵn sàng cho lần khởi chạy tiếp theo.');
                 }
             } catch (err) {

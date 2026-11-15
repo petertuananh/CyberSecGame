@@ -6,9 +6,10 @@
  * - Xử lý trường hợp lỗi không mở được cửa sổ riêng -> Hỏi người dùng mở trên trình duyệt
  */
 
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 
 // Đảm bảo chỉ chạy duy nhất 1 phiên bản của ứng dụng
 const gotTheLock = app.requestSingleInstanceLock();
@@ -105,7 +106,18 @@ function createGameWindow() {
     isWindowOpening = true;
 
     try {
-        const iconPath = path.join(__dirname, 'icon.ico');
+        let iconPath = path.join(__dirname, 'icon.ico');
+        if (process.platform === 'darwin') {
+            const icnsPath = path.join(__dirname, 'icon.icns');
+            const pngPath = path.join(__dirname, 'icon.png');
+            if (fs.existsSync(icnsPath)) iconPath = icnsPath;
+            else if (fs.existsSync(pngPath)) iconPath = pngPath;
+
+            if (app.dock && fs.existsSync(pngPath)) {
+                try { app.dock.setIcon(pngPath); } catch (e) {}
+            }
+        }
+
         mainWindow = new BrowserWindow({
             width: 1360,
             height: 840,
@@ -115,6 +127,7 @@ function createGameWindow() {
             icon: iconPath,
             backgroundColor: '#090714',
             autoHideMenuBar: true,
+            titleBarStyle: process.platform === 'darwin' ? 'default' : undefined,
             show: false, // Ẩn cửa sổ cho đến khi sẵn sàng để tránh chớp giật
             webPreferences: {
                 nodeIntegration: false,
@@ -185,8 +198,68 @@ function handleWindowFailure(err) {
     }
 }
 
+// Thiết lập Menu chuẩn cho macOS (Cmd+C, Cmd+V, Cmd+Q, Fullscreen...)
+function setupApplicationMenu() {
+    if (process.platform === 'darwin') {
+        const template = [
+            {
+                label: 'Vệ Binh Mật Khẩu',
+                submenu: [
+                    { role: 'about', label: 'Về Vệ Binh Mật Khẩu' },
+                    { type: 'separator' },
+                    { role: 'services', label: 'Dịch vụ' },
+                    { type: 'separator' },
+                    { role: 'hide', label: 'Ẩn Vệ Binh Mật Khẩu' },
+                    { role: 'hideOthers', label: 'Ẩn các ứng dụng khác' },
+                    { role: 'unhide', label: 'Hiện tất cả' },
+                    { type: 'separator' },
+                    { role: 'quit', label: 'Thoát' }
+                ]
+            },
+            {
+                label: 'Chỉnh sửa',
+                submenu: [
+                    { role: 'undo', label: 'Hoàn tác' },
+                    { role: 'redo', label: 'Làm lại' },
+                    { type: 'separator' },
+                    { role: 'cut', label: 'Cắt' },
+                    { role: 'copy', label: 'Sao chép' },
+                    { role: 'paste', label: 'Dán' },
+                    { role: 'selectAll', label: 'Chọn tất cả' }
+                ]
+            },
+            {
+                label: 'Hiển thị',
+                submenu: [
+                    { role: 'reload', label: 'Tải lại trang' },
+                    { role: 'forceReload', label: 'Tải lại bắt buộc' },
+                    { role: 'toggleDevTools', label: 'Công cụ phát triển (DevTools)' },
+                    { type: 'separator' },
+                    { role: 'resetZoom', label: 'Kích thước mặc định' },
+                    { role: 'zoomIn', label: 'Phóng to' },
+                    { role: 'zoomOut', label: 'Thu nhỏ' },
+                    { type: 'separator' },
+                    { role: 'togglefullscreen', label: 'Bật/Tắt Toàn màn hình' }
+                ]
+            },
+            {
+                label: 'Cửa sổ',
+                submenu: [
+                    { role: 'minimize', label: 'Thu nhỏ' },
+                    { role: 'zoom', label: 'Phóng đại' },
+                    { type: 'separator' },
+                    { role: 'front', label: 'Đưa lên phía trước' }
+                ]
+            }
+        ];
+        Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    }
+}
+
 // Vòng đời ứng dụng Electron
 app.whenReady().then(() => {
+    setupApplicationMenu();
+
     ensureServerRunning(() => {
         createGameWindow();
     });
@@ -199,7 +272,5 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    app.quit();
 });

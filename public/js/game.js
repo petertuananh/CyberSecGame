@@ -1071,7 +1071,7 @@ class CyberSecGame {
             btnApply.disabled = true;
             btnApply.innerText = "⏳ ĐANG XIN QUYỀN ADMIN...";
         }
-        this._showToast("🛡️ Đang mở hộp thoại Windows UAC... Hãy bấm 'Yes' (Đồng ý) trên màn hình!", "shield", 5000);
+        this._showToast("🛡️ Đang mở hộp thoại Quản trị viên (UAC / macOS)... Hãy bấm 'Yes' hoặc nhập mật khẩu trên màn hình!", "shield", 5000);
 
         try {
             const res = await fetch("/api/update/apply", {

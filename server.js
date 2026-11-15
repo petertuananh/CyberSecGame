@@ -13,12 +13,21 @@ const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const { Readable } = require('stream');
 const { WebSocketServer } = require('ws');
-const { SerialPort } = require('serialport');
-const { ReadlineParser } = require('@serialport/parser-readline');
+let SerialPort = null;
+let ReadlineParser = null;
+try {
+    const sp = require('serialport');
+    SerialPort = sp.SerialPort;
+    const rp = require('@serialport/parser-readline');
+    ReadlineParser = rp.ReadlineParser;
+} catch (e) {
+    console.warn('[SerialPort] Native bindings chưa có hoặc không khả dụng trên nền tảng này:', e.message);
+    console.log('[SerialPort] 💡 Game vẫn hoạt động trọn vẹn 100% bằng Bàn phím & Điện thoại thông minh!');
+}
 const TunnelManager = require('./tunnel_manager');
 
 // Lấy phiên bản phần mềm hiện tại từ package.json
-let CURRENT_VERSION = '2.5.6';
+let CURRENT_VERSION = '3.0.0';
 try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     if (pkg && pkg.version) CURRENT_VERSION = pkg.version;
@@ -396,17 +405,14 @@ app.get('/api/admin/check-permissions', (req, res) => {
     }
 });
 
-// API Cấp quyền ghi thư mục qua UAC của Windows
+// API Cấp quyền ghi thư mục qua UAC của Windows hoặc Administrator Privileges của macOS
 app.post('/api/admin/grant-permissions', (req, res) => {
-    if (process.platform !== 'win32') {
-        return res.json({ success: true, message: 'Hệ thống không phải Windows, không cần cấp quyền qua UAC.' });
-    }
-
     try {
-        console.log('[Admin] 🛡️ Đang gửi lệnh cấp quyền ghi thư mục qua hộp thoại Windows UAC...');
-        const os = require('os');
-        const batPath = path.join(os.tmpdir(), 'cybersec_grant_permissions.bat');
-        const batContent = `@echo off\r
+        if (process.platform === 'win32') {
+            console.log('[Admin] 🛡️ Đang gửi lệnh cấp quyền ghi thư mục qua hộp thoại Windows UAC...');
+            const os = require('os');
+            const batPath = path.join(os.tmpdir(), 'cybersec_grant_permissions.bat');
+            const batContent = `@echo off\r
 chcp 65001 >nul\r
 title VE BINH MAT KHAU - CAP QUYEN GHI DU LIEU\r
 echo ========================================================\r
@@ -424,67 +430,112 @@ echo.\r
 echo [THANH CONG] Da mo khoa quyen ghi du lieu hoan tat!\r
 timeout /t 2 >nul\r
 `;
-        fs.writeFileSync(batPath, batContent, 'utf8');
+            fs.writeFileSync(batPath, batContent, 'utf8');
 
-        // Lệnh PowerShell chạy với -Verb RunAs kích hoạt hộp thoại UAC chuẩn của Windows
-        const elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${batPath}' -ArgumentList '\\"${DATA_DIR}\\"', '\\"${CONFIG_FILE}\\"' -Verb RunAs"`;
-
-        exec(elevateCmd, (error) => {
-            if (error) {
-                console.warn('[Admin] Hộp thoại UAC bị từ chối hoặc gặp lỗi:', error.message);
-                return res.status(400).json({
-                    success: false,
-                    error: 'Hộp thoại xác nhận Administrator bị từ chối hoặc đã đóng: ' + error.message
+            const elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${batPath}' -ArgumentList '\\"${DATA_DIR}\\"', '\\"${CONFIG_FILE}\\"' -Verb RunAs"`;
+            exec(elevateCmd, (error) => {
+                if (error) {
+                    console.warn('[Admin] Hộp thoại UAC bị từ chối hoặc gặp lỗi:', error.message);
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Hộp thoại xác nhận Administrator bị từ chối hoặc đã đóng: ' + error.message
+                    });
+                }
+                console.log('[Admin] ✅ Đã kích hoạt lệnh phân quyền Windows Admin thành công!');
+                res.json({
+                    success: true,
+                    message: 'Đã gửi yêu cầu cấp quyền qua UAC! Vui lòng bấm "Yes" (Đồng ý) trên màn hình để mở khóa quyền ghi.'
                 });
-            }
-            console.log('[Admin] ✅ Đã kích hoạt lệnh phân quyền Admin thành công!');
-            res.json({
-                success: true,
-                message: 'Đã gửi yêu cầu cấp quyền qua UAC! Vui lòng bấm "Yes" (Đồng ý) trên màn hình để mở khóa quyền ghi.'
             });
-        });
+        } else if (process.platform === 'darwin') {
+            console.log('[Admin] 🍎 Đang yêu cầu cấp quyền ghi thư mục dữ liệu qua macOS Administrator Privileges...');
+            const macCmd = `osascript -e 'do shell script "mkdir -p \\"${DATA_DIR}\\" && chmod -R ugo+rw \\"${DATA_DIR}\\"" with administrator privileges'`;
+            exec(macCmd, (error) => {
+                if (error) {
+                    console.warn('[Admin] macOS Administrator bị từ chối:', error.message);
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Xác nhận Administrator bị từ chối: ' + error.message
+                    });
+                }
+                console.log('[Admin] ✅ Đã cấp toàn quyền ghi thư mục dữ liệu trên macOS thành công!');
+                res.json({
+                    success: true,
+                    message: 'Đã cấp quyền ghi dữ liệu Administrator trên macOS thành công!'
+                });
+            });
+        } else {
+            // Linux / Unix
+            const linuxCmd = `chmod -R ugo+rw "${DATA_DIR}"`;
+            exec(linuxCmd, (error) => {
+                res.json({
+                    success: !error,
+                    message: error ? error.message : 'Đã thực hiện lệnh chmod quyền ghi dữ liệu.'
+                });
+            });
+        }
     } catch (err) {
         console.error('[Admin] Lỗi thực thi lệnh cấp quyền:', err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// API Khởi chạy lại Game với quyền Administrator
+// API Khởi chạy lại Game với quyền Administrator (Windows UAC & macOS)
 app.post('/api/admin/relaunch-as-admin', (req, res) => {
-    if (process.platform !== 'win32') {
-        return res.json({ success: true, message: 'Chức năng chỉ áp dụng trên Windows.' });
-    }
-
     try {
-        const isExe = process.execPath.toLowerCase().endsWith('cybersecgame.exe');
-        console.log(`[Admin] 🔄 Đang khởi chạy lại ứng dụng với quyền Administrator: ${process.execPath} (isExe: ${isExe})`);
+        if (process.platform === 'win32') {
+            const isExe = process.execPath.toLowerCase().endsWith('cybersecgame.exe');
+            console.log(`[Admin] 🔄 Đang khởi chạy lại ứng dụng với quyền Administrator (Windows): ${process.execPath}`);
 
-        let elevateCmd = '';
-        if (isExe) {
-            elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -Verb RunAs"`;
-        } else {
-            const scriptPath = process.argv[1] || path.join(__dirname, 'server.js');
-            elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -ArgumentList '\\"${scriptPath}\\"' -Verb RunAs"`;
-        }
-
-        exec(elevateCmd, (error) => {
-            if (error) {
-                console.warn('[Admin] Lỗi khởi chạy lại Admin:', error.message);
-                return res.status(400).json({
-                    success: false,
-                    error: 'Không thể khởi chạy với quyền Admin: ' + error.message
-                });
+            let elevateCmd = '';
+            if (isExe) {
+                elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -Verb RunAs"`;
+            } else {
+                const scriptPath = process.argv[1] || path.join(__dirname, 'server.js');
+                elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -ArgumentList '\\"${scriptPath}\\"' -Verb RunAs"`;
             }
-        });
 
-        res.json({
-            success: true,
-            message: 'Đang khởi chạy phiên bản Administrator mới...'
-        });
+            exec(elevateCmd, (error) => {
+                if (error) {
+                    console.warn('[Admin] Lỗi khởi chạy lại Admin:', error.message);
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Không thể khởi chạy với quyền Admin: ' + error.message
+                    });
+                }
+            });
 
-        setTimeout(() => {
-            process.exit(0);
-        }, 1500);
+            res.json({
+                success: true,
+                message: 'Đang khởi chạy phiên bản Administrator mới...'
+            });
+
+            setTimeout(() => {
+                process.exit(0);
+            }, 1500);
+        } else if (process.platform === 'darwin') {
+            console.log('[Admin] 🍎 Đang khởi chạy lại ứng dụng trên macOS với quyền Administrator...');
+            const appMatch = process.execPath.match(/^(.+\.app)/);
+            const appTarget = appMatch ? appMatch[1] : process.execPath;
+            const macRelaunchCmd = `osascript -e 'do shell script "open -n \\"${appTarget}\\"" with administrator privileges'`;
+            
+            exec(macRelaunchCmd, (error) => {
+                if (error) {
+                    console.warn('[Admin] Lỗi khởi chạy lại Administrator macOS:', error.message);
+                }
+            });
+
+            res.json({
+                success: true,
+                message: 'Đang khởi chạy phiên bản Administrator mới trên macOS...'
+            });
+
+            setTimeout(() => {
+                process.exit(0);
+            }, 1500);
+        } else {
+            res.json({ success: true, message: 'Nền tảng này không yêu cầu relaunch as admin.' });
+        }
     } catch (err) {
         console.error('[Admin] Lỗi thực thi relaunch-as-admin:', err);
         res.status(500).json({ error: err.message });
@@ -522,10 +573,24 @@ app.get('/api/check-update', async (req, res) => {
                     source = 'github_release';
 
                     if (Array.isArray(releaseData.assets)) {
-                        const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
-                        if (setupAsset && setupAsset.browser_download_url) {
-                            directSetupUrl = setupAsset.browser_download_url;
+                        const isMac = process.platform === 'darwin';
+                        const isArm = process.arch === 'arm64';
+
+                        if (isMac) {
+                            const macDmg = releaseData.assets.find(a => a.name && a.name.endsWith('.dmg'));
+                            const macZip = releaseData.assets.find(a => a.name && a.name.endsWith('.zip') && (isArm ? a.name.includes('arm64') : a.name.includes('x64')));
+                            const anyMacZip = releaseData.assets.find(a => a.name && a.name.endsWith('.zip') && (a.name.includes('mac') || a.name.includes('darwin')));
+                            const chosenMac = macDmg || macZip || anyMacZip;
+                            if (chosenMac && chosenMac.browser_download_url) {
+                                directSetupUrl = chosenMac.browser_download_url;
+                            }
+                        } else {
+                            const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
+                            if (setupAsset && setupAsset.browser_download_url) {
+                                directSetupUrl = setupAsset.browser_download_url;
+                            }
                         }
+
                         const zipAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.zip'));
                         if (zipAsset && zipAsset.browser_download_url) {
                             directZipUrl = zipAsset.browser_download_url;
@@ -573,7 +638,9 @@ app.get('/api/check-update', async (req, res) => {
             directSetupUrl: directSetupUrl || `https://github.com/${repo}/releases`,
             directZipUrl: directZipUrl || `https://github.com/${repo}/archive/refs/heads/main.zip`,
             repoUrl: `https://github.com/${repo}`,
-            source
+            source,
+            platform: process.platform,
+            arch: process.arch
         });
     } catch (err) {
         res.status(500).json({
@@ -589,6 +656,8 @@ app.get('/api/version', (req, res) => {
     res.json({
         version: CURRENT_VERSION,
         name: 'CyberSec Password Guardian',
+        platform: process.platform,
+        arch: process.arch,
         author: 'Peter Tuan Anh',
         company: 'CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB',
         mst: '3604049476',
@@ -890,6 +959,19 @@ app.post('/api/update/apply', (req, res) => {
         updateManager.state = 'installing';
         broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
 
+        if (updateManager.fileType === 'dmg') {
+            // macOS Disk Image (.dmg)
+            if (process.platform === 'darwin') {
+                console.log(`[AutoUpdate] 🍎 Đang mở tệp cài đặt macOS (.dmg) trong Finder: ${updateManager.filePath}`);
+                exec(`open "${updateManager.filePath}"`);
+                res.json({
+                    success: true,
+                    message: 'Đã mở gói cài đặt macOS (.dmg)! Vui lòng kéo biểu tượng CyberSecGame vào thư mục Applications.'
+                });
+                return;
+            }
+        }
+
         if (updateManager.fileType === 'exe') {
             // Chạy tệp cài đặt Inno Setup đã tải về
             // Luôn ưu tiên dùng -Verb RunAs trên Windows để mở hộp thoại UAC đảm bảo toàn quyền ghi vào Program Files / ổ C
@@ -933,7 +1015,7 @@ app.post('/api/update/apply', (req, res) => {
                 process.exit(0);
             }, 2500);
         } else {
-            // Cập nhật từ file ZIP (mã nguồn/assets mới nhất từ GitHub)
+            // Cập nhật từ file ZIP (mã nguồn/assets mới nhất từ GitHub hoặc gói phân phối macOS/Windows)
             const workDir = getUpdateWorkingDir();
             const extractDir = path.join(workDir, 'extracted');
             if (fs.existsSync(extractDir)) {
@@ -943,7 +1025,14 @@ app.post('/api/update/apply', (req, res) => {
 
             const safeZip = updateManager.filePath.replace(/'/g, "''");
             const safeExtract = extractDir.replace(/'/g, "''");
-            const extractCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '${safeZip}' -DestinationPath '${safeExtract}' -Force"`;
+            
+            let extractCmd = '';
+            if (process.platform === 'win32') {
+                extractCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '${safeZip}' -DestinationPath '${safeExtract}' -Force"`;
+            } else {
+                extractCmd = `unzip -q -o "${safeZip}" -d "${safeExtract}"`;
+            }
+
             exec(extractCmd, (err) => {
                 if (err) {
                     console.error('[AutoUpdate] ❌ Lỗi giải nén ZIP:', err);
@@ -954,7 +1043,7 @@ app.post('/api/update/apply', (req, res) => {
                 }
 
                 try {
-                    // Tìm thư mục con nếu giải nén ra CyberSecGame-main
+                    // Tìm thư mục con nếu giải nén ra CyberSecGame-main hoặc CyberSecGame-darwin...
                     let rootSource = extractDir;
                     const subEntries = fs.readdirSync(extractDir);
                     if (subEntries.length === 1 && fs.statSync(path.join(extractDir, subEntries[0])).isDirectory()) {
@@ -977,31 +1066,41 @@ app.post('/api/update/apply', (req, res) => {
                             }
                         });
                     } catch (directErr) {
-                        if (isPermissionError(directErr) && process.platform === 'win32') {
+                        if (isPermissionError(directErr)) {
                             needsAdminCopy = true;
                         } else {
                             throw directErr;
                         }
                     }
 
-                    // Nếu bị chặn quyền ghi (EACCES), kích hoạt lệnh sao chép bằng Administrator qua UAC
+                    // Nếu bị chặn quyền ghi, kích hoạt lệnh sao chép bằng Administrator qua UAC (Windows) hoặc osascript (macOS)
                     if (needsAdminCopy) {
-                        console.log('[AutoUpdate] 🛡️ Thiếu quyền ghi Program Files, kích hoạt quyền Admin qua UAC để chép file...');
-                        const os = require('os');
-                        const copyBatPath = path.join(os.tmpdir(), 'cybersec_apply_zip_update.bat');
-                        const copyBatContent = `@echo off\r
+                        if (process.platform === 'win32') {
+                            console.log('[AutoUpdate] 🛡️ Thiếu quyền ghi Program Files, kích hoạt quyền Admin qua UAC để chép file...');
+                            const os = require('os');
+                            const copyBatPath = path.join(os.tmpdir(), 'cybersec_apply_zip_update.bat');
+                            const copyBatContent = `@echo off\r
 chcp 65001 >nul\r
 echo [Ve Binh Mat Khau] Dang sao chep du lieu ban cap nhat moi voi quyen Admin...\r
 robocopy "${rootSource}" "${__dirname}" /E /XF *.exe /XD data temp_update /R:1 /W:1 >nul\r
 timeout /t 1 >nul\r
 `;
-                        fs.writeFileSync(copyBatPath, copyBatContent, 'utf8');
-                        const elevateCopyCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${copyBatPath}' -Verb RunAs -Wait"`;
-                        exec(elevateCopyCmd, (copyAdminErr) => {
-                            if (copyAdminErr) {
-                                console.error('[AutoUpdate] Lỗi sao chép tệp bằng quyền Admin:', copyAdminErr.message);
-                            }
-                        });
+                            fs.writeFileSync(copyBatPath, copyBatContent, 'utf8');
+                            const elevateCopyCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${copyBatPath}' -Verb RunAs -Wait"`;
+                            exec(elevateCopyCmd, (copyAdminErr) => {
+                                if (copyAdminErr) {
+                                    console.error('[AutoUpdate] Lỗi sao chép tệp bằng quyền Admin:', copyAdminErr.message);
+                                }
+                            });
+                        } else if (process.platform === 'darwin') {
+                            console.log('[AutoUpdate] 🍎 Cần quyền Administrator trên macOS để cập nhật dữ liệu...');
+                            const macCopyCmd = `osascript -e 'do shell script "rsync -av --exclude=data --exclude=temp_update \\"${rootSource}/\\" \\"${__dirname}/\\"" with administrator privileges'`;
+                            exec(macCopyCmd, (copyAdminErr) => {
+                                if (copyAdminErr) {
+                                    console.error('[AutoUpdate] Lỗi sao chép tệp Admin macOS:', copyAdminErr.message);
+                                }
+                            });
+                        }
                     }
 
                     console.log('[AutoUpdate] ✅ Đã sao chép tệp mới thành công!');
@@ -1015,14 +1114,25 @@ timeout /t 1 >nul\r
 
                     // Khởi động lại ứng dụng an toàn với độ trễ để tránh xung đột cổng
                     setTimeout(() => {
-                        const exePath = process.execPath;
-                        if (exePath.toLowerCase().endsWith('cybersecgame.exe')) {
-                            const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${exePath}'"`;
-                            exec(restartCmd);
+                        if (process.platform === 'win32') {
+                            const exePath = process.execPath;
+                            if (exePath.toLowerCase().endsWith('cybersecgame.exe')) {
+                                const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${exePath}'"`;
+                                exec(restartCmd);
+                            } else {
+                                const script = process.argv[1] || 'server.js';
+                                const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${process.argv[0]}' -ArgumentList '${script}'"`;
+                                exec(restartCmd);
+                            }
+                        } else if (process.platform === 'darwin') {
+                            const appMatch = process.execPath.match(/^(.+\.app)/);
+                            if (appMatch) {
+                                exec(`sleep 1.2 && open -n "${appMatch[1]}"`);
+                            } else {
+                                exec(`sleep 1.2 && open -n "${process.execPath}"`);
+                            }
                         } else {
-                            const script = process.argv[1] || 'server.js';
-                            const restartCmd = `powershell -NoProfile -Command "Start-Sleep -Milliseconds 1200; Start-Process -FilePath '${process.argv[0]}' -ArgumentList '${script}'"`;
-                            exec(restartCmd);
+                            exec(`sleep 1.2 && "${process.execPath}" &`);
                         }
                         process.exit(0);
                     }, 1200);
@@ -1054,6 +1164,16 @@ app.post('/api/update/open-folder', (req, res) => {
                 const dir = path.dirname(filePath);
                 exec(`explorer.exe "${dir}"`);
             }
+        } else if (process.platform === 'darwin') {
+            if (fs.existsSync(filePath)) {
+                exec(`open -R "${filePath}"`);
+            } else {
+                const dir = path.dirname(filePath);
+                exec(`open "${dir}"`);
+            }
+        } else {
+            const dir = fs.existsSync(filePath) && fs.statSync(filePath).isDirectory() ? filePath : path.dirname(filePath);
+            exec(`xdg-open "${dir}"`);
         }
         res.json({ success: true, message: 'Đã mở thư mục chứa tệp' });
     } catch (err) {
@@ -1170,9 +1290,13 @@ function handleSerialButton(rawLine) {
     }
 }
 
-// Hàm kết nối tới một cổng COM
+// Hàm kết nối tới một cổng Serial (COM trên Windows, /dev/tty.* trên macOS/Linux)
 function connectToPort(portPath, baudRate = 115200) {
     return new Promise((resolve, reject) => {
+        if (!SerialPort) {
+            return reject(new Error('Thư viện SerialPort chưa được nạp trên hệ thống này.'));
+        }
+
         if (currentSerialPort && currentSerialPort.isOpen) {
             currentSerialPort.close();
         }
@@ -1213,15 +1337,20 @@ function connectToPort(portPath, baudRate = 115200) {
     });
 }
 
-// Tự động tìm kiếm Arduino khi khởi động
+// Tự động tìm kiếm Arduino khi khởi động (Hỗ trợ cả Windows COM và macOS /dev/tty.usbmodem*)
 async function autoDetectArduino() {
+    if (!SerialPort) {
+        console.log("[SerialPort] Module phần cứng Serial không khả dụng. Game điều khiển bằng bàn phím & điện thoại.");
+        return;
+    }
+
     try {
         const ports = await SerialPort.list();
         console.log(`[SerialPort] Phát hiện ${ports.length} cổng:`, ports.map(p => p.path));
 
         const arduinoPort = ports.find(p => {
-            const str = `${p.manufacturer || ''} ${p.friendlyName || ''} ${p.vendorId || ''}`.toLowerCase();
-            return str.includes('arduino') || str.includes('ch340') || str.includes('ftdi') || str.includes('usb');
+            const str = `${p.manufacturer || ''} ${p.friendlyName || ''} ${p.vendorId || ''} ${p.path || ''}`.toLowerCase();
+            return str.includes('arduino') || str.includes('ch340') || str.includes('ftdi') || str.includes('usb') || str.includes('modem') || str.includes('wch');
         }) || ports[0];
 
         if (arduinoPort) {
@@ -1240,9 +1369,12 @@ async function autoDetectArduino() {
     }
 }
 
-// API: Lấy danh sách cổng COM
+// API: Lấy danh sách cổng COM / USB Serial
 app.get('/api/ports', async (req, res) => {
     try {
+        if (!SerialPort) {
+            return res.json({ ports: [], connectedPort: null, note: 'SerialPort không khả dụng' });
+        }
         const ports = await SerialPort.list();
         res.json({
             ports: ports.map(p => ({
