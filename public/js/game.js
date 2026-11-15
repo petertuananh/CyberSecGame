@@ -23,7 +23,15 @@ class CyberSecGame {
         this.stageQuestions = [];
         this.currentQIndex = 0;
         this.stageCorrectCount = 0;
+        this.stageWrongCount = 0;
+        this.totalWrongCount = 0;
+        this.stageQuestionsAnswered = 0;
         this.roses = 0; // Số bông hồng tích lũy
+
+        // Xóa sạch huy hiệu thành tựu session cũ khi tải game
+        if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+            window.AchievementManager.resetAll();
+        }
 
         // Hành trình phiêu lưu (Traveling between worlds)
         this.travelFrom = 1;
@@ -1192,7 +1200,7 @@ class CyberSecGame {
         }
 
         if (willStart) {
-            this.startStory();
+            this.resetPlayerDataAndRestart("STORY");
         } else {
             this._showToast(`⚔️ Tên người chơi: "${cleaned}"`, "sword");
         }
@@ -1442,7 +1450,10 @@ class CyberSecGame {
             } else if (this.state === "VICTORY") {
                 if (cy >= 495 && cy <= 595) isPointer = true;
             } else if (this.state === "ACHIEVEMENTS") {
-                if (cy >= 645 && cy <= 705) isPointer = true;
+                const btnY = this.canvas.height - 68;
+                if (cy >= btnY - 10 && cy <= btnY + 60) isPointer = true;
+            } else if (this.state === "GAME_OVER" || this.state === "STAGE_FAILED") {
+                isPointer = true;
             }
             this.canvas.style.cursor = isPointer ? "pointer" : "default";
         });
@@ -1510,24 +1521,24 @@ class CyberSecGame {
                     } else if (cx < w / 2 - 130) {
                         if (window.CertificateGenerator) {
                             window.CertificateGenerator.open({
+                                playerName: this.playerName || "Hiệp Sĩ Không Gian Mạng",
                                 totalRoses: this.roses,
                                 totalDuration: this.lastTotalDuration || 140,
                                 bossDuration: this.lastBossDuration || 16
                             });
                         }
                     } else {
-                        this.stage = 1;
-                        this.roses = 0;
-                        this.gameStartTime = Date.now();
-                        this.startStage(1);
+                        this.resetPlayerDataAndRestart("STAGE");
                     }
                 }
             } else if (this.state === "ACHIEVEMENTS") {
-                if (cy >= 645 && cy <= 705) {
+                const btnY = this.canvas.height - 68;
+                if (cy >= btnY - 10 && cy <= btnY + 60) {
                     if (cx >= w * 0.05 && cx <= w * 0.05 + 340) {
                         // Nút 1: Cấp Giấy Chứng Nhận
                         if (window.CertificateGenerator) {
                             window.CertificateGenerator.open({
+                                playerName: this.playerName || "Hiệp Sĩ Không Gian Mạng",
                                 totalRoses: this.roses,
                                 totalDuration: this.lastTotalDuration || 140,
                                 bossDuration: this.lastBossDuration || 16
@@ -1541,10 +1552,7 @@ class CyberSecGame {
                         this.state = "START";
                     } else if (cx >= w * 0.725 && cx <= w * 0.725 + 240) {
                         // Nút 4: Chơi lại săn thành tựu
-                        this.stage = 1;
-                        this.roses = 0;
-                        this.gameStartTime = Date.now();
-                        this.startStage(1);
+                        this.resetPlayerDataAndRestart("STAGE");
                     }
                 } else {
                     // Click ngẫu nhiên trên màn hình thành tựu tỏa bụi sao
@@ -1552,6 +1560,10 @@ class CyberSecGame {
                         window.CursorFX.burst(cx, cy, 25);
                     }
                 }
+            } else if (this.state === "GAME_OVER") {
+                this.resetPlayerDataAndRestart("STAGE");
+            } else if (this.state === "STAGE_FAILED") {
+                this.startStage(this.stage);
             }
         });
 
@@ -1697,16 +1709,14 @@ class CyberSecGame {
                     // Mở giấy chứng nhận
                     if (window.CertificateGenerator) {
                         window.CertificateGenerator.open({
+                            playerName: this.playerName || "Hiệp Sĩ Không Gian Mạng",
                             totalRoses: this.roses,
                             totalDuration: this.lastTotalDuration || 140,
                             bossDuration: this.lastBossDuration || 16
                         });
                     }
                 } else if (button === "A" || button === "R") {
-                    this.stage = 1;
-                    this.roses = 0;
-                    this.gameStartTime = Date.now();
-                    this.startStage(1);
+                    this.resetPlayerDataAndRestart("STAGE");
                 }
                 break;
 
@@ -1715,6 +1725,7 @@ class CyberSecGame {
                     // Mở Giấy Chứng Nhận
                     if (window.CertificateGenerator) {
                         window.CertificateGenerator.open({
+                            playerName: this.playerName || "Hiệp Sĩ Không Gian Mạng",
                             totalRoses: this.roses,
                             totalDuration: this.lastTotalDuration || 140,
                             bossDuration: this.lastBossDuration || 16
@@ -1723,19 +1734,19 @@ class CyberSecGame {
                 } else if (button === "B" || button === "ESC" || button === "T") {
                     this.state = "START";
                 } else if (button === "A") {
-                    this.stage = 1;
-                    this.roses = 0;
-                    this.gameStartTime = Date.now();
-                    this.startStage(1);
+                    this.resetPlayerDataAndRestart("STAGE");
+                } else if (button === "R") {
+                    // Nhấn phím R trên màn hình thành tựu: Reset sạch toàn bộ danh hiệu
+                    if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+                        window.AchievementManager.resetAll();
+                        this._showToast("🔄 Đã xóa sạch toàn bộ danh hiệu thành tựu!", "star");
+                    }
                 }
                 break;
 
             case "GAME_OVER":
-                if (button === "ENTER" || button === "A") {
-                    this.stage = 1;
-                    this.roses = 0;
-                    this.gameStartTime = Date.now();
-                    this.startStage(1);
+                if (button === "ENTER" || button === "A" || button === "R") {
+                    this.resetPlayerDataAndRestart("STAGE");
                 } else if (button === "B" || button === "ESC" || button === "T") {
                     this.state = "START";
                 }
@@ -1816,7 +1827,73 @@ class CyberSecGame {
         ];
     }
 
-    startStory() {
+    resetPlayerDataAndRestart(targetState = "STAGE") {
+        console.log("[Game] 🔄 Đặt lại toàn bộ dữ liệu người chơi và bắt đầu lượt mới...");
+
+        // 1. Reset các biến tiến trình trò chơi
+        this.stage = 1;
+        this.roses = 0;
+        this.currentQIndex = 0;
+        this.stageCorrectCount = 0;
+        this.stageWrongCount = 0;
+        this.totalWrongCount = 0;
+        this.stageQuestionsAnswered = 0;
+        this.gameStartTime = Date.now();
+        this.lastTotalDuration = 0;
+        this.lastBossDuration = 0;
+        this.bossHP = this.bossMaxHP || 9;
+        this.bossTimer = 0;
+        this.jumpscareActive = false;
+        this.screenShake = 0;
+        this.currentCard = null;
+        this.cardRevealed = false;
+        this.diceValue = 1;
+        this.isDiceRolling = false;
+        this.fallProgress = 0;
+        this.travelProgress = 0;
+        this.storySlideIndex = 0;
+        this.storyCharProgress = 0;
+        this.storyTextDone = false;
+
+        // 2. Xóa sạch huy hiệu & thành tựu của lượt chơi trước (kể cả Loser)
+        if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+            window.AchievementManager.resetAll();
+        }
+
+        // 3. Đóng các modal nếu đang mở
+        if (window.CertificateGenerator && typeof window.CertificateGenerator.close === "function") {
+            window.CertificateGenerator.close();
+        }
+        this.closeLeaderboardModal();
+
+        // 4. Chuyển sang trạng thái mong muốn
+        if (targetState === "START") {
+            this.state = "START";
+        } else if (targetState === "STORY") {
+            this.startStory(false);
+        } else {
+            this.startStage(1);
+        }
+    }
+
+    startStory(shouldReset = true) {
+        if (shouldReset) {
+            this.stage = 1;
+            this.roses = 0;
+            this.currentQIndex = 0;
+            this.stageCorrectCount = 0;
+            this.stageWrongCount = 0;
+            this.totalWrongCount = 0;
+            this.stageQuestionsAnswered = 0;
+            this.lastTotalDuration = 0;
+            this.lastBossDuration = 0;
+            this.bossHP = this.bossMaxHP || 9;
+            this.bossTimer = 0;
+            if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+                window.AchievementManager.resetAll();
+            }
+        }
+
         if (this.config && Array.isArray(this.config.storySlides) && this.config.storySlides.length > 0) {
             this.storySlides = this.config.storySlides;
         }
@@ -1861,6 +1938,15 @@ class CyberSecGame {
 
         if (stageNum === 1) {
             this.gameStartTime = Date.now();
+            this.roses = 0;
+            this.totalWrongCount = 0;
+            this.stageCorrectCount = 0;
+            this.stageWrongCount = 0;
+            this.stageQuestionsAnswered = 0;
+            this.bossHP = this.bossMaxHP || 9;
+            if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+                window.AchievementManager.resetAll();
+            }
         }
 
         if (this.config && Array.isArray(this.config.sections)) {
@@ -3826,6 +3912,12 @@ class CyberSecGame {
         // 5. THANH NÚT HÀNH ĐỘNG DƯỚI CÙNG (BOTTOM ACTION CONTROLS - 4 NÚT)
         const btnY = h - 68;
         const pulse = Math.sin(performance.now() / 200) > 0;
+
+        // Dòng gợi ý thao tác phím tắt
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "italic 13.5px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("💡 Mẹo: Nhấn phím [R] để xóa sạch toàn bộ danh hiệu thành tựu  •  Nhấn [A] để Chơi lại từ đầu", w / 2, btnY - 11);
 
         // Nút 1: Cấp Giấy Chứng Nhận & Tải Về
         const b1X = w * 0.05;

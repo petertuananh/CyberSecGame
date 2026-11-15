@@ -230,6 +230,39 @@
             return false;
         }
 
+        resetAll() {
+            ACHIEVEMENTS_DEF.forEach(def => {
+                const item = this.data[def.id];
+                if (item) {
+                    item.unlocked = false;
+                    item.unlockedAt = null;
+                    item.record = null;
+                    item.meta = {};
+                }
+            });
+            this.toasts = [];
+            try {
+                localStorage.removeItem(this.storageKey);
+            } catch (e) {}
+            this._save();
+            console.log("[Achievements] 🔄 Đã xóa sạch toàn bộ danh hiệu thành tựu và reset về mặc định!");
+            return true;
+        }
+
+        resetAchievement(id) {
+            const item = this.data[id];
+            if (item) {
+                item.unlocked = false;
+                item.unlockedAt = null;
+                item.record = null;
+                item.meta = {};
+                this._save();
+                console.log(`[Achievements] 🔄 Đã xóa danh hiệu "${id}"!`);
+                return true;
+            }
+            return false;
+        }
+
         updateToasts(dt) {
             for (let i = this.toasts.length - 1; i >= 0; i--) {
                 const t = this.toasts[i];
