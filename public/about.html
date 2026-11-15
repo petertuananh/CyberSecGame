@@ -879,7 +879,7 @@
             <div class="hero-badge-row">
                 <span class="badge badge-free">🎁 MIỄN PHÍ 100% CHO GIÁO DỤC</span>
                 <span class="badge badge-edu">🛡️ PHI LỢI NHUẬN • AN TOÀN SỐ</span>
-                <span class="badge badge-version">v2.5 ARCADEPUNK</span>
+                <span id="btnAboutCheckUpdate" class="badge badge-version" style="cursor:pointer;" title="Nhấn để kiểm tra bản cập nhật mới từ GitHub">v2.5 ARCADEPUNK • 🔄 CHECK UPDATE</span>
             </div>
 
             <div class="hero-pixel-title">CYBER SECURITY ARCADE ADVENTURE</div>
@@ -1258,6 +1258,33 @@
             setTimeout(() => {
                 toast.style.display = 'none';
             }, 2500);
+        }
+
+        // Live check update trên trang About
+        const btnCheck = document.getElementById('btnAboutCheckUpdate');
+        if (btnCheck) {
+            btnCheck.addEventListener('click', async () => {
+                btnCheck.innerText = '⏳ ĐANG CHECK GITHUB...';
+                try {
+                    const res = await fetch('/api/check-update');
+                    const d = await res.json();
+                    if (d.hasUpdate) {
+                        btnCheck.innerText = `🚀 CÓ BẢN MỚI v${d.latestVersion}!`;
+                        btnCheck.style.background = 'rgba(230, 126, 34, 0.3)';
+                        btnCheck.style.borderColor = '#e67e22';
+                        showToast(`🚀 Đã có bản cập nhật mới v${d.latestVersion} trên GitHub!`);
+                        if (confirm(`Đã có bản cập nhật mới v${d.latestVersion} trên GitHub!\nBạn có muốn mở trang tải về ngay bây giờ không?`)) {
+                            window.open(d.downloadUrl || 'https://github.com/petertuananh/CyberSecGame/releases', '_blank');
+                        }
+                    } else {
+                        btnCheck.innerText = `✅ v${d.currentVersion} MỚI NHẤT`;
+                        showToast(`Bạn đang sử dụng phiên bản mới nhất v${d.currentVersion}!`);
+                    }
+                } catch (e) {
+                    btnCheck.innerText = 'v2.5 ARCADEPUNK';
+                    showToast('Lỗi kiểm tra cập nhật: ' + e.message);
+                }
+            });
         }
     </script>
 </body>

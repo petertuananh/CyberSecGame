@@ -416,6 +416,18 @@
                 return false;
             }
 
+            // PHÁT HIỆN LỖI PHÂN QUYỀN GHI Ổ C (403 PERMISSION DENIED)
+            if (res.status === 403 || result.isPermissionError) {
+                // Tự động sao lưu dữ liệu cấu hình vào LocalStorage để không bao giờ mất công sức
+                try {
+                    localStorage.setItem('cybersec_config_backup', JSON.stringify(currentConfig));
+                    localStorage.setItem('cybersec_config_backup_time', Date.now().toString());
+                } catch (errBackup) {}
+
+                openAdminPermissionModal(result, force, summary, targetId);
+                return false;
+            }
+
             if (!res.ok) throw new Error(result.error || "Lỗi lưu cấu hình");
 
             baseRevision = result.revision || (baseRevision + 1);
@@ -465,6 +477,144 @@
 
         modalConflict.classList.add("active");
     }
+
+    // ==========================================
+    // 2.1. XỬ LÝ LỖI THIẾU QUYỀN GHI Ổ C & XIN QUYỀN ADMIN
+    // ==========================================
+    const modalAdmin = document.getElementById("modalAdminPermission");
+    const adminErrorFilePath = document.getElementById("adminErrorFilePath");
+    const btnGrantAdminPerms = document.getElementById("btnGrantAdminPerms");
+    const btnRelaunchAdmin = document.getElementById("btnRelaunchAdmin");
+    const btnDownloadConfigEmergency = document.getElementById("btnDownloadConfigEmergency");
+
+    function openAdminPermissionModal(errorData, force, summary, targetId) {
+        if (!modalAdmin) {
+            alert("Lỗi thiếu quyền ghi vào ổ C! Hãy chạy game với quyền Quản trị viên (Run as administrator).");
+            return;
+        }
+        if (adminErrorFilePath && errorData && errorData.path) {
+            adminErrorFilePath.innerText = errorData.path;
+        }
+        modalAdmin.classList.add("active");
+
+        // Gắn sự kiện xin quyền UAC
+        if (btnGrantAdminPerms) {
+            btnGrantAdminPerms.onclick = async () => {
+                btnGrantAdminPerms.disabled = true;
+                btnGrantAdminPerms.innerText = "⏳ Đang gửi lệnh UAC...";
+                showToast("🛡️ Đang kích hoạt hộp thoại Windows UAC... Hãy bấm 'Yes' trên màn hình!", false);
+                try {
+                    const res = await fetch("/api/admin/grant-permissions", { method: "POST" });
+                    const d = await res.json();
+                    if (d.success) {
+                        showToast("✅ Đang chờ cấp quyền... Đang tự động lưu lại vào game!");
+                        setTimeout(async () => {
+                            btnGrantAdminPerms.disabled = false;
+                            btnGrantAdminPerms.innerText = "🛡️ CẤP QUYỀN ADMIN (UAC)";
+                            modalAdmin.classList.remove("active");
+                            await saveConfigToServer(force, summary, targetId);
+                        }, 2500);
+                    } else {
+                        throw new Error(d.error || "Không thể cấp quyền");
+                    }
+                } catch (err) {
+                    btnGrantAdminPerms.disabled = false;
+                    btnGrantAdminPerms.innerText = "🛡️ CẤP QUYỀN ADMIN (UAC)";
+                    showToast("❌ " + err.message, true);
+                }
+            };
+        }
+
+        // Gắn sự kiện chạy lại bằng quyền Admin
+        if (btnRelaunchAdmin) {
+            btnRelaunchAdmin.onclick = async () => {
+                if (!confirm("Game sẽ tự động đóng và khởi động lại với quyền Administrator. Bạn có muốn tiếp tục?")) return;
+                try {
+                    showToast("🔄 Đang khởi chạy lại ứng dụng bằng quyền Administrator...");
+                    await fetch("/api/admin/relaunch-as-admin", { method: "POST" });
+                } catch (e) {
+                    showToast("❌ Không thể chạy lại: " + e.message, true);
+                }
+            };
+        }
+
+        // Gắn sự kiện tải file JSON cấp cứu
+        if (btnDownloadConfigEmergency) {
+            btnDownloadConfigEmergency.onclick = () => {
+                exportJsonFile();
+                showToast("📥 Đã tải file cấu hình về máy tính an toàn!");
+            };
+        }
+    }
+
+    // ==========================================
+    // 2.2. KIỂM TRA CẬP NHẬT GITHUB TRÊN HELPER
+    // ==========================================
+    const btnHelperCheckUpdate = document.getElementById("btnHelperCheckUpdate");
+    const modalUpdateHelper = document.getElementById("modalUpdateHelper");
+    const helperCurVer = document.getElementById("helperCurVer");
+    const helperLatestVer = document.getElementById("helperLatestVer");
+    const helperUpdateBadge = document.getElementById("helperUpdateBadge");
+    const helperReleaseNotesBox = document.getElementById("helperReleaseNotesBox");
+    const btnHelperDownloadSetup = document.getElementById("btnHelperDownloadSetup");
+
+    async function checkUpdateFromHelper(isManual = false) {
+        if (isManual && btnHelperCheckUpdate) {
+            btnHelperCheckUpdate.innerText = "⏳ Đang kiểm tra...";
+        }
+        try {
+            const res = await fetch("/api/check-update");
+            const data = await res.json();
+            if (btnHelperCheckUpdate) btnHelperCheckUpdate.innerText = "🚀 CẬP NHẬT";
+
+            if (data.success) {
+                if (helperCurVer) helperCurVer.innerText = `v${data.currentVersion}`;
+                if (helperLatestVer) helperLatestVer.innerText = `v${data.latestVersion}`;
+                if (helperReleaseNotesBox) {
+                    helperReleaseNotesBox.innerHTML = `<strong>${data.releaseName || 'Bản mới'}</strong><br>${(data.releaseNotes || 'Không có mô tả').replace(/\n/g, '<br>')}`;
+                }
+                if (btnHelperDownloadSetup && data.downloadUrl) {
+                    btnHelperDownloadSetup.href = data.directSetupUrl || data.downloadUrl;
+                }
+
+                if (data.hasUpdate) {
+                    if (helperUpdateBadge) {
+                        helperUpdateBadge.innerText = "🎉 CÓ BẢN MỚI";
+                        helperUpdateBadge.style.background = "rgba(230, 126, 34, 0.2)";
+                        helperUpdateBadge.style.color = "#e67e22";
+                        helperUpdateBadge.style.border = "1px solid #e67e22";
+                    }
+                    if (btnHelperCheckUpdate) {
+                        btnHelperCheckUpdate.style.background = "linear-gradient(135deg, #e67e22, #f39c12)";
+                        btnHelperCheckUpdate.style.color = "#fff";
+                        btnHelperCheckUpdate.innerText = `🚀 CÓ BẢN MỚI v${data.latestVersion}`;
+                    }
+                    if (modalUpdateHelper) modalUpdateHelper.classList.add("active");
+                } else {
+                    if (helperUpdateBadge) {
+                        helperUpdateBadge.innerText = "✅ BẢN MỚI NHẤT";
+                        helperUpdateBadge.style.background = "rgba(46, 204, 113, 0.15)";
+                        helperUpdateBadge.style.color = "#2ecc71";
+                        helperUpdateBadge.style.border = "1px solid #2ecc71";
+                    }
+                    if (isManual) {
+                        if (modalUpdateHelper) modalUpdateHelper.classList.add("active");
+                    }
+                }
+            } else if (isManual) {
+                showToast("⚠️ " + (data.error || "Không thể kiểm tra cập nhật"));
+            }
+        } catch (e) {
+            if (btnHelperCheckUpdate) btnHelperCheckUpdate.innerText = "🚀 CẬP NHẬT";
+            if (isManual) showToast("❌ Lỗi mạng khi kiểm tra cập nhật: " + e.message, true);
+        }
+    }
+
+    if (btnHelperCheckUpdate) {
+        btnHelperCheckUpdate.addEventListener("click", () => checkUpdateFromHelper(true));
+    }
+    // Tự động kiểm tra bản cập nhật khi mở Helper
+    setTimeout(() => checkUpdateFromHelper(false), 2000);
 
     // ==========================================
     // 3. KHÔI PHỤC MẶC ĐỊNH

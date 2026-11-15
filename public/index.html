@@ -66,6 +66,12 @@
                 <span class="label-full">GIỚI THIỆU</span>
                 <span class="label-short">[I]</span>
             </button>
+            <button id="btnCheckUpdate" class="btn-update" title="Kiểm tra bản cập nhật mới từ GitHub - Phím U">
+                <span class="update-pulse-dot"></span>
+                <span>🚀</span>
+                <span class="label-full">CẬP NHẬT</span>
+                <span class="label-short">[U]</span>
+            </button>
             <button id="btnWeather" class="weather-btn" title="Đổi thời tiết (Nắng, Mưa, Tuyết) hoặc nhấn phím W">
                 <img id="weatherIconImg" class="pixel-icon-btn" alt="" />
                 <span id="weatherLabel" class="label-full">Nắng</span>
@@ -88,6 +94,18 @@
             </div>
         </div>
     </header>
+
+    <!-- Banner Thông Báo Có Bản Cập Nhật Mới Trên GitHub -->
+    <div id="updateBanner" class="update-banner hidden">
+        <div class="update-banner-left">
+            <span class="update-banner-icon">🚀</span>
+            <span id="updateBannerText">Đã có bản cập nhật mới trên GitHub! Nhấn để cập nhật ngay.</span>
+        </div>
+        <div class="update-banner-right">
+            <button id="btnBannerUpdate" class="btn-banner-action">CẬP NHẬT NGAY [U]</button>
+            <button id="btnDismissBanner" class="btn-banner-close" title="Ẩn thông báo">&times;</button>
+        </div>
+    </div>
 
     <!-- Khung máy Arcade Pixel -->
     <div class="arcade-wrapper">
@@ -316,6 +334,62 @@
                     <span>🌐 MỞ TRANG ĐẦY ĐỦ (/about)</span>
                 </a>
                 <button id="btnCloseAboutBottom" class="btn-cert-secondary">
+                    <span>✖ ĐÓNG [ESC]</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hộp thoại Modal Kiểm Tra Cập Nhật GitHub Live -->
+    <div id="updateModal" class="cert-modal-backdrop hidden">
+        <div class="update-modal-card">
+            <div class="cert-modal-header">
+                <div class="cert-modal-title">🚀 KIỂM TRA CẬP NHẬT (GITHUB LIVE UPDATE)</div>
+                <button id="btnCloseUpdateModal" class="cert-close-btn">&times;</button>
+            </div>
+            <div class="update-modal-body">
+                <div class="update-version-status-box">
+                    <div class="version-stat-col">
+                        <span class="version-stat-lbl">Bản đang chạy:</span>
+                        <span id="updateCurVer" class="version-stat-val">v2.5.0</span>
+                    </div>
+                    <div id="updateStatusBadge" class="update-status-badge checking">
+                        ⏳ ĐANG KIỂM TRA...
+                    </div>
+                    <div class="version-stat-col">
+                        <span class="version-stat-lbl">Bản mới nhất:</span>
+                        <span id="updateLatestVer" class="version-stat-val text-cyan">v2.5.0</span>
+                    </div>
+                </div>
+
+                <div class="update-info-card">
+                    <div id="updateReleaseTitle" class="update-release-title">Đang kết nối tới GitHub repository...</div>
+                    <div id="updateReleaseMeta" class="update-release-meta">Nguồn: petertuananh/CyberSecGame</div>
+                    <div id="updateReleaseNotes" class="update-release-notes">
+                        Đang lấy thông tin bản phát hành...
+                    </div>
+                </div>
+
+                <div id="updateActionsRow" class="update-actions-row">
+                    <a id="btnDownloadUpdateExe" href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" rel="noopener noreferrer" class="btn-cert-primary">
+                        <span>📥</span>
+                        <span>TẢI BẢN MỚI (.EXE)</span>
+                    </a>
+                    <a id="btnDownloadUpdateZip" href="https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary">
+                        <span>📦</span>
+                        <span>TẢI BẢN NÉN (.ZIP)</span>
+                    </a>
+                    <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary">
+                        <span>🐙</span>
+                        <span>XEM GITHUB</span>
+                    </a>
+                </div>
+            </div>
+            <div class="cert-actions-bar">
+                <button id="btnRefreshUpdateCheck" class="btn-cert-secondary">
+                    <span>🔄 KIỂM TRA LẠI</span>
+                </button>
+                <button id="btnCloseUpdateBottom" class="btn-cert-secondary">
                     <span>✖ ĐÓNG [ESC]</span>
                 </button>
             </div>

@@ -68,6 +68,9 @@
                 <a href="/about" target="_blank" class="action-btn" style="background:#1b2838; border-color:#2980b9; color:#00d2d3;" title="Xem thông tin Tác giả Peter Tuan Anh, SoftLab & Bản quyền">
                     ℹ️ GIỚI THIỆU
                 </a>
+                <button id="btnHelperCheckUpdate" class="action-btn" style="background:#1e1b4b; border-color:#6366f1; color:#a5b4fc;" title="Kiểm tra bản cập nhật mới từ GitHub">
+                    🚀 CẬP NHẬT
+                </button>
                 <a href="/" target="_blank" class="action-btn btn-play" title="Mở cửa sổ chơi Game">
                     🎮 VÀO CHƠI GAME
                 </a>
@@ -814,6 +817,120 @@
             <div class="modal-footer">
                 <button class="btn-secondary" data-close="modalProfile">HỦY BỎ</button>
                 <button id="btnSaveProfile" class="btn-create">LƯU THÔNG TIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BÁO LỖI THIẾU QUYỀN GHI Ổ C & XIN QUYỀN ADMIN -->
+    <div id="modalAdminPermission" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 650px; border: 2.5px solid #e74c3c; box-shadow: 0 0 35px rgba(231, 76, 60, 0.45);">
+            <div class="modal-header" style="background: rgba(231, 76, 60, 0.15); border-bottom: 1px solid rgba(231, 76, 60, 0.3);">
+                <span class="modal-title" style="color: #ff6b6b; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:22px;">🛡️</span>
+                    <span>THIẾU QUYỀN GHI Ổ C • YÊU CẦU QUYỀN ADMIN</span>
+                </span>
+                <button class="modal-close" data-close="modalAdminPermission">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 22px;">
+                <div style="background: rgba(231, 76, 60, 0.1); border: 1px dashed #e74c3c; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px;">
+                    <p style="font-size: 14px; color: #ffb8b8; line-height: 1.6; margin-bottom: 8px;">
+                        ⚠️ <strong>Lỗi phân quyền hệ thống (EACCES / Permission Denied):</strong><br>
+                        Trò chơi đang được cài đặt trong thư mục hệ thống của ổ C (như <code>Program Files</code>) nên Windows chặn quyền ghi file cấu hình <code>game_config.json</code>.
+                    </p>
+                    <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5;">
+                        Đường dẫn bị chặn: <code id="adminErrorFilePath" style="color:#00d2d3; font-family:monospace; background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px;">data/game_config.json</code>
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 18px;">
+                    <h4 style="font-size: 14px; color: #fff; margin-bottom: 12px; text-transform:uppercase; letter-spacing:0.5px;">👉 Chọn cách xử lý bên dưới:</h4>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- Cách 1: Tự động xin quyền UAC và cấp quyền ghi cho thư mục -->
+                        <div style="background: rgba(108, 92, 231, 0.15); border: 1px solid #6c5ce7; border-radius: 10px; padding: 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <div style="max-width: 400px;">
+                                <strong style="color:#a29bfe; font-size:14px; display:block; margin-bottom:3px;">🛡️ Cách 1: Cấp quyền ghi thư mục qua UAC (Khuyên dùng)</strong>
+                                <span style="font-size:12.5px; color:#cbd5e1;">Windows sẽ hiện hộp thoại xác nhận Admin để mở quyền ghi vĩnh viễn cho thư mục dữ liệu, không cần khởi động lại.</span>
+                            </div>
+                            <button id="btnGrantAdminPerms" class="btn-create" style="background: linear-gradient(135deg, #6c5ce7, #8e44ad); white-space:nowrap; padding:9px 16px;">
+                                🛡️ CẤP QUYỀN ADMIN (UAC)
+                            </button>
+                        </div>
+
+                        <!-- Cách 2: Chạy lại game với quyền Administrator -->
+                        <div style="background: rgba(241, 196, 15, 0.12); border: 1px solid #f1c40f; border-radius: 10px; padding: 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <div style="max-width: 400px;">
+                                <strong style="color:#f1c40f; font-size:14px; display:block; margin-bottom:3px;">🔄 Cách 2: Khởi chạy lại Game bằng quyền Administrator</strong>
+                                <span style="font-size:12.5px; color:#cbd5e1;">Tự động khởi động lại file <code>CyberSecGame.exe</code> với cờ "Run as administrator".</span>
+                            </div>
+                            <button id="btnRelaunchAdmin" class="btn-create" style="background: linear-gradient(135deg, #d35400, #e67e22); white-space:nowrap; padding:9px 16px;">
+                                🔄 CHẠY LẠI VỚI ADMIN
+                            </button>
+                        </div>
+
+                        <!-- Cách 3: Tải file JSON về máy để không mất dữ liệu -->
+                        <div style="background: rgba(46, 204, 113, 0.12); border: 1px solid #2ecc71; border-radius: 10px; padding: 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                            <div style="max-width: 400px;">
+                                <strong style="color:#2ecc71; font-size:14px; display:block; margin-bottom:3px;">📥 Cách 3: Tải file JSON về máy (Bảo toàn dữ liệu)</strong>
+                                <span style="font-size:12.5px; color:#cbd5e1;">Tải ngay file cấu hình vừa sửa về máy tính để không mất nội dung, sau đó bạn có thể chép đè thủ công.</span>
+                            </div>
+                            <button id="btnDownloadConfigEmergency" class="btn-create" style="background: linear-gradient(135deg, #27ae60, #2ecc71); white-space:nowrap; padding:9px 16px;">
+                                📥 TẢI FILE NGAY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size: 12px; color: #a4b0be; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.06);">
+                    💡 <strong>Mẹo thủ công:</strong> Bạn cũng có thể nhấp chuột phải vào biểu tượng <strong>Vệ Binh Mật Khẩu</strong> ngoài màn hình Desktop hoặc file <code>CyberSecGame.exe</code> &rarr; chọn <strong>"Run as administrator" (Chạy với quyền quản trị viên)</strong> để mở khóa quyền ghi.
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 14px 22px;">
+                <button class="btn-secondary" data-close="modalAdminPermission">ĐÓNG [ESC]</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KIỂM TRA CẬP NHẬT (UPDATE MODAL CHO HELPER) -->
+    <div id="modalUpdateHelper" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 580px; border: 2.5px solid #6366f1; box-shadow: 0 0 35px rgba(99, 102, 241, 0.45);">
+            <div class="modal-header" style="background: rgba(99, 102, 241, 0.15); border-bottom: 1px solid rgba(99, 102, 241, 0.3);">
+                <span class="modal-title" style="color: #a5b4fc; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:20px;">🚀</span>
+                    <span>CẬP NHẬT PHIÊN BẢN (GITHUB LIVE UPDATE)</span>
+                </span>
+                <button class="modal-close" data-close="modalUpdateHelper">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 22px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:14px; border-radius:10px; margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:12px; color:#a4b0be;">Bản hiện tại:</div>
+                        <div id="helperCurVer" style="font-size:18px; font-weight:800; color:#fff;">v2.5.0</div>
+                    </div>
+                    <div id="helperUpdateBadge" style="padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.3);">
+                        ĐANG KIỂM TRA...
+                    </div>
+                    <div>
+                        <div style="font-size:12px; color:#a4b0be;">Bản mới nhất:</div>
+                        <div id="helperLatestVer" style="font-size:18px; font-weight:800; color:#00d2d3;">v2.5.0</div>
+                    </div>
+                </div>
+
+                <div id="helperReleaseNotesBox" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px; font-size:13px; color:#cbd5e1; max-height:160px; overflow-y:auto; line-height:1.6; margin-bottom:16px;">
+                    Đang nạp thông tin từ GitHub...
+                </div>
+
+                <div id="helperUpdateActions" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a id="btnHelperDownloadSetup" href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" class="btn-create" style="flex:1; text-align:center; text-decoration:none; background:linear-gradient(135deg, #10b981, #059669); padding:10px 14px;">
+                        📥 TẢI BẢN MỚI
+                    </a>
+                    <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" class="btn-secondary" style="flex:1; text-align:center; text-decoration:none; padding:10px 14px;">
+                        🐙 GITHUB REPO
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 22px;">
+                <button class="btn-secondary" data-close="modalUpdateHelper">ĐÓNG</button>
             </div>
         </div>
     </div>

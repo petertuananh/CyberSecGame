@@ -10,10 +10,41 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');
 const { WebSocketServer } = require('ws');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const TunnelManager = require('./tunnel_manager');
+
+// Lấy phiên bản phần mềm hiện tại từ package.json
+let CURRENT_VERSION = '2.5.0';
+try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    if (pkg && pkg.version) CURRENT_VERSION = pkg.version;
+} catch (e) {}
+
+// Hàm so sánh phiên bản dạng SemVer (VD: 2.6.0 > 2.5.0)
+function compareVersions(v1, v2) {
+    const clean = (v) => (v || '').replace(/^v/i, '').trim().split('.').map(n => parseInt(n, 10) || 0);
+    const p1 = clean(v1);
+    const p2 = clean(v2);
+    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+        const n1 = p1[i] || 0;
+        const n2 = p2[i] || 0;
+        if (n1 > n2) return 1;
+        if (n1 < n2) return -1;
+    }
+    return 0;
+}
+
+// Kiểm tra lỗi phân quyền ghi file trên hệ điều hành (EACCES / EPERM / EROFS)
+function isPermissionError(err) {
+    if (!err) return false;
+    return err.code === 'EACCES' ||
+           err.code === 'EPERM' ||
+           err.code === 'EROFS' ||
+           /permission denied|operation not permitted|access is denied/i.test(err.message || '');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -272,6 +303,17 @@ app.post('/api/config', (req, res) => {
         });
     } catch (e) {
         console.error('[Config] Lỗi lưu cấu hình:', e.message);
+        if (isPermissionError(e)) {
+            console.error(`[Config] ⛔ Lỗi phân quyền ghi vào ổ C (${e.code}): Không thể ghi file cấu hình tại ${CONFIG_FILE}`);
+            return res.status(403).json({
+                error: 'PERMISSION_DENIED',
+                isPermissionError: true,
+                code: e.code,
+                path: CONFIG_FILE,
+                dataDir: DATA_DIR,
+                message: 'Không có quyền ghi vào thư mục dữ liệu trên ổ C (Permission Denied)! Ứng dụng cần quyền Quản trị viên (Administrator) để ghi file cấu hình.'
+            });
+        }
         res.status(500).json({ error: e.message });
     }
 });
@@ -306,8 +348,190 @@ app.post('/api/config/reset', (req, res) => {
         res.status(404).json({ error: 'Không tìm thấy file default_config.json' });
     } catch (e) {
         console.error('[Config] Lỗi reset cấu hình:', e.message);
+        if (isPermissionError(e)) {
+            return res.status(403).json({
+                error: 'PERMISSION_DENIED',
+                isPermissionError: true,
+                code: e.code,
+                path: CONFIG_FILE,
+                dataDir: DATA_DIR,
+                message: 'Không có quyền ghi vào thư mục dữ liệu trên ổ C (Permission Denied)! Ứng dụng cần quyền Quản trị viên (Administrator) để khôi phục cấu hình.'
+            });
+        }
         res.status(500).json({ error: e.message });
     }
+});
+
+// API Cấp quyền ghi thư mục qua UAC của Windows
+app.post('/api/admin/grant-permissions', (req, res) => {
+    if (process.platform !== 'win32') {
+        return res.json({ success: true, message: 'Hệ thống không phải Windows, không cần cấp quyền qua UAC.' });
+    }
+
+    try {
+        console.log('[Admin] 🛡️ Đang gửi lệnh cấp quyền ghi thư mục qua hộp thoại Windows UAC...');
+        const safeDataDir = DATA_DIR.replace(/"/g, '`"');
+        const safeConfigFile = CONFIG_FILE.replace(/"/g, '`"');
+
+        // Lệnh PowerShell chạy với -Verb RunAs sẽ bật hộp thoại UAC yêu cầu người dùng xác nhận
+        const psInnerCmd = `Write-Host '[Ve Binh Mat Khau] Dang mo khoa quyen ghi thu muc...' -ForegroundColor Cyan; icacls \\"${safeDataDir}\\" /grant Users:(OI)(CI)F /T; icacls \\"${safeConfigFile}\\" /grant Users:F /T; Write-Host '[Thanh Cong] Da cap quyen ghi hoan tat!' -ForegroundColor Green; Start-Sleep -Seconds 2`;
+        const elevateCmd = `powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \\"${psInnerCmd}\\"' -Verb RunAs"`;
+
+        exec(elevateCmd, (error) => {
+            if (error) {
+                console.warn('[Admin] Hộp thoại UAC bị hủy hoặc đóng:', error.message);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Hộp thoại xác nhận Administrator bị từ chối hoặc đã đóng: ' + error.message
+                });
+            }
+            console.log('[Admin] ✅ Đã kích hoạt lệnh phân quyền thành công!');
+            res.json({
+                success: true,
+                message: 'Đã gửi yêu cầu cấp quyền qua UAC! Vui lòng bấm "Yes" (Đồng ý) trên màn hình để mở khóa quyền ghi.'
+            });
+        });
+    } catch (err) {
+        console.error('[Admin] Lỗi thực thi lệnh cấp quyền:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API Khởi chạy lại Game với quyền Administrator
+app.post('/api/admin/relaunch-as-admin', (req, res) => {
+    if (process.platform !== 'win32') {
+        return res.json({ success: true, message: 'Chức năng chỉ áp dụng trên Windows.' });
+    }
+
+    try {
+        const exePath = process.execPath;
+        console.log(`[Admin] 🔄 Đang khởi chạy lại ứng dụng với quyền Administrator: ${exePath}`);
+
+        const elevateCmd = `powershell -NoProfile -Command "Start-Process -FilePath '${exePath}' -Verb RunAs"`;
+        exec(elevateCmd, (error) => {
+            if (error) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Không thể khởi chạy với quyền Admin: ' + error.message
+                });
+            }
+            res.json({
+                success: true,
+                message: 'Đang khởi chạy phiên bản Administrator mới...'
+            });
+
+            setTimeout(() => {
+                process.exit(0);
+            }, 1500);
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API Kiểm tra cập nhật trực tiếp qua GitHub (Live Check Update)
+app.get('/api/check-update', async (req, res) => {
+    try {
+        const repo = 'petertuananh/CyberSecGame';
+        let latestVersion = CURRENT_VERSION;
+        let releaseName = `Phiên bản v${CURRENT_VERSION}`;
+        let releaseNotes = '';
+        let publishedAt = '';
+        let downloadUrl = `https://github.com/${repo}/releases`;
+        let source = 'local';
+        let directSetupUrl = '';
+        let directZipUrl = '';
+
+        // 1. Kiểm tra GitHub Releases API chính thức
+        try {
+            const releaseRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+                headers: { 'User-Agent': 'CyberSecGame-LiveUpdate' },
+                signal: AbortSignal.timeout(4000)
+            });
+            if (releaseRes.ok) {
+                const releaseData = await releaseRes.json();
+                if (releaseData && releaseData.tag_name) {
+                    const tagVer = releaseData.tag_name.replace(/^v/i, '');
+                    latestVersion = tagVer;
+                    releaseName = releaseData.name || `Phiên bản v${tagVer}`;
+                    releaseNotes = releaseData.body || 'Bản cập nhật mới với nhiều tính năng và cải tiến.';
+                    publishedAt = releaseData.published_at || '';
+                    downloadUrl = releaseData.html_url || `https://github.com/${repo}/releases/latest`;
+                    source = 'github_release';
+
+                    if (Array.isArray(releaseData.assets)) {
+                        const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
+                        if (setupAsset && setupAsset.browser_download_url) {
+                            directSetupUrl = setupAsset.browser_download_url;
+                        }
+                        const zipAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.zip'));
+                        if (zipAsset && zipAsset.browser_download_url) {
+                            directZipUrl = zipAsset.browser_download_url;
+                        }
+                    }
+                }
+            }
+        } catch (relErr) {
+            // Không có release hoặc offline/timeout
+        }
+
+        // 2. Kiểm tra package.json trên nhánh main nếu GitHub Releases chưa có bản mới hơn
+        if (compareVersions(latestVersion, CURRENT_VERSION) <= 0) {
+            try {
+                const rawRes = await fetch(`https://raw.githubusercontent.com/${repo}/main/package.json`, {
+                    signal: AbortSignal.timeout(3500)
+                });
+                if (rawRes.ok) {
+                    const rawPkg = await rawRes.json();
+                    if (rawPkg && rawPkg.version) {
+                        const rawVer = rawPkg.version.replace(/^v/i, '');
+                        if (compareVersions(rawVer, CURRENT_VERSION) > 0) {
+                            latestVersion = rawVer;
+                            releaseName = `Phiên bản mới v${latestVersion} (GitHub Main)`;
+                            releaseNotes = rawPkg.description || 'Đã có mã nguồn và cập nhật mới nhất trên nhánh chính GitHub!';
+                            downloadUrl = `https://github.com/${repo}`;
+                            source = 'github_main';
+                        }
+                    }
+                }
+            } catch (rawErr) {}
+        }
+
+        const hasUpdate = compareVersions(latestVersion, CURRENT_VERSION) > 0;
+
+        res.json({
+            success: true,
+            hasUpdate,
+            currentVersion: CURRENT_VERSION,
+            latestVersion,
+            releaseName,
+            releaseNotes: releaseNotes || (hasUpdate ? 'Đã có bản phát hành mới trên GitHub.' : 'Bạn đang sử dụng phiên bản mới nhất!'),
+            publishedAt,
+            downloadUrl,
+            directSetupUrl: directSetupUrl || `https://github.com/${repo}/releases`,
+            directZipUrl: directZipUrl || `https://github.com/${repo}/archive/refs/heads/main.zip`,
+            repoUrl: `https://github.com/${repo}`,
+            source
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: 'Lỗi kiểm tra cập nhật: ' + err.message,
+            currentVersion: CURRENT_VERSION
+        });
+    }
+});
+
+// API lấy thông tin phiên bản
+app.get('/api/version', (req, res) => {
+    res.json({
+        version: CURRENT_VERSION,
+        name: 'CyberSec Password Guardian',
+        author: 'Peter Tuan Anh',
+        company: 'CÔNG TY TNHH GIẢI PHÁP SỐ SOFTLAB',
+        mst: '3604049476',
+        repo: 'https://github.com/petertuananh/CyberSecGame'
+    });
 });
 
 // API: Lấy Bảng Xếp Hạng & Tên người chơi hiện tại

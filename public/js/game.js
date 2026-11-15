@@ -587,6 +587,35 @@ class CyberSecGame {
                 if (e.target === modalAb) this.closeAboutModal();
             });
         }
+
+        // Gắn sự kiện Modal Cập Nhật Phiên Bản (GitHub Live Update)
+        const btnUpdate = document.getElementById("btnCheckUpdate");
+        const modalUp = document.getElementById("updateModal");
+        const btnCloseUp = document.getElementById("btnCloseUpdateModal");
+        const btnCloseUpBtm = document.getElementById("btnCloseUpdateBottom");
+        const btnRefreshUp = document.getElementById("btnRefreshUpdateCheck");
+        const btnBannerUp = document.getElementById("btnBannerUpdate");
+        const btnDismissBanner = document.getElementById("btnDismissBanner");
+
+        if (btnUpdate) btnUpdate.addEventListener("click", () => this.openUpdateModal(true));
+        if (btnBannerUp) btnBannerUp.addEventListener("click", () => this.openUpdateModal(false));
+        if (btnDismissBanner) {
+            btnDismissBanner.addEventListener("click", () => {
+                const banner = document.getElementById("updateBanner");
+                if (banner) banner.classList.add("hidden");
+            });
+        }
+        if (btnCloseUp) btnCloseUp.addEventListener("click", () => this.closeUpdateModal());
+        if (btnCloseUpBtm) btnCloseUpBtm.addEventListener("click", () => this.closeUpdateModal());
+        if (btnRefreshUp) btnRefreshUp.addEventListener("click", () => this.performUpdateCheck(true));
+        if (modalUp) {
+            modalUp.addEventListener("click", (e) => {
+                if (e.target === modalUp) this.closeUpdateModal();
+            });
+        }
+
+        // Tự động kiểm tra bản cập nhật khi khởi động game (nếu có mạng)
+        setTimeout(() => this.checkUpdateOnStartup(), 2500);
     }
 
     openNameModal(isStarting = false) {
@@ -664,6 +693,138 @@ class CyberSecGame {
         if (modal) {
             modal.classList.remove("show");
             modal.classList.add("hidden");
+        }
+    }
+
+    async checkUpdateOnStartup() {
+        try {
+            const res = await fetch("/api/check-update");
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.success) {
+                this.updateData = data;
+                if (data.hasUpdate) {
+                    this.applyUpdateNotice(data);
+                }
+            }
+        } catch (e) {
+            // Im lặng khi offline hoặc không có mạng
+        }
+    }
+
+    applyUpdateNotice(data) {
+        // Nút Cập Nhật trên Top Bar sáng đèn & nhấp nháy
+        const btn = document.getElementById("btnCheckUpdate");
+        if (btn) {
+            btn.classList.add("has-new-update");
+            btn.title = `Đã có bản cập nhật mới v${data.latestVersion}! Nhấn để xem chi tiết.`;
+        }
+
+        // Hiện banner thông báo nổi
+        const banner = document.getElementById("updateBanner");
+        const bannerText = document.getElementById("updateBannerText");
+        if (banner && bannerText) {
+            bannerText.innerHTML = `Đã có bản cập nhật mới <strong>v${data.latestVersion}</strong> trên GitHub! Nhấn để tải về.`;
+            banner.classList.remove("hidden");
+        }
+
+        this._showToast(`🚀 Đã có bản cập nhật mới v${data.latestVersion}! Nhấn [U] để xem chi tiết.`, "star");
+    }
+
+    openUpdateModal(shouldFetch = false) {
+        const modal = document.getElementById("updateModal");
+        if (modal) {
+            modal.classList.remove("hidden");
+            modal.classList.add("show");
+        }
+        if (shouldFetch || !this.updateData) {
+            this.performUpdateCheck(true);
+        } else {
+            this.renderUpdateModal(this.updateData);
+        }
+    }
+
+    closeUpdateModal() {
+        const modal = document.getElementById("updateModal");
+        if (modal) {
+            modal.classList.remove("show");
+            modal.classList.add("hidden");
+        }
+    }
+
+    async performUpdateCheck(isManual = false) {
+        const badge = document.getElementById("updateStatusBadge");
+        const titleEl = document.getElementById("updateReleaseTitle");
+        const notesEl = document.getElementById("updateReleaseNotes");
+
+        if (badge) {
+            badge.className = "update-status-badge checking";
+            badge.innerText = "⏳ ĐANG KIỂM TRA...";
+        }
+        if (titleEl) titleEl.innerText = "Đang kết nối tới GitHub repository...";
+        if (notesEl) notesEl.innerText = "Vui lòng chờ trong giây lát...";
+
+        try {
+            const res = await fetch("/api/check-update");
+            const data = await res.json();
+            if (data && data.success) {
+                this.updateData = data;
+                this.renderUpdateModal(data);
+                if (data.hasUpdate) {
+                    this.applyUpdateNotice(data);
+                }
+            } else {
+                throw new Error(data.error || "Không thể kiểm tra cập nhật");
+            }
+        } catch (err) {
+            if (badge) {
+                badge.className = "update-status-badge";
+                badge.innerText = "❌ LỖI KẾT NỐI";
+                badge.style.background = "rgba(231, 76, 60, 0.2)";
+                badge.style.color = "#e74c3c";
+            }
+            if (titleEl) titleEl.innerText = "Không thể kết nối đến GitHub";
+            if (notesEl) notesEl.innerText = "Vui lòng kiểm tra lại kết nối mạng Internet hoặc tường lửa của máy tính: " + err.message;
+        }
+    }
+
+    renderUpdateModal(data) {
+        if (!data) return;
+        const curVerEl = document.getElementById("updateCurVer");
+        const latestVerEl = document.getElementById("updateLatestVer");
+        const badge = document.getElementById("updateStatusBadge");
+        const titleEl = document.getElementById("updateReleaseTitle");
+        const metaEl = document.getElementById("updateReleaseMeta");
+        const notesEl = document.getElementById("updateReleaseNotes");
+        const btnExe = document.getElementById("btnDownloadUpdateExe");
+        const btnZip = document.getElementById("btnDownloadUpdateZip");
+
+        if (curVerEl) curVerEl.innerText = `v${data.currentVersion}`;
+        if (latestVerEl) latestVerEl.innerText = `v${data.latestVersion}`;
+
+        if (badge) {
+            if (data.hasUpdate) {
+                badge.className = "update-status-badge has-update";
+                badge.innerText = "🎉 CÓ BẢN MỚI";
+            } else {
+                badge.className = "update-status-badge up-to-date";
+                badge.innerText = "✅ BẢN MỚI NHẤT";
+            }
+        }
+
+        if (titleEl) titleEl.innerText = data.releaseName || `Phiên bản v${data.latestVersion}`;
+        if (metaEl) {
+            const timeStr = data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('vi-VN') : 'Mới cập nhật';
+            metaEl.innerText = `Kho: ${data.repoUrl || 'petertuananh/CyberSecGame'} • Ngày: ${timeStr}`;
+        }
+        if (notesEl) {
+            notesEl.innerHTML = (data.releaseNotes || 'Không có ghi chú phiên bản.').replace(/\n/g, '<br>');
+        }
+        if (btnExe && data.downloadUrl) {
+            btnExe.href = data.directSetupUrl || data.downloadUrl;
+        }
+        if (btnZip && data.directZipUrl) {
+            btnZip.href = data.directZipUrl;
         }
     }
 
@@ -859,6 +1020,11 @@ class CyberSecGame {
             }
             let key = e.key.toUpperCase();
             if (key === "ESCAPE") {
+                const updateModal = document.getElementById("updateModal");
+                if (updateModal && !updateModal.classList.contains("hidden")) {
+                    this.closeUpdateModal();
+                    return;
+                }
                 const aboutModal = document.getElementById("aboutModal");
                 if (aboutModal && !aboutModal.classList.contains("hidden")) {
                     this.closeAboutModal();
@@ -913,6 +1079,14 @@ class CyberSecGame {
                     this.closeAboutModal();
                 } else {
                     this.openAboutModal();
+                }
+                return;
+            } else if (key === "U") {
+                const updateModal = document.getElementById("updateModal");
+                if (updateModal && !updateModal.classList.contains("hidden")) {
+                    this.closeUpdateModal();
+                } else {
+                    this.openUpdateModal(true);
                 }
                 return;
             }
