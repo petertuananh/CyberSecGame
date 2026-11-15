@@ -13,6 +13,7 @@
     "dist:mac:x64": "electron-packager . CyberSecGame --platform=darwin --arch=x64 --out=dist --overwrite --icon=icon.icns --prune=true",
     "dist:all": "npm run dist:win && npm run dist:mac",
     "pack:mac:zip": "tar.exe -a -cf dist/CyberSecGame-macOS-arm64.zip -C dist/CyberSecGame-darwin-arm64 CyberSecGame.app && tar.exe -a -cf dist/CyberSecGame-macOS-x64.zip -C dist/CyberSecGame-darwin-x64 CyberSecGame.app",
+    "build:dmg": "bash scripts/build-dmg.sh",
     "setup": "\"C:\\Users\\peter\\AppData\\Local\\Programs\\Inno Setup 6\\ISCC.exe\" installer.iss"
   },
   "keywords": [
