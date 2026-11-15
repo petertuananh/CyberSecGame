@@ -6,10 +6,30 @@
  * - Xử lý trường hợp lỗi không mở được cửa sổ riêng -> Hỏi người dùng mở trên trình duyệt
  */
 
-const { app, BrowserWindow, dialog, shell, Menu } = require('electron');
+let electron = null;
+try {
+    electron = require('electron');
+} catch (e) {}
+
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+
+// Nếu Electron được gọi dưới dạng node hoặc không có đối tượng app
+if (!electron || typeof electron !== 'object' || !electron.app) {
+    console.log("[Launcher] Đang khởi chạy Server Node.js và mở Trình duyệt...");
+    require(path.join(__dirname, 'server.js'));
+    const { exec } = require('child_process');
+    const url = 'http://localhost:3000';
+    setTimeout(() => {
+        if (process.platform === 'win32') exec(`start ${url}`);
+        else if (process.platform === 'darwin') exec(`open "${url}"`);
+        else exec(`xdg-open "${url}"`);
+    }, 1500);
+    return;
+}
+
+const { app, BrowserWindow, dialog, shell, Menu } = electron;
 
 // Đảm bảo chỉ chạy duy nhất 1 phiên bản của ứng dụng
 const gotTheLock = app.requestSingleInstanceLock();

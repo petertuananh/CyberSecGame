@@ -589,14 +589,18 @@ class CyberSecGame {
 
         if (btnSaveName) {
             btnSaveName.addEventListener("click", () => {
-                if (inputName) this.setPlayerName(inputName.value);
+                if (inputName) this.setPlayerName(inputName.value, this.isStartingGameFromModal);
             });
         }
         if (inputName) {
             inputName.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
-                    this.setPlayerName(inputName.value);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.setPlayerName(inputName.value, this.isStartingGameFromModal);
                 } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
                     this.closeNameModal();
                 }
             });
@@ -1171,7 +1175,7 @@ class CyberSecGame {
         }
     }
 
-    async setPlayerName(name, shouldStart = null) {
+    setPlayerName(name, shouldStart = null) {
         const cleaned = (name || "").trim() || "Hiệp Sĩ Không Gian Mạng";
         this.playerName = cleaned;
         this.updatePlayerNameUI(cleaned);
@@ -1181,23 +1185,23 @@ class CyberSecGame {
 
         // Gửi qua WebSocket cho server phát thanh tới toàn bộ điện thoại và client
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({
-                type: "SET_PLAYER_NAME",
-                name: cleaned,
-                playerName: cleaned
-            }));
+            try {
+                this.ws.send(JSON.stringify({
+                    type: "SET_PLAYER_NAME",
+                    name: cleaned,
+                    playerName: cleaned
+                }));
+            } catch (e) {}
         }
 
-        // Gọi API fallback
-        try {
-            await fetch("/api/player-name", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: cleaned, playerName: cleaned })
-            });
-        } catch (e) {
+        // Gọi API fallback ngầm không chặn luồng khởi động
+        fetch("/api/player-name", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: cleaned, playerName: cleaned })
+        }).catch((e) => {
             console.warn("[Game] Không thể lưu tên người chơi qua API:", e);
-        }
+        });
 
         if (willStart) {
             this.resetPlayerDataAndRestart("STORY");
@@ -1440,20 +1444,38 @@ class CyberSecGame {
             const cx = (e.clientX - rect.left) * scaleX;
             const cy = (e.clientY - rect.top) * scaleY;
             const w = this.canvas.width;
+            const h = this.canvas.height;
 
             let isPointer = false;
             if (this.state === "START") {
-                if (cx >= w / 2 - 250 && cx <= w / 2 + 250 && cy >= 125 && cy <= 185) isPointer = true;
-                else if (cx >= w / 2 - 350 && cx <= w / 2 + 350 && cy >= 570 && cy <= 612) isPointer = true;
-                else if (cx >= w / 2 - 350 && cx <= w / 2 + 350 && cy >= 614 && cy <= 656) isPointer = true;
-                else if (cy >= 520 && cy <= 568) isPointer = true;
+                isPointer = true;
+            } else if (this.state === "STORY" || this.state === "STAGE_INTRO" || this.state === "QUESTION_RESULT" ||
+                       this.state === "STAGE_CLEAR" || this.state === "STAGE_FAILED" || this.state === "DICE" ||
+                       this.state === "DICE_RESULT" || this.state === "CARD" || this.state === "TRAVELING" ||
+                       this.state === "BOSS_INTRO" || this.state === "GAME_OVER") {
+                isPointer = true;
+            } else if (this.state === "QUESTION") {
+                const boxW = w * 0.36;
+                const boxH = h * 0.20;
+                const positions = [
+                    { x: w * 0.13, y: h * 0.44 },
+                    { x: w * 0.52, y: h * 0.44 },
+                    { x: w * 0.13, y: h * 0.67 },
+                    { x: w * 0.52, y: h * 0.67 }
+                ];
+                for (const pos of positions) {
+                    if (cx >= pos.x && cx <= pos.x + boxW && cy >= pos.y && cy <= pos.y + boxH) {
+                        isPointer = true;
+                        break;
+                    }
+                }
+            } else if (this.state === "BOSS_BATTLE") {
+                isPointer = true;
             } else if (this.state === "VICTORY") {
                 if (cy >= 495 && cy <= 595) isPointer = true;
             } else if (this.state === "ACHIEVEMENTS") {
                 const btnY = this.canvas.height - 68;
                 if (cy >= btnY - 10 && cy <= btnY + 60) isPointer = true;
-            } else if (this.state === "GAME_OVER" || this.state === "STAGE_FAILED") {
-                isPointer = true;
             }
             this.canvas.style.cursor = isPointer ? "pointer" : "default";
         });
@@ -1509,6 +1531,61 @@ class CyberSecGame {
                 } else {
                     // Nhấp vào bất kỳ đâu để vào game -> hiện hộp thoại nhập tên người chơi
                     this.openNameModal(true);
+                }
+            } else if (this.state === "STAGE_INTRO") {
+                this.state = "QUESTION";
+            } else if (this.state === "QUESTION") {
+                // Nhấp vào các ô lựa chọn đáp án A, B, C, D
+                const boxW = w * 0.36;
+                const boxH = h * 0.20;
+                const positions = [
+                    { key: "A", x: w * 0.13, y: h * 0.44 },
+                    { key: "B", x: w * 0.52, y: h * 0.44 },
+                    { key: "C", x: w * 0.13, y: h * 0.67 },
+                    { key: "D", x: w * 0.52, y: h * 0.67 }
+                ];
+                for (const pos of positions) {
+                    if (cx >= pos.x && cx <= pos.x + boxW && cy >= pos.y && cy <= pos.y + boxH) {
+                        this.checkAnswer(pos.key);
+                        break;
+                    }
+                }
+            } else if (this.state === "QUESTION_RESULT") {
+                this.nextQuestion();
+            } else if (this.state === "STAGE_CLEAR") {
+                this.state = "DICE";
+                this.isDiceRolling = false;
+            } else if (this.state === "STAGE_FAILED") {
+                this.startStage(this.stage);
+            } else if (this.state === "DICE") {
+                if (!this.isDiceRolling) this.rollDice();
+            } else if (this.state === "DICE_RESULT") {
+                if (this.diceValue % 2 === 0) {
+                    this.state = "CARD";
+                    this.cardRevealed = false;
+                    this.currentCard = this._getRandomCard();
+                } else {
+                    this.proceedAfterDice();
+                }
+            } else if (this.state === "CARD") {
+                if (!this.cardRevealed) {
+                    this.cardRevealed = true;
+                    window.SoundEngine.play("card");
+                    if (this.currentCard.type === "bonus") {
+                        this.roses += this.currentCard.roses;
+                    } else if (this.currentCard.type === "penalty") {
+                        this.roses = Math.max(0, this.roses + this.currentCard.roses);
+                    }
+                } else {
+                    this.proceedAfterDice();
+                }
+            } else if (this.state === "TRAVELING") {
+                this._finishTravel();
+            } else if (this.state === "BOSS_INTRO") {
+                this.startBossFight();
+            } else if (this.state === "BOSS_BATTLE") {
+                if (this.bossTarget) {
+                    this.shootBoss(this.bossTarget);
                 }
             } else if (this.state === "VICTORY") {
                 // Nút Tiến vào Kho Thành Tựu
@@ -1591,6 +1668,49 @@ class CyberSecGame {
             return;
         }
 
+        // Xử lý khi Modal Nhập tên đang hiển thị (hỗ trợ điều khiển từ Nút Arcade Arduino, Bàn phím & Tay cầm ĐT)
+        const nameModal = document.getElementById("nameModal");
+        if (nameModal && (nameModal.classList.contains("show") || !nameModal.classList.contains("hidden"))) {
+            if (button === "ENTER" || button === "A") {
+                const inputName = document.getElementById("pcPlayerNameInput");
+                const val = inputName ? inputName.value : this.playerName;
+                this.setPlayerName(val, this.isStartingGameFromModal !== false);
+                return;
+            } else if (button === "B" || button === "ESC") {
+                this.closeNameModal();
+                return;
+            }
+        }
+
+        // Xử lý đóng các modal phụ khi bấm ESC hoặc B
+        if (button === "ESC" || button === "B") {
+            const certModal = document.getElementById("certModal");
+            if (certModal && !certModal.classList.contains("hidden") && window.CertificateGenerator) {
+                window.CertificateGenerator.close();
+                return;
+            }
+            const lbModal = document.getElementById("leaderboardModal");
+            if (lbModal && !lbModal.classList.contains("hidden")) {
+                this.closeLeaderboardModal();
+                return;
+            }
+            const aboutModal = document.getElementById("aboutModal");
+            if (aboutModal && !aboutModal.classList.contains("hidden")) {
+                this.closeAboutModal();
+                return;
+            }
+            const updateModal = document.getElementById("updateModal");
+            if (updateModal && !updateModal.classList.contains("hidden")) {
+                this.closeUpdateModal();
+                return;
+            }
+            const qrModal = document.getElementById("qrModal");
+            if (qrModal && !qrModal.classList.contains("hidden")) {
+                qrModal.classList.add("hidden");
+                return;
+            }
+        }
+
         this.activeButtons[button] = true;
         setTimeout(() => { this.activeButtons[button] = false; }, 200);
 
@@ -1610,7 +1730,7 @@ class CyberSecGame {
                 break;
 
             case "STORY":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     this.advanceStory();
                 } else if (button === "B") {
                     this.startStage(1);
@@ -1618,7 +1738,7 @@ class CyberSecGame {
                 break;
 
             case "STAGE_INTRO":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     this.state = "QUESTION";
                 }
                 break;
@@ -1630,32 +1750,32 @@ class CyberSecGame {
                 break;
 
             case "QUESTION_RESULT":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     this.nextQuestion();
                 }
                 break;
 
             case "STAGE_CLEAR":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     this.state = "DICE";
                     this.isDiceRolling = false;
                 }
                 break;
 
             case "STAGE_FAILED":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A" || button === "R") {
                     this.startStage(this.stage);
                 }
                 break;
 
             case "DICE":
-                if (button === "ENTER" && !this.isDiceRolling) {
+                if ((button === "ENTER" || button === "A") && !this.isDiceRolling) {
                     this.rollDice();
                 }
                 break;
 
             case "DICE_RESULT":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     if (this.diceValue % 2 === 0) {
                         this.state = "CARD";
                         this.cardRevealed = false;
@@ -1667,7 +1787,7 @@ class CyberSecGame {
                 break;
 
             case "CARD":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     if (!this.cardRevealed) {
                         this.cardRevealed = true;
                         window.SoundEngine.play("card");
@@ -1683,14 +1803,14 @@ class CyberSecGame {
                 break;
 
             case "TRAVELING":
-                // Bấm phím ENTER để bỏ qua/hoàn thành nhanh hoạt cảnh phiêu lưu
-                if (button === "ENTER") {
+                // Bấm phím ENTER hoặc A để bỏ qua/hoàn thành nhanh hoạt cảnh phiêu lưu
+                if (button === "ENTER" || button === "A") {
                     this._finishTravel();
                 }
                 break;
 
             case "BOSS_INTRO":
-                if (button === "ENTER") {
+                if (button === "ENTER" || button === "A") {
                     this.startBossFight();
                 }
                 break;
