@@ -309,6 +309,52 @@ class CyberSecGame {
         if (!cfg) return;
         this.config = cfg;
 
+        // Cập nhật linh hoạt Tiêu đề Trò chơi & Phụ đề trên toàn hệ thống
+        const gameTitle = (cfg.gameTitle && cfg.gameTitle.trim()) || "VỆ BINH MẬT KHẨU";
+        const gameSubtitle = (cfg.gameSubtitle && cfg.gameSubtitle.trim()) || "CYBERSEC PASSWORD GUARDIAN";
+
+        window._cybersecGameTitle = gameTitle;
+        window._cybersecGameSubtitle = gameSubtitle;
+
+        // Cập nhật Tiêu đề tab trình duyệt & cửa sổ Electron
+        document.title = `${gameTitle} - ${gameSubtitle} (Pixel Style)`;
+
+        // Cập nhật Thanh điều hướng phía trên (Top Bar)
+        const brandHeader = document.getElementById("headerBrandTitle") || document.querySelector(".brand-title span");
+        if (brandHeader) {
+            brandHeader.innerText = gameTitle;
+        }
+
+        // Cập nhật Modal Giới thiệu (About Modal)
+        const aboutGameTitle = document.getElementById("aboutModalGameTitle") || document.querySelector(".about-game-title");
+        if (aboutGameTitle) {
+            aboutGameTitle.innerText = gameTitle;
+        }
+        const aboutGameSub = document.getElementById("aboutModalGameSubtitle");
+        if (aboutGameSub) {
+            aboutGameSub.innerText = gameSubtitle;
+        }
+
+        // Cập nhật Tiêu đề Modal Giấy Chứng Nhận & Bảng Xếp Hạng
+        const certHeader = document.getElementById("certModalHeaderTitle");
+        if (certHeader) {
+            certHeader.innerText = `📜 GIẤY CHỨNG NHẬN ${gameTitle.toUpperCase()}`;
+        }
+        const lbHeader = document.getElementById("lbModalHeaderTitle");
+        if (lbHeader) {
+            lbHeader.innerText = `📊 BẢNG XẾP HẠNG ${gameTitle.toUpperCase()} (LIVE)`;
+        }
+
+        // Cập nhật sang Trình Quản Lý Thành Tựu & Giấy Chứng Nhận
+        if (window.AchievementManager) {
+            if (typeof window.AchievementManager.setGameTitles === "function") {
+                window.AchievementManager.setGameTitles(gameTitle, gameSubtitle);
+            }
+            if (cfg.achievementsSettings && typeof window.AchievementManager.applyConfig === "function") {
+                window.AchievementManager.applyConfig(cfg.achievementsSettings, cfg);
+            }
+        }
+
         // Cập nhật thẻ bài ma thuật từ cấu hình
         if (Array.isArray(cfg.magicCards) && cfg.magicCards.length > 0) {
             this.cards = cfg.magicCards;
@@ -333,11 +379,6 @@ class CyberSecGame {
         // Cập nhật các hồi cốt truyện mở đầu từ cấu hình
         if (Array.isArray(cfg.storySlides) && cfg.storySlides.length > 0) {
             this.storySlides = cfg.storySlides;
-        }
-
-        // Cập nhật cấu hình Thành Tựu
-        if (cfg.achievementsSettings && window.AchievementManager && window.AchievementManager.applyConfig) {
-            window.AchievementManager.applyConfig(cfg.achievementsSettings);
         }
     }
 
@@ -2835,14 +2876,17 @@ class CyberSecGame {
         ctx.lineWidth = 4;
         ctx.strokeRect(w * 0.10, h * 0.06, w * 0.80, h * 0.88);
 
+        const titleText = (this.config && this.config.gameTitle && this.config.gameTitle.trim()) || "VỆ BINH MẬT KHẨU";
+        const subtitleText = (this.config && this.config.gameSubtitle && this.config.gameSubtitle.trim()) || "CYBERSEC PASSWORD GUARDIAN";
+
         ctx.fillStyle = "#f1c40f";
         ctx.font = "bold 44px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("VỆ BINH MẬT KHẨU", w / 2, h * 0.13);
+        ctx.fillText(titleText, w / 2, h * 0.13);
 
         ctx.fillStyle = "#00d2d3";
         ctx.font = "bold 18px 'Courier New', monospace";
-        ctx.fillText("CYBERSEC PASSWORD GUARDIAN", w / 2, h * 0.17);
+        ctx.fillText(subtitleText, w / 2, h * 0.17);
 
         // Khung hiển thị Tên Người Chơi tương tác nổi bật
         const nameCardW = 460;
@@ -3516,7 +3560,8 @@ class CyberSecGame {
         ctx.fillText("Bạn đã đoạt được: 'KHO BÁU MẬT MÃ HOÀNG KIM'", w / 2, h * 0.54);
         ctx.fillStyle = "#00d2d3";
         ctx.font = "bold 20px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("Và đạt danh hiệu cao quý: BẬC THẦY VỆ BINH AN NINH MẠNG!", w / 2, h * 0.58);
+        const victoryTitle = ((this.config && this.config.gameTitle && this.config.gameTitle.trim()) || "VỆ BINH AN NINH MẠNG").toUpperCase();
+        ctx.fillText(`Và đạt danh hiệu cao quý: BẬC THẦY ${victoryTitle}!`, w / 2, h * 0.58);
 
         // Thông số chiến tích
         const minStr = Math.floor((this.lastTotalDuration || 0) / 60);
@@ -3614,7 +3659,8 @@ class CyberSecGame {
         const unlockedCount = window.AchievementManager ? window.AchievementManager.getUnlockedCount() : 0;
         ctx.fillStyle = "#00d2d3";
         ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText(`VỆ BINH AN TOÀN THÔNG TIN  •  ĐÃ MỞ KHÓA: ${unlockedCount}/3 THÀNH TỰU HUYỀN THOẠI`, w / 2, bannerY + 58);
+        const shrineTitle = ((this.config && this.config.gameTitle && this.config.gameTitle.trim()) || "VỆ BINH AN TOÀN THÔNG TIN").toUpperCase();
+        ctx.fillText(`${shrineTitle}  •  ĐÃ MỞ KHÓA: ${unlockedCount}/3 THÀNH TỰU HUYỀN THOẠI`, w / 2, bannerY + 58);
 
         // 4. BA BỆ THỜ VINH DANH (3 TROPHY SHRINES / ALTARS)
         const altars = [

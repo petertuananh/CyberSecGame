@@ -18,7 +18,7 @@
                     <img src="/images/logo_nbk_pixel.png" class="brand-logo" alt="Logo">
                     <div class="brand-info">
                         <h1 class="brand-name">CYBERSEC HELPER</h1>
-                        <span class="brand-desc">TRÌNH QUẢN LÝ CÂU HỎI & CẤU HÌNH SÂU GAME</span>
+                        <span class="brand-desc" id="helperHeaderGameTitle">TRÌNH QUẢN LÝ CÂU HỎI & CẤU HÌNH SÂU GAME</span>
                     </div>
                 </a>
                 <div id="syncStatus" class="status-pill status-online">
@@ -187,6 +187,27 @@
             <!-- TAB 4: RANDOM SETTINGS & MINIGAMES -->
             <section id="tab-random" class="tab-pane">
                 <div class="settings-grid">
+                    <!-- Box 0: Tên Game & Phụ Đề (Game Title & Subtitle) -->
+                    <div class="settings-card full-width" style="border: 1.5px solid #00d2d3; box-shadow: 0 0 15px rgba(0, 210, 211, 0.15);">
+                        <div class="card-head" style="background: rgba(0, 210, 211, 0.1);">
+                            <h3>🏷️ TỰA ĐỀ TRÒ CHƠI & PHỤ ĐỀ (GAME TITLE & SUBTITLE)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-row">
+                                    <label for="inputGameTitle"><strong>Tên Trò Chơi Chính (Game Title):</strong></label>
+                                    <input type="text" id="inputGameTitle" class="form-input" placeholder="VD: VỆ BINH MẬT KHẨU" value="VỆ BINH MẬT KHẨU">
+                                    <small>Hiển thị ở Start Screen, Thanh điều hướng (Top Bar), Tay cầm điện thoại, Bảng xếp hạng và Giấy chứng nhận.</small>
+                                </div>
+                                <div class="form-row">
+                                    <label for="inputGameSubtitle"><strong>Phụ Đề / Tên Tiếng Anh (Game Subtitle):</strong></label>
+                                    <input type="text" id="inputGameSubtitle" class="form-input" placeholder="VD: CYBERSEC PASSWORD GUARDIAN" value="CYBERSEC PASSWORD GUARDIAN">
+                                    <small>Hiển thị ở dòng phụ Start Screen, tiêu đề trình duyệt (Title Bar), và trang Giới thiệu trò chơi.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Box 1: Cấu hình Random -->
                     <div class="settings-card">
                         <div class="card-head">
@@ -917,14 +938,14 @@
                 <div class="update-version-status-box">
                     <div class="version-stat-col">
                         <span class="version-stat-lbl">Bản đang chạy:</span>
-                        <span id="helperCurVer" class="version-stat-val">v2.5.3</span>
+                        <span id="helperCurVer" class="version-stat-val">v2.5.4</span>
                     </div>
                     <div id="helperUpdateBadge" class="update-status-badge checking">
                         ⏳ ĐANG KIỂM TRA...
                     </div>
                     <div class="version-stat-col">
                         <span class="version-stat-lbl">Bản mới nhất:</span>
-                        <span id="helperLatestVer" class="version-stat-val text-cyan">v2.5.3</span>
+                        <span id="helperLatestVer" class="version-stat-val text-cyan">v2.5.4</span>
                     </div>
                 </div>
 

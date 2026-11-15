@@ -28,7 +28,7 @@
 
             <div class="brand-title">
                 <img id="brandIcon" class="pixel-badge-icon" alt="" />
-                <span>VỆ BINH MẬT KHẨU</span>
+                <span id="headerBrandTitle">VỆ BINH MẬT KHẨU</span>
             </div>
         </div>
 
@@ -191,7 +191,7 @@
     <div id="certModal" class="cert-modal-backdrop hidden">
         <div class="cert-modal-card">
             <div class="cert-modal-header">
-                <div class="cert-modal-title">📜 GIẤY CHỨNG NHẬN CHIẾN BINH AN TOÀN MẬT KHẨU</div>
+                <div class="cert-modal-title" id="certModalHeaderTitle">📜 GIẤY CHỨNG NHẬN CHIẾN BINH AN TOÀN MẬT KHẨU</div>
                 <button id="btnCloseCertModal" class="cert-close-btn">&times;</button>
             </div>
 
@@ -245,7 +245,7 @@
     <div id="leaderboardModal" class="cert-modal-backdrop hidden">
         <div class="leaderboard-modal-card">
             <div class="cert-modal-header">
-                <div class="cert-modal-title">📊 BẢNG XẾP HẠNG VỆ BINH AN NINH MẠNG (LIVE)</div>
+                <div class="cert-modal-title" id="lbModalHeaderTitle">📊 BẢNG XẾP HẠNG AN NINH MẠNG (LIVE)</div>
                 <button id="btnCloseLeaderboardModal" class="cert-close-btn">&times;</button>
             </div>
             <div class="leaderboard-meta-bar">
@@ -294,7 +294,8 @@
                         <img src="images/logo_nbk_pixel.png" alt="THCS NBK" class="about-logo-pixel">
                     </a>
                     <div>
-                        <div class="about-game-title">VỆ BINH MẬT KHẨU</div>
+                        <div class="about-game-title" id="aboutModalGameTitle">VỆ BINH MẬT KHẨU</div>
+                        <div class="about-game-subtitle" id="aboutModalGameSubtitle" style="font-size:12px; color:#00d2d3; font-weight:700; margin-top:2px; font-family:'JetBrains Mono',monospace;">CYBERSEC PASSWORD GUARDIAN</div>
                         <div class="about-free-tag">🎁 SẢN PHẨM MIỄN PHÍ 100% CHO GIÁO DỤC</div>
                     </div>
                 </div>
@@ -368,14 +369,14 @@
                 <div class="update-version-status-box">
                     <div class="version-stat-col">
                         <span class="version-stat-lbl">Bản đang chạy:</span>
-                        <span id="updateCurVer" class="version-stat-val">v2.5.3</span>
+                        <span id="updateCurVer" class="version-stat-val">v2.5.4</span>
                     </div>
                     <div id="updateStatusBadge" class="update-status-badge checking">
                         ⏳ ĐANG KIỂM TRA...
                     </div>
                     <div class="version-stat-col">
                         <span class="version-stat-lbl">Bản mới nhất:</span>
-                        <span id="updateLatestVer" class="version-stat-val text-cyan">v2.5.3</span>
+                        <span id="updateLatestVer" class="version-stat-val text-cyan">v2.5.4</span>
                     </div>
                 </div>
 

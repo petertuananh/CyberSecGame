@@ -359,7 +359,8 @@
     <!-- HEADER STATUS -->
     <header class="header">
         <div class="brand-info">
-            <div class="brand-title">🛡️ VỆ BINH MẬT KHẨU</div>
+            <div class="brand-title" id="controllerBrandTitle">🛡️ VỆ BINH MẬT KHẨU</div>
+            <div class="controller-subtitle" id="controllerBrandSubtitle" style="font-size:10px; color:#00d2d3; font-weight:700; letter-spacing:0.5px; opacity:0.9; margin-top:1px;">CYBERSEC PASSWORD GUARDIAN</div>
             <div id="deviceBadge" class="device-badge">📱 TAY CẦM #...</div>
         </div>
         <div id="statusPill" class="status-pill disconnected">
@@ -436,6 +437,23 @@
             const inputPlayerName = document.getElementById('inputPlayerName');
             const btnSetPlayerName = document.getElementById('btnSetPlayerName');
             const currentNameTag = document.getElementById('currentNameTag');
+            const controllerBrandTitle = document.getElementById('controllerBrandTitle');
+            const controllerBrandSubtitle = document.getElementById('controllerBrandSubtitle');
+
+            function applyConfigToController(cfg) {
+                if (!cfg) return;
+                const title = (cfg.gameTitle && cfg.gameTitle.trim()) || 'VỆ BINH MẬT KHẨU';
+                const subtitle = (cfg.gameSubtitle && cfg.gameSubtitle.trim()) || 'CYBERSEC PASSWORD GUARDIAN';
+                document.title = `Tay Cầm Điện Thoại - ${title}`;
+                if (controllerBrandTitle) controllerBrandTitle.innerText = `🛡️ ${title}`;
+                if (controllerBrandSubtitle) controllerBrandSubtitle.innerText = subtitle;
+            }
+
+            // Tải cấu hình game ban đầu để lấy tên game & phụ đề
+            fetch('/api/config')
+                .then(r => r.json())
+                .then(cfg => applyConfigToController(cfg))
+                .catch(() => {});
 
             if (deviceBadge) deviceBadge.innerText = '📱 TAY CẦM #' + controllerId;
 
@@ -554,6 +572,10 @@
                                     if (inputPlayerName && document.activeElement !== inputPlayerName) {
                                         inputPlayerName.value = newName;
                                     }
+                                }
+                            } else if (data.type === 'CONFIG_SYNC' || data.type === 'CONFIG_UPDATED') {
+                                if (data.config) {
+                                    applyConfigToController(data.config);
                                 }
                             }
                         } catch (e) {}

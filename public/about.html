@@ -886,7 +886,7 @@
             <div class="hero-badge-row">
                 <span class="badge badge-free">🎁 MIỄN PHÍ 100% CHO GIÁO DỤC</span>
                 <span class="badge badge-edu">🛡️ PHI LỢI NHUẬN • AN TOÀN SỐ</span>
-                <span id="btnAboutCheckUpdate" class="badge badge-version" style="cursor:pointer;" title="Nhấn để kiểm tra bản cập nhật mới từ GitHub">v2.5 ARCADEPUNK • 🔄 CHECK UPDATE</span>
+                <span id="btnAboutCheckUpdate" class="badge badge-version" style="cursor:pointer;" title="Nhấn để kiểm tra bản cập nhật mới từ GitHub">v2.5.4 ARCADEPUNK • 🔄 CHECK UPDATE</span>
             </div>
 
             <div class="hero-pixel-title">CYBER SECURITY ARCADE ADVENTURE</div>
@@ -1293,6 +1293,23 @@
                 toast.style.display = 'none';
             }, 2500);
         }
+
+        // Nạp cấu hình game động để cập nhật gameTitle và gameSubtitle
+        fetch('/api/config')
+            .then(r => r.json())
+            .then(cfg => {
+                if (!cfg) return;
+                const title = (cfg.gameTitle && cfg.gameTitle.trim()) || 'VỆ BINH MẬT KHẨU';
+                const subtitle = (cfg.gameSubtitle && cfg.gameSubtitle.trim()) || 'CYBERSEC PASSWORD GUARDIAN';
+                document.title = `Giới Thiệu & Bản Quyền | ${title} (${subtitle})`;
+                const navTitleMain = document.querySelector('.nav-title-main');
+                if (navTitleMain) navTitleMain.innerText = title;
+                const heroTitle = document.querySelector('.hero-title');
+                if (heroTitle) heroTitle.innerText = title;
+                const heroPixelTitle = document.querySelector('.hero-pixel-title');
+                if (heroPixelTitle && cfg.gameSubtitle) heroPixelTitle.innerText = subtitle;
+            })
+            .catch(() => {});
 
         // Live check update trên trang About
         const btnCheck = document.getElementById('btnAboutCheckUpdate');

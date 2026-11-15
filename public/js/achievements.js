@@ -62,6 +62,13 @@
             this.images.the_flash.src = "images/flash.png";
             this.images.kratos.src = "images/trophy_kratos.jpg";
             this.images.loser.src = "images/loser.png";
+            this.gameTitle = "VỆ BINH MẬT KHẨU";
+            this.gameSubtitle = "CYBERSEC PASSWORD GUARDIAN";
+        }
+
+        setGameTitles(title, subtitle) {
+            if (title && title.trim()) this.gameTitle = title.trim();
+            if (subtitle && subtitle.trim()) this.gameSubtitle = subtitle.trim();
         }
 
         _load() {
@@ -111,7 +118,11 @@
             }
         }
 
-        applyConfig(achSettings) {
+        applyConfig(achSettings, fullConfig) {
+            if (fullConfig) {
+                if (fullConfig.gameTitle) this.gameTitle = fullConfig.gameTitle;
+                if (fullConfig.gameSubtitle) this.gameSubtitle = fullConfig.gameSubtitle;
+            }
             if (!achSettings) return;
             if (achSettings.the_flash) {
                 const cfg = achSettings.the_flash;
@@ -973,7 +984,8 @@
             const descY = nameY + Math.round(30 * scaleY);
             ctx.font = `${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2f3542";
-            ctx.fillText("Đã xuất sắc vượt qua khóa thử thách Vệ Binh Mật Khẩu, dũng cảm chinh phục 3 thế giới", w / 2, descY);
+            const titleDisplay = this.gameTitle || "Vệ Binh Mật Khẩu";
+            ctx.fillText(`Đã xuất sắc vượt qua khóa thử thách ${titleDisplay}, dũng cảm chinh phục 3 thế giới`, w / 2, descY);
             ctx.fillText("Rừng Mật Mã, Biển Dữ Liệu, Tầng Mây và phong ấn thành công Rồng Hắc Ám!", w / 2, descY + Math.round(20 * scaleY));
 
             // 6. KHỐI THÀNH TỰU ĐẠT ĐƯỢC (BẢNG TRƯNG BÀY CÚP & HUY HIỆU ĐẦY ĐỦ, HOÀNG KIM)
@@ -1197,8 +1209,10 @@
             // Ngôi sao vàng / chữ ĐÃ CHỨNG THỰC
             ctx.font = "bold 11.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.fillText("CHỨNG THỰC", 0, 8);
-            ctx.font = "bold 9.5px 'Segoe UI', Tahoma, sans-serif";
-            ctx.fillText("VỆ BINH MẬT KHẨU", 0, 24);
+            const sealTitle = (this.gameTitle || "VỆ BINH MẬT KHẨU").toUpperCase();
+            const sealFont = sealTitle.length > 22 ? "bold 7.5px 'Segoe UI', Tahoma, sans-serif" : (sealTitle.length > 16 ? "bold 8.5px 'Segoe UI', Tahoma, sans-serif" : "bold 9.5px 'Segoe UI', Tahoma, sans-serif");
+            ctx.font = sealFont;
+            ctx.fillText(sealTitle, 0, 24);
 
             ctx.restore();
         }

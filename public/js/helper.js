@@ -80,6 +80,8 @@
         'cardSelectType': 'Loại thẻ bài',
         'cardInputRoses': 'Hoa hồng thẻ bài',
         'cardInputDesc': 'Mô tả thẻ bài',
+        'inputGameTitle': 'Tên trò chơi (Game Title)',
+        'inputGameSubtitle': 'Phụ đề trò chơi (Game Subtitle)',
         'chkShuffleQuestions': 'Xáo trộn câu hỏi',
         'chkShuffleOptions': 'Xáo trộn đáp án',
         'chkAllowSkipStory': 'Cho phép bỏ qua cốt truyện',
@@ -219,6 +221,8 @@
     const questionsListEl = document.getElementById("questionsList");
     const qCountText = document.getElementById("qCountText");
 
+    const inputGameTitle = document.getElementById("inputGameTitle");
+    const inputGameSubtitle = document.getElementById("inputGameSubtitle");
     const chkShuffleQuestions = document.getElementById("chkShuffleQuestions");
     const chkShuffleOptions = document.getElementById("chkShuffleOptions");
     const chkAllowSkipStory = document.getElementById("chkAllowSkipStory");
@@ -1276,10 +1280,28 @@
         });
     }
 
+    function updateHelperTitleUI() {
+        const title = (currentConfig && currentConfig.gameTitle && currentConfig.gameTitle.trim()) || "VỆ BINH MẬT KHẨU";
+        const subtitle = (currentConfig && currentConfig.gameSubtitle && currentConfig.gameSubtitle.trim()) || "CYBERSEC PASSWORD GUARDIAN";
+        document.title = `Trình Quản Lý & Cấu Hình - ${title}`;
+        const helperHeaderGameTitle = document.getElementById("helperHeaderGameTitle");
+        if (helperHeaderGameTitle) {
+            helperHeaderGameTitle.innerText = `TRÌNH QUẢN LÝ CÂU HỎI & CẤU HÌNH SÂU GAME • ${title.toUpperCase()}`;
+        }
+    }
+
     // Render Tab 4: Settings & Cards
     function renderRandomSettings() {
         const s = currentConfig.settings || {};
         const active = document.activeElement;
+
+        if (inputGameTitle && active !== inputGameTitle) {
+            inputGameTitle.value = currentConfig.gameTitle || "VỆ BINH MẬT KHẨU";
+        }
+        if (inputGameSubtitle && active !== inputGameSubtitle) {
+            inputGameSubtitle.value = currentConfig.gameSubtitle || "CYBERSEC PASSWORD GUARDIAN";
+        }
+        updateHelperTitleUI();
 
         if (active !== chkShuffleQuestions) chkShuffleQuestions.checked = !!s.shuffleQuestions;
         if (active !== chkShuffleOptions) chkShuffleOptions.checked = !!s.shuffleOptions;
@@ -1355,6 +1377,14 @@
         currentConfig.settings.bossHP = parseInt(inputBossHP.value) || 9;
         currentConfig.settings.requiredRosesForBoss = parseInt(inputRequiredRoses.value) || 9;
         currentConfig.settings.bossSpeedMs = parseInt(inputBossSpeed.value) || 1400;
+
+        if (inputGameTitle) {
+            currentConfig.gameTitle = inputGameTitle.value.trim() || "VỆ BINH MẬT KHẨU";
+        }
+        if (inputGameSubtitle) {
+            currentConfig.gameSubtitle = inputGameSubtitle.value.trim() || "CYBERSEC PASSWORD GUARDIAN";
+        }
+        updateHelperTitleUI();
 
         syncAchievementsFormToState();
     }

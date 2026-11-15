@@ -782,7 +782,8 @@ const PixelSprites = {
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "16px 'Segoe UI', Tahoma, sans-serif";
-        ctx.fillText("Vệ Binh Mật Khẩu đang bước đi khám phá vùng đất tiếp theo...", w / 2, 130);
+        const heroTitle = window._cybersecGameTitle || "Vệ Binh Mật Khẩu";
+        ctx.fillText(`${heroTitle} đang bước đi khám phá vùng đất tiếp theo...`, w / 2, 130);
     },
 
     // ========================================================
