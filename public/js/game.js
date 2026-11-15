@@ -1020,11 +1020,16 @@ class CyberSecGame {
 
         if (btnApply) {
             btnApply.disabled = true;
-            btnApply.innerText = "⏳ ĐANG NÂNG CẤP...";
+            btnApply.innerText = "⏳ ĐANG XIN QUYỀN ADMIN...";
         }
+        this._showToast("🛡️ Đang mở hộp thoại Windows UAC... Hãy bấm 'Yes' (Đồng ý) trên màn hình!", "shield", 5000);
 
         try {
-            const res = await fetch("/api/update/apply", { method: "POST" });
+            const res = await fetch("/api/update/apply", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ runAsAdmin: true })
+            });
             const data = await res.json();
             if (data.success) {
                 this._showToast("🚀 " + (data.message || "Đang nâng cấp..."), "star");
@@ -1039,15 +1044,15 @@ class CyberSecGame {
 
                 if (progressBar) progressBar.style.width = "100%";
                 if (percentText) percentText.innerText = "100%";
-                if (speedText) speedText.innerText = "Hoàn tất";
-                if (sizeText) sizeText.innerText = "Đã cập nhật xong";
+                if (speedText) speedText.innerText = "Admin UAC";
+                if (sizeText) sizeText.innerText = "Đang chạy bộ cài đặt...";
 
                 let countdown = 3;
-                if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+                if (statusText) statusText.innerText = `🔄 Đang chuyển giao bộ cài đặt (Admin)! Tự động tải lại sau ${countdown}s...`;
 
                 const cdTimer = setInterval(() => {
                     countdown--;
-                    if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+                    if (statusText) statusText.innerText = `🔄 Đang chuyển giao bộ cài đặt (Admin)! Tự động tải lại sau ${countdown}s...`;
                     if (countdown <= 0) {
                         clearInterval(cdTimer);
                         window.location.href = window.location.pathname + '?v=' + Date.now();
@@ -1059,9 +1064,9 @@ class CyberSecGame {
         } catch (err) {
             if (btnApply) {
                 btnApply.disabled = false;
-                btnApply.innerText = "🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI NGAY";
+                btnApply.innerText = "🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI (ADMIN UAC)";
             }
-            alert("Lỗi cài đặt: " + err.message);
+            alert("Lỗi cài đặt: " + err.message + "\n\n💡 Mẹo: Nhấn 'MỞ THƯ MỤC CHỨA TỆP' -> Chuột phải vào CyberSecGame_Setup.exe -> chọn 'Run as administrator' (Chạy với quyền quản trị viên).");
         }
     }
 

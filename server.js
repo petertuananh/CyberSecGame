@@ -18,7 +18,7 @@ const { ReadlineParser } = require('@serialport/parser-readline');
 const TunnelManager = require('./tunnel_manager');
 
 // Lấy phiên bản phần mềm hiện tại từ package.json
-let CURRENT_VERSION = '2.5.1';
+let CURRENT_VERSION = '2.5.2';
 try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     if (pkg && pkg.version) CURRENT_VERSION = pkg.version;
@@ -616,11 +616,34 @@ const updateManager = {
     abortController: null
 };
 
-// Dọn dẹp thư mục tạm temp_update khi khởi động server
+// Hàm lấy thư mục làm việc cho bản cập nhật (Ưu tiên thư mục tạm hệ thống os.tmpdir() để luôn có quyền ghi kể cả khi game cài trong Program Files)
+function getUpdateWorkingDir() {
+    const os = require('os');
+    const tmpDir = path.join(os.tmpdir(), 'CyberSecGame_Update');
+    try {
+        if (!fs.existsSync(tmpDir)) {
+            fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        return tmpDir;
+    } catch (e) {
+        const localDir = path.join(__dirname, 'temp_update');
+        if (!fs.existsSync(localDir)) {
+            fs.mkdirSync(localDir, { recursive: true });
+        }
+        return localDir;
+    }
+}
+
+// Dọn dẹp thư mục tạm cập nhật khi khởi động server
 try {
-    const startupTempDir = path.join(__dirname, 'temp_update');
-    if (fs.existsSync(startupTempDir)) {
-        fs.rmSync(startupTempDir, { recursive: true, force: true });
+    const os = require('os');
+    const startupTmpDir = path.join(os.tmpdir(), 'CyberSecGame_Update');
+    if (fs.existsSync(startupTmpDir)) {
+        fs.rmSync(startupTmpDir, { recursive: true, force: true });
+    }
+    const localTmpDir = path.join(__dirname, 'temp_update');
+    if (fs.existsSync(localTmpDir)) {
+        fs.rmSync(localTmpDir, { recursive: true, force: true });
     }
 } catch (e) {}
 
@@ -724,11 +747,8 @@ app.post('/api/update/start', async (req, res) => {
             }
         }
 
-        // Tạo thư mục tạm temp_update
-        const updateDir = path.join(__dirname, 'temp_update');
-        if (!fs.existsSync(updateDir)) {
-            fs.mkdirSync(updateDir, { recursive: true });
-        }
+        // Tạo thư mục tạm an toàn có quyền ghi
+        const updateDir = getUpdateWorkingDir();
         const destPath = path.join(updateDir, fileName);
 
         // Xóa file cũ nếu có để tải lại từ đầu sạch sẽ
@@ -856,7 +876,7 @@ app.post('/api/update/cancel', (req, res) => {
     }
 });
 
-// API: Áp dụng bản cập nhật & Khởi động lại (1-Click Apply)
+// API: Áp dụng bản cập nhật & Khởi động lại (1-Click Apply với quyền Administrator UAC)
 app.post('/api/update/apply', (req, res) => {
     try {
         if (!updateManager.filePath || !fs.existsSync(updateManager.filePath)) {
@@ -872,31 +892,58 @@ app.post('/api/update/apply', (req, res) => {
 
         if (updateManager.fileType === 'exe') {
             // Chạy tệp cài đặt Inno Setup đã tải về
-            // /CLOSEAPPLICATIONS để tự động đóng phiên bản hiện tại
-            const installerArgs = ['/CLOSEAPPLICATIONS'];
-            const child = spawn(updateManager.filePath, installerArgs, {
-                detached: true,
-                stdio: 'ignore'
-            });
-            child.unref();
+            // Luôn ưu tiên dùng -Verb RunAs trên Windows để mở hộp thoại UAC đảm bảo toàn quyền ghi vào Program Files / ổ C
+            const safeSetupPath = updateManager.filePath.replace(/'/g, "''");
+            const installerArgs = '/CLOSEAPPLICATIONS';
+
+            if (process.platform === 'win32') {
+                console.log(`[AutoUpdate] 🛡️ Đang kích hoạt bộ cài với quyền Administrator qua Windows UAC...`);
+                const elevateInstallerCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${safeSetupPath}' -ArgumentList '${installerArgs}' -Verb RunAs"`;
+                
+                exec(elevateInstallerCmd, (elevateErr) => {
+                    if (elevateErr) {
+                        console.warn('[AutoUpdate] Người dùng đóng UAC hoặc gặp lỗi:', elevateErr.message);
+                        // Thử chạy trực tiếp thông thường phòng trường hợp máy không có UAC
+                        try {
+                            const child = spawn(updateManager.filePath, [installerArgs], {
+                                detached: true,
+                                stdio: 'ignore',
+                                shell: true
+                            });
+                            child.unref();
+                        } catch (spawnErr) {
+                            console.error('[AutoUpdate] Không thể chạy bộ cài:', spawnErr.message);
+                        }
+                    }
+                });
+            } else {
+                const child = spawn(updateManager.filePath, ['/CLOSEAPPLICATIONS'], {
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                child.unref();
+            }
 
             res.json({
                 success: true,
-                message: 'Đã khởi chạy trình cài đặt bản mới! Game sẽ tự động đóng sau 2 giây để hoàn tất nâng cấp...'
+                message: 'Đang khởi chạy trình cài đặt bản mới (Administrator UAC)! Vui lòng bấm "Yes" (Đồng ý) trên màn hình để nâng cấp...'
             });
 
             setTimeout(() => {
                 process.exit(0);
-            }, 2000);
+            }, 2500);
         } else {
             // Cập nhật từ file ZIP (mã nguồn/assets mới nhất từ GitHub)
-            const extractDir = path.join(__dirname, 'temp_update', 'extracted');
+            const workDir = getUpdateWorkingDir();
+            const extractDir = path.join(workDir, 'extracted');
             if (fs.existsSync(extractDir)) {
                 try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (e) {}
             }
             fs.mkdirSync(extractDir, { recursive: true });
 
-            const extractCmd = `powershell -NoProfile -Command "Expand-Archive -Path '${updateManager.filePath}' -DestinationPath '${extractDir}' -Force"`;
+            const safeZip = updateManager.filePath.replace(/'/g, "''");
+            const safeExtract = extractDir.replace(/'/g, "''");
+            const extractCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '${safeZip}' -DestinationPath '${safeExtract}' -Force"`;
             exec(extractCmd, (err) => {
                 if (err) {
                     console.error('[AutoUpdate] ❌ Lỗi giải nén ZIP:', err);
@@ -914,18 +961,48 @@ app.post('/api/update/apply', (req, res) => {
                         rootSource = path.join(extractDir, subEntries[0]);
                     }
 
-                    // Sao chép tệp mới, giữ nguyên tuyệt đối thư mục data/ (dữ liệu người chơi) và không đè các file exe đang chạy
-                    fs.cpSync(rootSource, __dirname, {
-                        recursive: true,
-                        force: true,
-                        filter: (src) => {
-                            const rel = path.relative(rootSource, src).replace(/\\/g, '/');
-                            if (rel.startsWith('data/') || rel === 'data' || rel.startsWith('temp_update') || rel.toLowerCase().endsWith('.exe')) {
-                                return false;
+                    // Kiểm tra xem có cần quyền Admin để ghi đè vào thư mục app không
+                    let needsAdminCopy = false;
+                    try {
+                        // Thử sao chép trực tiếp trước
+                        fs.cpSync(rootSource, __dirname, {
+                            recursive: true,
+                            force: true,
+                            filter: (src) => {
+                                const rel = path.relative(rootSource, src).replace(/\\/g, '/');
+                                if (rel.startsWith('data/') || rel === 'data' || rel.startsWith('temp_update') || rel.toLowerCase().endsWith('.exe')) {
+                                    return false;
+                                }
+                                return true;
                             }
-                            return true;
+                        });
+                    } catch (directErr) {
+                        if (isPermissionError(directErr) && process.platform === 'win32') {
+                            needsAdminCopy = true;
+                        } else {
+                            throw directErr;
                         }
-                    });
+                    }
+
+                    // Nếu bị chặn quyền ghi (EACCES), kích hoạt lệnh sao chép bằng Administrator qua UAC
+                    if (needsAdminCopy) {
+                        console.log('[AutoUpdate] 🛡️ Thiếu quyền ghi Program Files, kích hoạt quyền Admin qua UAC để chép file...');
+                        const os = require('os');
+                        const copyBatPath = path.join(os.tmpdir(), 'cybersec_apply_zip_update.bat');
+                        const copyBatContent = `@echo off\r
+chcp 65001 >nul\r
+echo [Ve Binh Mat Khau] Dang sao chep du lieu ban cap nhat moi voi quyen Admin...\r
+robocopy "${rootSource}" "${__dirname}" /E /XF *.exe /XD data temp_update /R:1 /W:1 >nul\r
+timeout /t 1 >nul\r
+`;
+                        fs.writeFileSync(copyBatPath, copyBatContent, 'utf8');
+                        const elevateCopyCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${copyBatPath}' -Verb RunAs -Wait"`;
+                        exec(elevateCopyCmd, (copyAdminErr) => {
+                            if (copyAdminErr) {
+                                console.error('[AutoUpdate] Lỗi sao chép tệp bằng quyền Admin:', copyAdminErr.message);
+                            }
+                        });
+                    }
 
                     console.log('[AutoUpdate] ✅ Đã sao chép tệp mới thành công!');
                     updateManager.state = 'completed';
@@ -952,7 +1029,7 @@ app.post('/api/update/apply', (req, res) => {
                 } catch (copyErr) {
                     console.error('[AutoUpdate] ❌ Lỗi sao chép tệp mới:', copyErr);
                     updateManager.state = 'error';
-                    updateManager.error = 'Lỗi cập nhật tệp: ' + copyErr.message;
+                    updateManager.error = 'Lỗi cập nhật tệp (cần quyền Administrator): ' + copyErr.message;
                     broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
                     res.status(500).json({ success: false, error: updateManager.error });
                 }
@@ -969,7 +1046,7 @@ app.post('/api/update/apply', (req, res) => {
 // API: Mở thư mục chứa tệp cập nhật vừa tải về
 app.post('/api/update/open-folder', (req, res) => {
     try {
-        const filePath = updateManager.filePath || path.join(__dirname, 'temp_update');
+        const filePath = updateManager.filePath || getUpdateWorkingDir();
         if (process.platform === 'win32') {
             if (fs.existsSync(filePath)) {
                 exec(`explorer.exe /select,"${filePath}"`);
