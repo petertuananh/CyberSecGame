@@ -479,13 +479,48 @@
     }
 
     // ==========================================
-    // 2.1. XỬ LÝ LỖI THIẾU QUYỀN GHI Ổ C & XIN QUYỀN ADMIN
+    // 2.1. XỬ LÝ QUYỀN GHI Ổ C & XIN QUYỀN ADMIN (WINDOWS UAC)
     // ==========================================
     const modalAdmin = document.getElementById("modalAdminPermission");
     const adminErrorFilePath = document.getElementById("adminErrorFilePath");
+    const adminLiveStatusBadge = document.getElementById("adminLiveStatusBadge");
     const btnGrantAdminPerms = document.getElementById("btnGrantAdminPerms");
     const btnRelaunchAdmin = document.getElementById("btnRelaunchAdmin");
     const btnDownloadConfigEmergency = document.getElementById("btnDownloadConfigEmergency");
+    const btnCheckPermsRefresh = document.getElementById("btnCheckPermsRefresh");
+    const btnHeaderGrantAdmin = document.getElementById("btnHeaderGrantAdmin");
+
+    let adminCheckPollInterval = null;
+
+    async function checkCurrentAdminPermissions(silent = false) {
+        if (!adminLiveStatusBadge) return false;
+        if (!silent) {
+            adminLiveStatusBadge.innerText = "⏳ ĐANG KIỂM TRA...";
+            adminLiveStatusBadge.style.background = "rgba(148, 163, 184, 0.2)";
+            adminLiveStatusBadge.style.color = "#94a3b8";
+            adminLiveStatusBadge.style.border = "1px solid #94a3b8";
+        }
+        try {
+            const res = await fetch("/api/admin/check-permissions");
+            const data = await res.json();
+            if (data.canWrite) {
+                adminLiveStatusBadge.innerText = "✅ ĐÃ CÓ QUYỀN GHI";
+                adminLiveStatusBadge.style.background = "rgba(46, 204, 113, 0.2)";
+                adminLiveStatusBadge.style.color = "#2ecc71";
+                adminLiveStatusBadge.style.border = "1px solid #2ecc71";
+                return true;
+            } else {
+                adminLiveStatusBadge.innerText = "⚠️ THIẾU QUYỀN GHI (CẦN ADMIN)";
+                adminLiveStatusBadge.style.background = "rgba(231, 76, 60, 0.2)";
+                adminLiveStatusBadge.style.color = "#ff6b81";
+                adminLiveStatusBadge.style.border = "1px solid #e74c3c";
+                return false;
+            }
+        } catch (e) {
+            adminLiveStatusBadge.innerText = "❌ LỖI KẾT NỐI";
+            return false;
+        }
+    }
 
     function openAdminPermissionModal(errorData, force, summary, targetId) {
         if (!modalAdmin) {
@@ -496,26 +531,49 @@
             adminErrorFilePath.innerText = errorData.path;
         }
         modalAdmin.classList.add("active");
+        checkCurrentAdminPermissions();
 
         // Gắn sự kiện xin quyền UAC
         if (btnGrantAdminPerms) {
             btnGrantAdminPerms.onclick = async () => {
                 btnGrantAdminPerms.disabled = true;
                 btnGrantAdminPerms.innerText = "⏳ Đang gửi lệnh UAC...";
-                showToast("🛡️ Đang kích hoạt hộp thoại Windows UAC... Hãy bấm 'Yes' trên màn hình!", false);
+                showToast("🛡️ Đang kích hoạt hộp thoại Windows UAC... Hãy bấm 'Yes' trên màn hình!", false, 5000);
+                
                 try {
                     const res = await fetch("/api/admin/grant-permissions", { method: "POST" });
                     const d = await res.json();
                     if (d.success) {
-                        showToast("✅ Đang chờ cấp quyền... Đang tự động lưu lại vào game!");
-                        setTimeout(async () => {
-                            btnGrantAdminPerms.disabled = false;
-                            btnGrantAdminPerms.innerText = "🛡️ CẤP QUYỀN ADMIN (UAC)";
-                            modalAdmin.classList.remove("active");
-                            await saveConfigToServer(force, summary, targetId);
-                        }, 2500);
+                        showToast("✅ Đã kích hoạt lệnh UAC! Đang chờ bạn xác nhận...");
+                        
+                        // Polling kiểm tra quyền ghi sau khi người dùng bấm Yes trên UAC
+                        let attempts = 0;
+                        if (adminCheckPollInterval) clearInterval(adminCheckPollInterval);
+                        adminCheckPollInterval = setInterval(async () => {
+                            attempts++;
+                            const canWrite = await checkCurrentAdminPermissions(true);
+                            if (canWrite) {
+                                clearInterval(adminCheckPollInterval);
+                                adminCheckPollInterval = null;
+                                btnGrantAdminPerms.disabled = false;
+                                btnGrantAdminPerms.innerText = "🛡️ CẤP QUYỀN ADMIN (UAC)";
+                                showToast("🎉 Cấp quyền Admin thành công! Đã mở khóa quyền ghi dữ liệu.");
+                                
+                                setTimeout(async () => {
+                                    modalAdmin.classList.remove("active");
+                                    if (force || summary || targetId) {
+                                        await saveConfigToServer(force, summary, targetId);
+                                    }
+                                }, 1500);
+                            } else if (attempts >= 12) { // 12 x 800ms = ~10s
+                                clearInterval(adminCheckPollInterval);
+                                adminCheckPollInterval = null;
+                                btnGrantAdminPerms.disabled = false;
+                                btnGrantAdminPerms.innerText = "🛡️ CẤP QUYỀN ADMIN (UAC)";
+                            }
+                        }, 800);
                     } else {
-                        throw new Error(d.error || "Không thể cấp quyền");
+                        throw new Error(d.error || "Không thể gửi yêu cầu UAC");
                     }
                 } catch (err) {
                     btnGrantAdminPerms.disabled = false;
@@ -547,20 +605,68 @@
         }
     }
 
+    if (btnCheckPermsRefresh) {
+        btnCheckPermsRefresh.addEventListener("click", () => checkCurrentAdminPermissions());
+    }
+
+    if (btnHeaderGrantAdmin) {
+        btnHeaderGrantAdmin.addEventListener("click", () => {
+            openAdminPermissionModal(null, false, "Cấp quyền Administrator");
+        });
+    }
+
     // ==========================================
-    // 2.2. KIỂM TRA CẬP NHẬT GITHUB TRÊN HELPER
+    // 2.2. HỆ THỐNG CẬP NHẬT TRỰC TIẾP 1-CLICK (GITHUB LIVE AUTO-UPDATER CHO HELPER)
     // ==========================================
+    let helperUpdateData = null;
+    let isHelperDownloadingUpdate = false;
+    let helperUpdatePollTimer = null;
+
     const btnHelperCheckUpdate = document.getElementById("btnHelperCheckUpdate");
     const modalUpdateHelper = document.getElementById("modalUpdateHelper");
     const helperCurVer = document.getElementById("helperCurVer");
     const helperLatestVer = document.getElementById("helperLatestVer");
     const helperUpdateBadge = document.getElementById("helperUpdateBadge");
+    const helperReleaseTitle = document.getElementById("helperReleaseTitle");
+    const helperReleaseMeta = document.getElementById("helperReleaseMeta");
     const helperReleaseNotesBox = document.getElementById("helperReleaseNotesBox");
-    const btnHelperDownloadSetup = document.getElementById("btnHelperDownloadSetup");
+
+    const helperBoxReady = document.getElementById("helperUpdateReadyBox");
+    const helperBoxDl = document.getElementById("helperUpdateDownloadingBox");
+    const helperBoxDone = document.getElementById("helperUpdateCompleteBox");
+    const helperBoxErr = document.getElementById("helperUpdateErrorBox");
+
+    const btnHelperAutoUpdateNow = document.getElementById("btnHelperAutoUpdateNow");
+    const btnHelperAutoUpdateTitle = document.getElementById("btnHelperAutoUpdateTitle");
+    const btnHelperAutoUpdateSub = document.getElementById("btnHelperAutoUpdateSub");
+    const btnHelperCancelDownload = document.getElementById("btnHelperCancelDownload");
+    const btnHelperApplyUpdateNow = document.getElementById("btnHelperApplyUpdateNow");
+    const btnHelperRedownloadUpdate = document.getElementById("btnHelperRedownloadUpdate");
+    const btnHelperOpenUpdateFolder = document.getElementById("btnHelperOpenUpdateFolder");
+    const btnHelperRetryUpdate = document.getElementById("btnHelperRetryUpdate");
+    const btnHelperRecheckUpdate = document.getElementById("btnHelperRecheckUpdate");
+    const btnHelperDownloadManualExe = document.getElementById("btnHelperDownloadManualExe");
+    const btnHelperDownloadManualZip = document.getElementById("btnHelperDownloadManualZip");
+
+    function setHelperUpdateUIState(state) {
+        if (helperBoxReady) helperBoxReady.classList.add("hidden");
+        if (helperBoxDl) helperBoxDl.classList.add("hidden");
+        if (helperBoxDone) helperBoxDone.classList.add("hidden");
+        if (helperBoxErr) helperBoxErr.classList.add("hidden");
+
+        if (state === "ready" && helperBoxReady) helperBoxReady.classList.remove("hidden");
+        else if (state === "downloading" && helperBoxDl) helperBoxDl.classList.remove("hidden");
+        else if (state === "complete" && helperBoxDone) helperBoxDone.classList.remove("hidden");
+        else if (state === "error" && helperBoxErr) helperBoxErr.classList.remove("hidden");
+    }
 
     async function checkUpdateFromHelper(isManual = false) {
         if (isManual && btnHelperCheckUpdate) {
             btnHelperCheckUpdate.innerText = "⏳ Đang kiểm tra...";
+        }
+        if (helperUpdateBadge) {
+            helperUpdateBadge.className = "update-status-badge checking";
+            helperUpdateBadge.innerText = "⏳ ĐANG KIỂM TRA...";
         }
         try {
             const res = await fetch("/api/check-update");
@@ -568,35 +674,57 @@
             if (btnHelperCheckUpdate) btnHelperCheckUpdate.innerText = "🚀 CẬP NHẬT";
 
             if (data.success) {
+                helperUpdateData = data;
                 if (helperCurVer) helperCurVer.innerText = `v${data.currentVersion}`;
                 if (helperLatestVer) helperLatestVer.innerText = `v${data.latestVersion}`;
-                if (helperReleaseNotesBox) {
-                    helperReleaseNotesBox.innerHTML = `<strong>${data.releaseName || 'Bản mới'}</strong><br>${(data.releaseNotes || 'Không có mô tả').replace(/\n/g, '<br>')}`;
+                if (helperReleaseTitle) helperReleaseTitle.innerText = data.releaseName || `Phiên bản v${data.latestVersion}`;
+                if (helperReleaseMeta) {
+                    helperReleaseMeta.innerText = data.publishedAt
+                        ? `Phát hành lúc: ${new Date(data.publishedAt).toLocaleString('vi-VN')} • Nguồn: GitHub Releases`
+                        : `Nguồn: GitHub repository petertuananh/CyberSecGame`;
                 }
-                if (btnHelperDownloadSetup && data.downloadUrl) {
-                    btnHelperDownloadSetup.href = data.directSetupUrl || data.downloadUrl;
+                if (helperReleaseNotesBox) {
+                    helperReleaseNotesBox.innerHTML = `<strong>${data.releaseName || 'Chi tiết bản phát hành'}</strong><br>${(data.releaseNotes || 'Không có mô tả chi tiết.').replace(/\n/g, '<br>')}`;
+                }
+
+                // Cập nhật các liên kết tải thủ công
+                if (btnHelperDownloadManualExe) {
+                    btnHelperDownloadManualExe.href = data.directSetupUrl || data.downloadUrl || "https://github.com/petertuananh/CyberSecGame/releases";
+                }
+                if (btnHelperDownloadManualZip) {
+                    btnHelperDownloadManualZip.href = data.directZipUrl || data.downloadUrl || "https://github.com/petertuananh/CyberSecGame/releases";
                 }
 
                 if (data.hasUpdate) {
                     if (helperUpdateBadge) {
-                        helperUpdateBadge.innerText = "🎉 CÓ BẢN MỚI";
-                        helperUpdateBadge.style.background = "rgba(230, 126, 34, 0.2)";
-                        helperUpdateBadge.style.color = "#e67e22";
-                        helperUpdateBadge.style.border = "1px solid #e67e22";
+                        helperUpdateBadge.className = "update-status-badge has-update";
+                        helperUpdateBadge.innerText = `🎉 CÓ BẢN MỚI v${data.latestVersion}`;
                     }
                     if (btnHelperCheckUpdate) {
                         btnHelperCheckUpdate.style.background = "linear-gradient(135deg, #e67e22, #f39c12)";
                         btnHelperCheckUpdate.style.color = "#fff";
                         btnHelperCheckUpdate.innerText = `🚀 CÓ BẢN MỚI v${data.latestVersion}`;
                     }
+                    if (btnHelperAutoUpdateTitle) {
+                        btnHelperAutoUpdateTitle.innerText = `CẬP NHẬT LÊN PHIÊN BẢN v${data.latestVersion} (1-CLICK)`;
+                    }
+                    if (btnHelperAutoUpdateSub) {
+                        btnHelperAutoUpdateSub.innerText = "Tự động tải gói cài đặt chính thức từ GitHub và nâng cấp ngay lập tức";
+                    }
+                    setHelperUpdateUIState("ready");
                     if (modalUpdateHelper) modalUpdateHelper.classList.add("active");
                 } else {
                     if (helperUpdateBadge) {
+                        helperUpdateBadge.className = "update-status-badge up-to-date";
                         helperUpdateBadge.innerText = "✅ BẢN MỚI NHẤT";
-                        helperUpdateBadge.style.background = "rgba(46, 204, 113, 0.15)";
-                        helperUpdateBadge.style.color = "#2ecc71";
-                        helperUpdateBadge.style.border = "1px solid #2ecc71";
                     }
+                    if (btnHelperAutoUpdateTitle) {
+                        btnHelperAutoUpdateTitle.innerText = `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
+                    }
+                    if (btnHelperAutoUpdateSub) {
+                        btnHelperAutoUpdateSub.innerText = "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
+                    }
+                    setHelperUpdateUIState("ready");
                     if (isManual) {
                         if (modalUpdateHelper) modalUpdateHelper.classList.add("active");
                     }
@@ -610,11 +738,225 @@
         }
     }
 
+    async function startHelperInAppUpdate(isForce = false) {
+        isHelperDownloadingUpdate = true;
+        setHelperUpdateUIState("downloading");
+
+        const statusText = document.getElementById("helperDownloadStatusText");
+        const percentText = document.getElementById("helperDownloadPercentText");
+        const progressBar = document.getElementById("helperDownloadProgressBar");
+        const speedText = document.getElementById("helperDownloadSpeedText");
+        const sizeText = document.getElementById("helperDownloadSizeText");
+
+        if (statusText) statusText.innerText = "⏳ Đang kết nối tới GitHub để tải bản cập nhật...";
+        if (percentText) percentText.innerText = "0%";
+        if (progressBar) progressBar.style.width = "0%";
+        if (speedText) speedText.innerText = "Đang kết nối...";
+        if (sizeText) sizeText.innerText = "0 MB / 0 MB";
+
+        try {
+            if (isForce) {
+                await fetch("/api/update/cancel", { method: "POST" });
+            }
+
+            const targetUrl = (helperUpdateData && helperUpdateData.directSetupUrl) || "";
+            const targetVer = (helperUpdateData && helperUpdateData.latestVersion) || "";
+
+            const res = await fetch("/api/update/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: targetUrl, version: targetVer })
+            });
+            const data = await res.json();
+            if (!data.success && data.error) {
+                throw new Error(data.error);
+            }
+            handleHelperUpdateProgress(data);
+            startHelperUpdatePolling();
+            showToast("🚀 Bắt đầu tải bản cập nhật trực tiếp...");
+        } catch (err) {
+            handleHelperUpdateError(err.message || "Không thể bắt đầu tải");
+        }
+    }
+
+    function handleHelperUpdateProgress(data) {
+        if (!data) return;
+
+        const statusText = document.getElementById("helperDownloadStatusText");
+        const percentText = document.getElementById("helperDownloadPercentText");
+        const progressBar = document.getElementById("helperDownloadProgressBar");
+        const sizeText = document.getElementById("helperDownloadSizeText");
+        const speedText = document.getElementById("helperDownloadSpeedText");
+        const fileText = document.getElementById("helperDownloadFileText");
+        const completeDesc = document.getElementById("helperCompleteDesc");
+
+        if (data.state === "downloading") {
+            setHelperUpdateUIState("downloading");
+
+            const pct = Math.max(0, Math.min(100, data.progress || 0));
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            if (percentText) percentText.innerText = `${pct}%`;
+            if (statusText) statusText.innerText = `⏳ Đang tải bản cập nhật (${pct}%)...`;
+            if (sizeText) {
+                sizeText.innerText = (data.downloadedFormatted || "0 MB") +
+                    (data.totalBytes > 0 ? ` / ${data.totalFormatted}` : "");
+            }
+            if (speedText) speedText.innerText = data.speed || "Đang tải...";
+            if (fileText) fileText.innerText = data.fileName || "CyberSecGame_Setup.exe";
+        } else if (data.state === "ready") {
+            stopHelperUpdatePolling();
+            setHelperUpdateUIState("complete");
+
+            if (completeDesc) {
+                const fName = data.fileName || "Bản cập nhật";
+                const fSize = data.downloadedFormatted || "";
+                completeDesc.innerText = `Tệp ${fName} (${fSize}) đã được tải về an toàn và sẵn sàng nâng cấp.`;
+            }
+            if (isHelperDownloadingUpdate) {
+                isHelperDownloadingUpdate = false;
+                showToast("🎉 Tải bản cập nhật hoàn tất! Nhấn Cài Đặt Ngay để hoàn tất.");
+            }
+        } else if (data.state === "installing") {
+            stopHelperUpdatePolling();
+            setHelperUpdateUIState("downloading");
+            if (statusText) statusText.innerText = "🚀 Đang khởi chạy trình cài đặt và nâng cấp...";
+            if (percentText) percentText.innerText = "100%";
+            showToast("🚀 Đang khởi chạy trình cài đặt bản mới...");
+        } else if (data.state === "completed") {
+            stopHelperUpdatePolling();
+            if (statusText) statusText.innerText = "✅ Nâng cấp thành công! Đang khởi động lại...";
+            showToast("✅ Đã nâng cấp thành công!");
+        } else if (data.state === "error") {
+            stopHelperUpdatePolling();
+            handleHelperUpdateError(data.error);
+        } else if (data.state === "idle") {
+            stopHelperUpdatePolling();
+            setHelperUpdateUIState("ready");
+        }
+    }
+
+    function handleHelperUpdateError(errText) {
+        isHelperDownloadingUpdate = false;
+        setHelperUpdateUIState("error");
+        const errEl = document.getElementById("helperUpdateErrorText");
+        if (errEl) errEl.innerText = `Không thể tải bản cập nhật: ${errText || 'Lỗi kết nối'}`;
+        showToast(`❌ Lỗi cập nhật: ${errText || 'Không xác định'}`, true);
+    }
+
+    async function cancelHelperInAppUpdate() {
+        stopHelperUpdatePolling();
+        isHelperDownloadingUpdate = false;
+        try {
+            await fetch("/api/update/cancel", { method: "POST" });
+        } catch (e) {}
+        setHelperUpdateUIState("ready");
+        showToast("Đã hủy tải bản cập nhật.");
+    }
+
+    async function applyHelperInAppUpdate() {
+        const btnApply = document.getElementById("btnHelperApplyUpdateNow");
+        const statusText = document.getElementById("helperDownloadStatusText");
+
+        if (btnApply) {
+            btnApply.disabled = true;
+            btnApply.innerText = "⏳ ĐANG NÂNG CẤP...";
+        }
+
+        try {
+            const res = await fetch("/api/update/apply", { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                showToast("🚀 " + (data.message || "Đang nâng cấp..."));
+                setHelperUpdateUIState("downloading");
+
+                const percentText = document.getElementById("helperDownloadPercentText");
+                const progressBar = document.getElementById("helperDownloadProgressBar");
+                const speedText = document.getElementById("helperDownloadSpeedText");
+                const sizeText = document.getElementById("helperDownloadSizeText");
+
+                if (progressBar) progressBar.style.width = "100%";
+                if (percentText) percentText.innerText = "100%";
+                if (speedText) speedText.innerText = "Hoàn tất";
+                if (sizeText) sizeText.innerText = "Đã cập nhật xong";
+
+                let countdown = 3;
+                if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+
+                const cdTimer = setInterval(() => {
+                    countdown--;
+                    if (statusText) statusText.innerText = `🔄 Cập nhật thành công! Tự động tải lại sau ${countdown}s...`;
+                    if (countdown <= 0) {
+                        clearInterval(cdTimer);
+                        window.location.href = window.location.pathname + '?v=' + Date.now();
+                    }
+                }, 1000);
+            } else {
+                throw new Error(data.error || "Không thể áp dụng bản cập nhật");
+            }
+        } catch (err) {
+            if (btnApply) {
+                btnApply.disabled = false;
+                btnApply.innerText = "🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI NGAY";
+            }
+            alert("Lỗi cài đặt: " + err.message);
+        }
+    }
+
+    async function openHelperUpdateFolder() {
+        try {
+            await fetch("/api/update/open-folder", { method: "POST" });
+        } catch (e) {}
+    }
+
+    function startHelperUpdatePolling() {
+        stopHelperUpdatePolling();
+        helperUpdatePollTimer = setInterval(async () => {
+            try {
+                const res = await fetch("/api/update/status");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success) {
+                        handleHelperUpdateProgress(data);
+                    }
+                }
+            } catch (e) {}
+        }, 800);
+    }
+
+    function stopHelperUpdatePolling() {
+        if (helperUpdatePollTimer) {
+            clearInterval(helperUpdatePollTimer);
+            helperUpdatePollTimer = null;
+        }
+    }
+
+    if (btnHelperAutoUpdateNow) {
+        btnHelperAutoUpdateNow.addEventListener("click", () => startHelperInAppUpdate());
+    }
+    if (btnHelperCancelDownload) {
+        btnHelperCancelDownload.addEventListener("click", () => cancelHelperInAppUpdate());
+    }
+    if (btnHelperApplyUpdateNow) {
+        btnHelperApplyUpdateNow.addEventListener("click", () => applyHelperInAppUpdate());
+    }
+    if (btnHelperRedownloadUpdate) {
+        btnHelperRedownloadUpdate.addEventListener("click", () => startHelperInAppUpdate(true));
+    }
+    if (btnHelperRetryUpdate) {
+        btnHelperRetryUpdate.addEventListener("click", () => startHelperInAppUpdate());
+    }
+    if (btnHelperOpenUpdateFolder) {
+        btnHelperOpenUpdateFolder.addEventListener("click", () => openHelperUpdateFolder());
+    }
+    if (btnHelperRecheckUpdate) {
+        btnHelperRecheckUpdate.addEventListener("click", () => checkUpdateFromHelper(true));
+    }
     if (btnHelperCheckUpdate) {
         btnHelperCheckUpdate.addEventListener("click", () => checkUpdateFromHelper(true));
     }
+
     // Tự động kiểm tra bản cập nhật khi mở Helper
-    setTimeout(() => checkUpdateFromHelper(false), 2000);
+    setTimeout(() => checkUpdateFromHelper(false), 2500);
 
     // ==========================================
     // 3. KHÔI PHỤC MẶC ĐỊNH
@@ -1953,6 +2295,8 @@
                             if (newName && helperCurrentPlayerTag) {
                                 helperCurrentPlayerTag.innerText = newName;
                             }
+                        } else if (msg.type === "UPDATE_PROGRESS") {
+                            handleHelperUpdateProgress(msg.data || msg);
                         }
                     } catch (e) {}
                 };

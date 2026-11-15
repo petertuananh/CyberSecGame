@@ -18,7 +18,7 @@ const { ReadlineParser } = require('@serialport/parser-readline');
 const TunnelManager = require('./tunnel_manager');
 
 // Lấy phiên bản phần mềm hiện tại từ package.json
-let CURRENT_VERSION = '2.5.0';
+let CURRENT_VERSION = '2.5.1';
 try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     if (pkg && pkg.version) CURRENT_VERSION = pkg.version;
@@ -368,6 +368,34 @@ app.post('/api/config/reset', (req, res) => {
     }
 });
 
+// API Kiểm tra quyền ghi vào thư mục dữ liệu
+app.get('/api/admin/check-permissions', (req, res) => {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+        const testFile = path.join(DATA_DIR, `_perm_test_${Date.now()}.tmp`);
+        fs.writeFileSync(testFile, 'ok', 'utf8');
+        fs.unlinkSync(testFile);
+        res.json({
+            success: true,
+            canWrite: true,
+            dataDir: DATA_DIR,
+            configFile: CONFIG_FILE,
+            message: 'Đã có đầy đủ quyền ghi vào thư mục dữ liệu.'
+        });
+    } catch (err) {
+        res.json({
+            success: true,
+            canWrite: false,
+            dataDir: DATA_DIR,
+            configFile: CONFIG_FILE,
+            error: err.code || err.message,
+            message: 'Không có quyền ghi vào thư mục dữ liệu. Cần cấp quyền Administrator.'
+        });
+    }
+});
+
 // API Cấp quyền ghi thư mục qua UAC của Windows
 app.post('/api/admin/grant-permissions', (req, res) => {
     if (process.platform !== 'win32') {
@@ -376,22 +404,40 @@ app.post('/api/admin/grant-permissions', (req, res) => {
 
     try {
         console.log('[Admin] 🛡️ Đang gửi lệnh cấp quyền ghi thư mục qua hộp thoại Windows UAC...');
-        const safeDataDir = DATA_DIR.replace(/"/g, '`"');
-        const safeConfigFile = CONFIG_FILE.replace(/"/g, '`"');
+        const os = require('os');
+        const batPath = path.join(os.tmpdir(), 'cybersec_grant_permissions.bat');
+        const batContent = `@echo off\r
+chcp 65001 >nul\r
+title VE BINH MAT KHAU - CAP QUYEN GHI DU LIEU\r
+echo ========================================================\r
+echo  [VE BINH MAT KHAU] CAP QUYEN GHI DU LIEU HE THONG\r
+echo ========================================================\r
+echo.\r
+echo [*] Dang cap toan quyen ghi (Full Control) cho Users...\r
+echo [*] Thu muc: "%~1"\r
+icacls "%~1" /grant Users:(OI)(CI)F /T /C /Q\r
+if exist "%~2" (\r
+    echo [*] File: "%~2"\r
+    icacls "%~2" /grant Users:F /T /C /Q\r
+)\r
+echo.\r
+echo [THANH CONG] Da mo khoa quyen ghi du lieu hoan tat!\r
+timeout /t 2 >nul\r
+`;
+        fs.writeFileSync(batPath, batContent, 'utf8');
 
-        // Lệnh PowerShell chạy với -Verb RunAs sẽ bật hộp thoại UAC yêu cầu người dùng xác nhận
-        const psInnerCmd = `Write-Host '[Ve Binh Mat Khau] Dang mo khoa quyen ghi thu muc...' -ForegroundColor Cyan; icacls \\"${safeDataDir}\\" /grant Users:(OI)(CI)F /T; icacls \\"${safeConfigFile}\\" /grant Users:F /T; Write-Host '[Thanh Cong] Da cap quyen ghi hoan tat!' -ForegroundColor Green; Start-Sleep -Seconds 2`;
-        const elevateCmd = `powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \\"${psInnerCmd}\\"' -Verb RunAs"`;
+        // Lệnh PowerShell chạy với -Verb RunAs kích hoạt hộp thoại UAC chuẩn của Windows
+        const elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '${batPath}' -ArgumentList '\\"${DATA_DIR}\\"', '\\"${CONFIG_FILE}\\"' -Verb RunAs"`;
 
         exec(elevateCmd, (error) => {
             if (error) {
-                console.warn('[Admin] Hộp thoại UAC bị hủy hoặc đóng:', error.message);
+                console.warn('[Admin] Hộp thoại UAC bị từ chối hoặc gặp lỗi:', error.message);
                 return res.status(400).json({
                     success: false,
                     error: 'Hộp thoại xác nhận Administrator bị từ chối hoặc đã đóng: ' + error.message
                 });
             }
-            console.log('[Admin] ✅ Đã kích hoạt lệnh phân quyền thành công!');
+            console.log('[Admin] ✅ Đã kích hoạt lệnh phân quyền Admin thành công!');
             res.json({
                 success: true,
                 message: 'Đã gửi yêu cầu cấp quyền qua UAC! Vui lòng bấm "Yes" (Đồng ý) trên màn hình để mở khóa quyền ghi.'
@@ -410,27 +456,37 @@ app.post('/api/admin/relaunch-as-admin', (req, res) => {
     }
 
     try {
-        const exePath = process.execPath;
-        console.log(`[Admin] 🔄 Đang khởi chạy lại ứng dụng với quyền Administrator: ${exePath}`);
+        const isExe = process.execPath.toLowerCase().endsWith('cybersecgame.exe');
+        console.log(`[Admin] 🔄 Đang khởi chạy lại ứng dụng với quyền Administrator: ${process.execPath} (isExe: ${isExe})`);
 
-        const elevateCmd = `powershell -NoProfile -Command "Start-Process -FilePath '${exePath}' -Verb RunAs"`;
+        let elevateCmd = '';
+        if (isExe) {
+            elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -Verb RunAs"`;
+        } else {
+            const scriptPath = process.argv[1] || path.join(__dirname, 'server.js');
+            elevateCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Milliseconds 1000; Start-Process -FilePath '${process.execPath}' -ArgumentList '\\"${scriptPath}\\"' -Verb RunAs"`;
+        }
+
         exec(elevateCmd, (error) => {
             if (error) {
+                console.warn('[Admin] Lỗi khởi chạy lại Admin:', error.message);
                 return res.status(400).json({
                     success: false,
                     error: 'Không thể khởi chạy với quyền Admin: ' + error.message
                 });
             }
-            res.json({
-                success: true,
-                message: 'Đang khởi chạy phiên bản Administrator mới...'
-            });
-
-            setTimeout(() => {
-                process.exit(0);
-            }, 1500);
         });
+
+        res.json({
+            success: true,
+            message: 'Đang khởi chạy phiên bản Administrator mới...'
+        });
+
+        setTimeout(() => {
+            process.exit(0);
+        }, 1500);
     } catch (err) {
+        console.error('[Admin] Lỗi thực thi relaunch-as-admin:', err);
         res.status(500).json({ error: err.message });
     }
 });
