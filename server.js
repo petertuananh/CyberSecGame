@@ -10,7 +10,8 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
+const { Readable } = require('stream');
 const { WebSocketServer } = require('ws');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
@@ -537,6 +538,395 @@ app.get('/api/version', (req, res) => {
         mst: '3604049476',
         repo: 'https://github.com/petertuananh/CyberSecGame'
     });
+});
+
+// =========================================================================
+// HỆ THỐNG AUTO-UPDATER 1-CLICK (CẬP NHẬT TRỰC TIẾP TRONG GAME)
+// =========================================================================
+
+const updateManager = {
+    state: 'idle', // 'idle' | 'downloading' | 'ready' | 'installing' | 'completed' | 'error'
+    progress: 0,
+    downloadedBytes: 0,
+    totalBytes: 0,
+    speedStr: '0 KB/s',
+    fileName: '',
+    filePath: '',
+    downloadUrl: '',
+    fileType: '', // 'exe' | 'zip'
+    targetVersion: '',
+    error: null,
+    startTime: null,
+    abortController: null
+};
+
+function formatUpdateBytes(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+}
+
+function getUpdateStatusPayload() {
+    return {
+        state: updateManager.state,
+        progress: updateManager.progress,
+        downloadedBytes: updateManager.downloadedBytes,
+        totalBytes: updateManager.totalBytes,
+        downloadedFormatted: formatUpdateBytes(updateManager.downloadedBytes),
+        totalFormatted: updateManager.totalBytes > 0 ? formatUpdateBytes(updateManager.totalBytes) : 'Đang tính...',
+        speed: updateManager.speedStr,
+        fileName: updateManager.fileName,
+        filePath: updateManager.filePath,
+        fileType: updateManager.fileType,
+        targetVersion: updateManager.targetVersion,
+        error: updateManager.error
+    };
+}
+
+// API: Lấy trạng thái tiến trình tải và cập nhật
+app.get('/api/update/status', (req, res) => {
+    res.json({
+        success: true,
+        ...getUpdateStatusPayload()
+    });
+});
+
+// API: Bắt đầu tải bản cập nhật trực tiếp (1-Click Auto Update)
+app.post('/api/update/start', async (req, res) => {
+    try {
+        if (updateManager.state === 'downloading') {
+            return res.json({
+                success: true,
+                message: 'Đang trong quá trình tải về...',
+                ...getUpdateStatusPayload()
+            });
+        }
+
+        const repo = 'petertuananh/CyberSecGame';
+        let reqUrl = req.body && req.body.url ? req.body.url.trim() : '';
+        let targetVersion = req.body && req.body.version ? req.body.version.trim() : CURRENT_VERSION;
+        let preferredType = req.body && req.body.type ? req.body.type.toLowerCase() : 'auto';
+
+        let downloadUrl = '';
+        let fileType = 'exe';
+        let fileName = 'CyberSecGame_Setup.exe';
+
+        // 1. Nếu client chỉ định URL trực tiếp dạng file (.exe hoặc .zip)
+        if (reqUrl && (reqUrl.endsWith('.exe') || reqUrl.endsWith('.zip'))) {
+            downloadUrl = reqUrl;
+            fileType = reqUrl.endsWith('.exe') ? 'exe' : 'zip';
+            fileName = fileType === 'exe' ? 'CyberSecGame_Setup.exe' : 'CyberSecGame_Update.zip';
+        } else {
+            // 2. Tự động truy vấn nguồn tải tốt nhất từ GitHub
+            try {
+                const releaseRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+                    headers: { 'User-Agent': 'CyberSecGame-AutoUpdater' },
+                    signal: AbortSignal.timeout(4000)
+                });
+                if (releaseRes.ok) {
+                    const releaseData = await releaseRes.json();
+                    if (releaseData && releaseData.assets && releaseData.assets.length > 0) {
+                        const setupAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.exe'));
+                        if (setupAsset && setupAsset.browser_download_url) {
+                            downloadUrl = setupAsset.browser_download_url;
+                            fileType = 'exe';
+                            fileName = setupAsset.name || 'CyberSecGame_Setup.exe';
+                        } else {
+                            const zipAsset = releaseData.assets.find(a => a.name && a.name.endsWith('.zip'));
+                            if (zipAsset && zipAsset.browser_download_url) {
+                                downloadUrl = zipAsset.browser_download_url;
+                                fileType = 'zip';
+                                fileName = zipAsset.name || 'CyberSecGame_Update.zip';
+                            }
+                        }
+                    }
+                }
+            } catch (relErr) {
+                console.warn('[AutoUpdate] Không thể lấy thông tin release asset:', relErr.message);
+            }
+
+            // Nếu chưa có asset release chính thức, dùng gói mã nguồn nhánh main (ZIP) hoặc link release mặc định
+            if (!downloadUrl) {
+                if (preferredType === 'exe') {
+                    downloadUrl = `https://github.com/${repo}/releases/latest/download/CyberSecGame_Setup.exe`;
+                    fileType = 'exe';
+                    fileName = 'CyberSecGame_Setup.exe';
+                } else {
+                    downloadUrl = `https://github.com/${repo}/archive/refs/heads/main.zip`;
+                    fileType = 'zip';
+                    fileName = 'CyberSecGame_Update.zip';
+                }
+            }
+        }
+
+        // Tạo thư mục tạm temp_update
+        const updateDir = path.join(__dirname, 'temp_update');
+        if (!fs.existsSync(updateDir)) {
+            fs.mkdirSync(updateDir, { recursive: true });
+        }
+        const destPath = path.join(updateDir, fileName);
+
+        // Khởi tạo trạng thái
+        updateManager.state = 'downloading';
+        updateManager.progress = 0;
+        updateManager.downloadedBytes = 0;
+        updateManager.totalBytes = 0;
+        updateManager.speedStr = 'Đang kết nối...';
+        updateManager.fileName = fileName;
+        updateManager.filePath = destPath;
+        updateManager.fileType = fileType;
+        updateManager.downloadUrl = downloadUrl;
+        updateManager.targetVersion = targetVersion;
+        updateManager.error = null;
+        updateManager.startTime = Date.now();
+        updateManager.abortController = new AbortController();
+
+        console.log(`[AutoUpdate] 🚀 Bắt đầu tải bản cập nhật: ${downloadUrl} -> ${destPath}`);
+        broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+
+        // Tải bất đồng bộ không chặn request
+        (async () => {
+            try {
+                const response = await fetch(downloadUrl, {
+                    headers: { 'User-Agent': 'CyberSecGame-AutoUpdater' },
+                    signal: updateManager.abortController.signal
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Máy chủ trả về mã HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+                updateManager.totalBytes = contentLength;
+
+                const fileStream = fs.createWriteStream(destPath);
+                const nodeStream = Readable.fromWeb(response.body);
+
+                let lastBroadcast = Date.now();
+
+                nodeStream.on('data', (chunk) => {
+                    updateManager.downloadedBytes += chunk.length;
+                    const now = Date.now();
+                    if (now - lastBroadcast >= 250) {
+                        lastBroadcast = now;
+                        const elapsed = (now - updateManager.startTime) / 1000;
+                        const speed = elapsed > 0 ? (updateManager.downloadedBytes / elapsed) : 0;
+                        updateManager.speedStr = formatUpdateBytes(speed) + '/s';
+
+                        if (updateManager.totalBytes > 0) {
+                            updateManager.progress = Math.min(99, Math.round((updateManager.downloadedBytes / updateManager.totalBytes) * 100));
+                        } else {
+                            updateManager.progress = Math.min(95, Math.floor(updateManager.downloadedBytes / (1024 * 500)));
+                        }
+                        broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+                    }
+                });
+
+                nodeStream.pipe(fileStream);
+
+                fileStream.on('finish', () => {
+                    console.log(`[AutoUpdate] ✅ Đã tải hoàn tất bản cập nhật: ${destPath} (${formatUpdateBytes(updateManager.downloadedBytes)})`);
+                    updateManager.progress = 100;
+                    updateManager.state = 'ready';
+                    updateManager.speedStr = 'Hoàn tất';
+                    broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+                });
+
+                fileStream.on('error', (err) => {
+                    console.error('[AutoUpdate] ❌ Lỗi ghi file:', err);
+                    updateManager.state = 'error';
+                    updateManager.error = 'Lỗi lưu tệp: ' + err.message;
+                    broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+                });
+            } catch (dlErr) {
+                if (dlErr.name === 'AbortError') {
+                    console.log('[AutoUpdate] Người dùng đã bấm hủy tải.');
+                    updateManager.state = 'idle';
+                    updateManager.error = null;
+                } else {
+                    console.error('[AutoUpdate] ❌ Lỗi tải về:', dlErr);
+                    updateManager.state = 'error';
+                    updateManager.error = dlErr.message || 'Lỗi kết nối máy chủ tải về';
+                }
+                broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+            }
+        })();
+
+        res.json({
+            success: true,
+            message: 'Đã kích hoạt tải gói cập nhật!',
+            ...getUpdateStatusPayload()
+        });
+    } catch (err) {
+        console.error('[AutoUpdate] Lỗi khởi động tải:', err);
+        updateManager.state = 'error';
+        updateManager.error = err.message;
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Hủy tải bản cập nhật
+app.post('/api/update/cancel', (req, res) => {
+    try {
+        if (updateManager.abortController) {
+            updateManager.abortController.abort();
+            updateManager.abortController = null;
+        }
+        updateManager.state = 'idle';
+        updateManager.progress = 0;
+        updateManager.speedStr = '0 KB/s';
+        updateManager.error = null;
+        if (updateManager.filePath && fs.existsSync(updateManager.filePath)) {
+            try { fs.rmSync(updateManager.filePath, { force: true }); } catch (e) {}
+        }
+        broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+        res.json({ success: true, message: 'Đã hủy tải bản cập nhật' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Áp dụng bản cập nhật & Khởi động lại (1-Click Apply)
+app.post('/api/update/apply', (req, res) => {
+    try {
+        if (!updateManager.filePath || !fs.existsSync(updateManager.filePath)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Tệp cập nhật không tồn tại hoặc chưa tải xong. Vui lòng thử tải lại.'
+            });
+        }
+
+        console.log(`[AutoUpdate] 🚀 Bắt đầu áp dụng bản cập nhật: ${updateManager.filePath} (Dạng: ${updateManager.fileType})`);
+        updateManager.state = 'installing';
+        broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+
+        if (updateManager.fileType === 'exe') {
+            // Chạy tệp cài đặt Inno Setup đã tải về
+            // /CLOSEAPPLICATIONS để tự động đóng phiên bản hiện tại
+            const installerArgs = ['/CLOSEAPPLICATIONS'];
+            const child = spawn(updateManager.filePath, installerArgs, {
+                detached: true,
+                stdio: 'ignore'
+            });
+            child.unref();
+
+            res.json({
+                success: true,
+                message: 'Đã khởi chạy trình cài đặt bản mới! Game sẽ tự động đóng sau 2 giây để hoàn tất nâng cấp...'
+            });
+
+            setTimeout(() => {
+                process.exit(0);
+            }, 2000);
+        } else {
+            // Cập nhật từ file ZIP (mã nguồn/assets mới nhất từ GitHub)
+            const extractDir = path.join(__dirname, 'temp_update', 'extracted');
+            if (fs.existsSync(extractDir)) {
+                try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (e) {}
+            }
+            fs.mkdirSync(extractDir, { recursive: true });
+
+            const extractCmd = `powershell -NoProfile -Command "Expand-Archive -Path '${updateManager.filePath}' -DestinationPath '${extractDir}' -Force"`;
+            exec(extractCmd, (err) => {
+                if (err) {
+                    console.error('[AutoUpdate] ❌ Lỗi giải nén ZIP:', err);
+                    updateManager.state = 'error';
+                    updateManager.error = 'Không thể giải nén file ZIP: ' + err.message;
+                    broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+                    return res.status(500).json({ success: false, error: updateManager.error });
+                }
+
+                try {
+                    // Tìm thư mục con nếu giải nén ra CyberSecGame-main
+                    let rootSource = extractDir;
+                    const subEntries = fs.readdirSync(extractDir);
+                    if (subEntries.length === 1 && fs.statSync(path.join(extractDir, subEntries[0])).isDirectory()) {
+                        rootSource = path.join(extractDir, subEntries[0]);
+                    }
+
+                    // Sao chép tệp mới, giữ nguyên tuyệt đối thư mục data/ (dữ liệu người chơi)
+                    fs.cpSync(rootSource, __dirname, {
+                        recursive: true,
+                        force: true,
+                        filter: (src) => {
+                            const rel = path.relative(rootSource, src).replace(/\\/g, '/');
+                            if (rel.startsWith('data/') || rel === 'data' || rel.startsWith('temp_update')) {
+                                return false;
+                            }
+                            return true;
+                        }
+                    });
+
+                    console.log('[AutoUpdate] ✅ Đã sao chép tệp mới thành công!');
+                    updateManager.state = 'completed';
+                    broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+
+                    res.json({
+                        success: true,
+                        message: 'Đã nâng cấp xong dữ liệu game! Đang tự động khởi chạy lại...'
+                    });
+
+                    // Khởi động lại ứng dụng
+                    setTimeout(() => {
+                        const exePath = process.execPath;
+                        if (exePath.toLowerCase().endsWith('cybersecgame.exe')) {
+                            const child = spawn(exePath, process.argv.slice(1), {
+                                detached: true,
+                                stdio: 'ignore'
+                            });
+                            child.unref();
+                        } else {
+                            const child = spawn(process.argv[0], process.argv.slice(1), {
+                                detached: true,
+                                stdio: 'ignore'
+                            });
+                            child.unref();
+                        }
+                        process.exit(0);
+                    }, 1800);
+                } catch (copyErr) {
+                    console.error('[AutoUpdate] ❌ Lỗi sao chép tệp mới:', copyErr);
+                    updateManager.state = 'error';
+                    updateManager.error = 'Lỗi cập nhật tệp: ' + copyErr.message;
+                    broadcast({ type: 'UPDATE_PROGRESS', ...getUpdateStatusPayload() });
+                    res.status(500).json({ success: false, error: updateManager.error });
+                }
+            });
+        }
+    } catch (err) {
+        console.error('[AutoUpdate] Lỗi thực thi bản cập nhật:', err);
+        updateManager.state = 'error';
+        updateManager.error = err.message;
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Mở thư mục chứa tệp cập nhật vừa tải về
+app.post('/api/update/open-folder', (req, res) => {
+    try {
+        const filePath = updateManager.filePath || path.join(__dirname, 'temp_update');
+        if (process.platform === 'win32') {
+            if (fs.existsSync(filePath)) {
+                exec(`explorer.exe /select,"${filePath}"`);
+            } else {
+                const dir = path.dirname(filePath);
+                exec(`explorer.exe "${dir}"`);
+            }
+        }
+        res.json({ success: true, message: 'Đã mở thư mục chứa tệp' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API: Tải trực tiếp file cập nhật về máy qua trình duyệt (fallback)
+app.get('/api/update/download-file', (req, res) => {
+    if (updateManager.filePath && fs.existsSync(updateManager.filePath)) {
+        res.download(updateManager.filePath, updateManager.fileName);
+    } else {
+        res.status(404).send('Chưa có file cập nhật nào được tải.');
+    }
 });
 
 // API: Lấy Bảng Xếp Hạng & Tên người chơi hiện tại

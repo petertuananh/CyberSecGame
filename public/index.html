@@ -387,19 +387,87 @@
                     </div>
                 </div>
 
-                <div id="updateActionsRow" class="update-actions-row">
-                    <a id="btnDownloadUpdateExe" href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" rel="noopener noreferrer" class="btn-cert-primary">
-                        <span>📥</span>
-                        <span>TẢI BẢN MỚI (.EXE)</span>
-                    </a>
-                    <a id="btnDownloadUpdateZip" href="https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary">
-                        <span>📦</span>
-                        <span>TẢI BẢN NÉN (.ZIP)</span>
-                    </a>
-                    <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary">
-                        <span>🐙</span>
-                        <span>XEM GITHUB</span>
-                    </a>
+                <!-- Khu vực Cập Nhật Trực Tiếp Trong Game (1-Click In-App Updater) -->
+                <div id="updateAutoSection" class="update-auto-section">
+                    <!-- Trạng thái 1: Sẵn sàng cập nhật (Nút bấm 1-Click to nổi bật) -->
+                    <div id="updateReadyBox" class="update-ready-box">
+                        <button id="btnAutoUpdateNow" class="btn-auto-update-hero">
+                            <span class="auto-update-icon">⚡</span>
+                            <div class="auto-update-text">
+                                <span id="btnAutoUpdateTitle" class="auto-update-main">CẬP NHẬT TRỰC TIẾP TRONG GAME (1-CLICK)</span>
+                                <span id="btnAutoUpdateSub" class="auto-update-sub">Tự động tải gói cài đặt và nâng cấp ngay lập tức không cần vào GitHub</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Trạng thái 2: Đang tải về (Tiến trình tải trực tiếp Live Progress) -->
+                    <div id="updateDownloadingBox" class="update-downloading-box hidden">
+                        <div class="download-progress-header">
+                            <span id="downloadStatusText" class="download-status-text">⏳ Đang tải bản cập nhật mới từ GitHub...</span>
+                            <span id="downloadPercentText" class="download-percent-text">0%</span>
+                        </div>
+                        <div class="download-progress-track">
+                            <div id="downloadProgressBar" class="download-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="download-stats-row">
+                            <span id="downloadSizeText" class="download-stat-item">0 MB / 0 MB</span>
+                            <span id="downloadSpeedText" class="download-stat-item">0 KB/s</span>
+                            <span id="downloadFileText" class="download-stat-item file-name">CyberSecGame_Setup.exe</span>
+                        </div>
+                        <div class="download-controls-row">
+                            <button id="btnCancelDownload" class="btn-cert-secondary btn-sm">
+                                <span>✖ HỦY TẢI</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Trạng thái 3: Tải hoàn tất (Sẵn sàng cài đặt & khởi động lại) -->
+                    <div id="updateCompleteBox" class="update-complete-box hidden">
+                        <div class="complete-alert">
+                            <span class="complete-icon">🎉</span>
+                            <div class="complete-info">
+                                <div class="complete-title">BẢN CẬP NHẬT ĐÃ TẢI XONG!</div>
+                                <div id="completeDesc" class="complete-desc">Gói cài đặt đã được tải về an toàn và sẵn sàng nâng cấp.</div>
+                            </div>
+                        </div>
+                        <div class="complete-actions">
+                            <button id="btnApplyUpdateNow" class="btn-cert-primary btn-pulse">
+                                <span>🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI NGAY</span>
+                            </button>
+                            <button id="btnOpenUpdateFolder" class="btn-cert-secondary">
+                                <span>📂 MỞ THƯ MỤC CHỨA TỆP</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Trạng thái 4: Lỗi tải về -->
+                    <div id="updateErrorBox" class="update-error-box hidden">
+                        <div class="error-msg-box">
+                            <span class="error-icon">⚠️</span>
+                            <span id="updateErrorText">Không thể tải bản cập nhật: Lỗi kết nối</span>
+                        </div>
+                        <div class="error-actions-row">
+                            <button id="btnRetryUpdate" class="btn-cert-primary btn-sm">
+                                <span>🔄 THỬ LẠI</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tùy chọn tải thủ công khác -->
+                <div class="update-manual-options">
+                    <div class="manual-opts-label">Tùy chọn tải thủ công khác:</div>
+                    <div id="updateActionsRow" class="update-actions-row">
+                        <a id="btnDownloadUpdateExe" href="https://github.com/petertuananh/CyberSecGame/releases" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
+                            <span>📥 TẢI .EXE THỦ CÔNG</span>
+                        </a>
+                        <a id="btnDownloadUpdateZip" href="https://github.com/petertuananh/CyberSecGame/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
+                            <span>📦 TẢI .ZIP THỦ CÔNG</span>
+                        </a>
+                        <a href="https://github.com/petertuananh/CyberSecGame" target="_blank" rel="noopener noreferrer" class="btn-cert-secondary btn-sm">
+                            <span>🐙 XEM GITHUB</span>
+                        </a>
+                    </div>
                 </div>
             </div>
             <div class="cert-actions-bar">

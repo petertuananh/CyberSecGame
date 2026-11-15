@@ -1131,9 +1131,9 @@
             ctx.fillStyle = "#1e272e";
             ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM", rightColX, sigY + Math.round(22 * scaleY));
 
-            ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#57606f";
-            ctx.fillText("(Ban Giám Hiệu xác nhận)", rightColX, sigY + Math.round(40 * scaleY));
+            // ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+            // ctx.fillStyle = "#57606f";
+            // ctx.fillText("(Ban Giám Hiệu xác nhận)", rightColX, sigY + Math.round(40 * scaleY));
 
             // Nét ký trang trọng
             ctx.strokeStyle = "#2c3e50";
@@ -1192,7 +1192,7 @@
             ctx.font = "900 8.5px 'Segoe UI', Tahoma, sans-serif";
             ctx.textAlign = "center";
             ctx.fillText("★ THCS NGUYỄN BỈNH KHIÊM ★", 0, -24);
-            ctx.fillText("SOFTLAB CYBERSEC", 0, -12);
+            // ctx.fillText("SOFTLAB CYBERSEC", 0, -12);
 
             // Ngôi sao vàng / chữ ĐÃ CHỨNG THỰC
             ctx.font = "bold 11.5px 'Segoe UI', Tahoma, sans-serif";

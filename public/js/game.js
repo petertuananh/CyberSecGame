@@ -276,6 +276,8 @@ class CyberSecGame {
                             this._showToast("📊 Bảng Xếp Hạng vừa có lượt chơi mới!", "trophy");
                         }
                     }
+                } else if (data.type === "UPDATE_PROGRESS") {
+                    this.handleUpdateProgress(data);
                 }
             } catch (e) {
                 console.error("WS Parse error:", e);
@@ -614,6 +616,19 @@ class CyberSecGame {
             });
         }
 
+        // Các nút trong hệ thống Auto-Updater 1-Click
+        const btnAutoUpdate = document.getElementById("btnAutoUpdateNow");
+        const btnCancelDl = document.getElementById("btnCancelDownload");
+        const btnApplyUp = document.getElementById("btnApplyUpdateNow");
+        const btnOpenFolder = document.getElementById("btnOpenUpdateFolder");
+        const btnRetryUp = document.getElementById("btnRetryUpdate");
+
+        if (btnAutoUpdate) btnAutoUpdate.addEventListener("click", () => this.startInAppUpdate());
+        if (btnCancelDl) btnCancelDl.addEventListener("click", () => this.cancelInAppUpdate());
+        if (btnApplyUp) btnApplyUp.addEventListener("click", () => this.applyInAppUpdate());
+        if (btnOpenFolder) btnOpenFolder.addEventListener("click", () => this.openUpdateFolder());
+        if (btnRetryUp) btnRetryUp.addEventListener("click", () => this.startInAppUpdate());
+
         // Tự động kiểm tra bản cập nhật khi khởi động game (nếu có mạng)
         setTimeout(() => this.checkUpdateOnStartup(), 2500);
     }
@@ -737,6 +752,7 @@ class CyberSecGame {
             modal.classList.remove("hidden");
             modal.classList.add("show");
         }
+        this.checkUpdateStatus();
         if (shouldFetch || !this.updateData) {
             this.performUpdateCheck(true);
         } else {
@@ -750,6 +766,7 @@ class CyberSecGame {
             modal.classList.remove("show");
             modal.classList.add("hidden");
         }
+        this.stopUpdatePolling();
     }
 
     async performUpdateCheck(isManual = false) {
@@ -798,6 +815,8 @@ class CyberSecGame {
         const notesEl = document.getElementById("updateReleaseNotes");
         const btnExe = document.getElementById("btnDownloadUpdateExe");
         const btnZip = document.getElementById("btnDownloadUpdateZip");
+        const btnAutoTitle = document.getElementById("btnAutoUpdateTitle");
+        const btnAutoSub = document.getElementById("btnAutoUpdateSub");
 
         if (curVerEl) curVerEl.innerText = `v${data.currentVersion}`;
         if (latestVerEl) latestVerEl.innerText = `v${data.latestVersion}`;
@@ -809,6 +828,16 @@ class CyberSecGame {
             } else {
                 badge.className = "update-status-badge up-to-date";
                 badge.innerText = "✅ BẢN MỚI NHẤT";
+            }
+        }
+
+        if (btnAutoTitle) {
+            if (data.hasUpdate) {
+                btnAutoTitle.innerText = `CẬP NHẬT TRỰC TIẾP LÊN v${data.latestVersion} (1-CLICK)`;
+                if (btnAutoSub) btnAutoSub.innerText = "Tự động tải gói cài đặt và nâng cấp ngay lập tức không cần vào GitHub";
+            } else {
+                btnAutoTitle.innerText = `CẬP NHẬT / TẢI LẠI BẢN NÀY (FORCE REINSTALL)`;
+                if (btnAutoSub) btnAutoSub.innerText = "Tải lại gói cài đặt chính thức mới nhất từ GitHub";
             }
         }
 
@@ -826,6 +855,219 @@ class CyberSecGame {
         if (btnZip && data.directZipUrl) {
             btnZip.href = data.directZipUrl;
         }
+    }
+
+    // =========================================================================
+    // HỆ THỐNG AUTO-UPDATER 1-CLICK CLIENT-SIDE
+    // =========================================================================
+
+    async checkUpdateStatus() {
+        try {
+            const res = await fetch("/api/update/status");
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success && data.state && data.state !== "idle") {
+                    this.handleUpdateProgress(data);
+                    if (data.state === "downloading") {
+                        this.startUpdatePolling();
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    async startInAppUpdate() {
+        const boxReady = document.getElementById("updateReadyBox");
+        const boxDl = document.getElementById("updateDownloadingBox");
+        const boxDone = document.getElementById("updateCompleteBox");
+        const boxErr = document.getElementById("updateErrorBox");
+
+        if (boxReady) boxReady.classList.add("hidden");
+        if (boxDone) boxDone.classList.add("hidden");
+        if (boxErr) boxErr.classList.add("hidden");
+        if (boxDl) boxDl.classList.remove("hidden");
+
+        const statusText = document.getElementById("downloadStatusText");
+        const percentText = document.getElementById("downloadPercentText");
+        const progressBar = document.getElementById("downloadProgressBar");
+        const speedText = document.getElementById("downloadSpeedText");
+        const sizeText = document.getElementById("downloadSizeText");
+
+        if (statusText) statusText.innerText = "⏳ Đang kết nối tới GitHub để tải bản cập nhật...";
+        if (percentText) percentText.innerText = "0%";
+        if (progressBar) progressBar.style.width = "0%";
+        if (speedText) speedText.innerText = "Đang kết nối...";
+        if (sizeText) sizeText.innerText = "0 MB / 0 MB";
+
+        try {
+            const targetUrl = (this.updateData && this.updateData.directSetupUrl) || "";
+            const targetVer = (this.updateData && this.updateData.latestVersion) || "";
+
+            const res = await fetch("/api/update/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: targetUrl, version: targetVer })
+            });
+            const data = await res.json();
+            if (!data.success && data.error) {
+                throw new Error(data.error);
+            }
+            this.handleUpdateProgress(data);
+            this.startUpdatePolling();
+            this._showToast("🚀 Bắt đầu tải bản cập nhật trực tiếp...", "star");
+        } catch (err) {
+            this.handleUpdateError(err.message || "Không thể bắt đầu tải");
+        }
+    }
+
+    handleUpdateProgress(data) {
+        if (!data) return;
+        const boxReady = document.getElementById("updateReadyBox");
+        const boxDl = document.getElementById("updateDownloadingBox");
+        const boxDone = document.getElementById("updateCompleteBox");
+        const boxErr = document.getElementById("updateErrorBox");
+
+        const statusText = document.getElementById("downloadStatusText");
+        const percentText = document.getElementById("downloadPercentText");
+        const progressBar = document.getElementById("downloadProgressBar");
+        const sizeText = document.getElementById("downloadSizeText");
+        const speedText = document.getElementById("downloadSpeedText");
+        const fileText = document.getElementById("downloadFileText");
+        const completeDesc = document.getElementById("completeDesc");
+
+        if (data.state === "downloading") {
+            if (boxReady) boxReady.classList.add("hidden");
+            if (boxDone) boxDone.classList.add("hidden");
+            if (boxErr) boxErr.classList.add("hidden");
+            if (boxDl) boxDl.classList.remove("hidden");
+
+            const pct = Math.max(0, Math.min(100, data.progress || 0));
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            if (percentText) percentText.innerText = `${pct}%`;
+            if (statusText) statusText.innerText = `⏳ Đang tải bản cập nhật (${pct}%)...`;
+            if (sizeText) {
+                sizeText.innerText = (data.downloadedFormatted || "0 MB") +
+                    (data.totalBytes > 0 ? ` / ${data.totalFormatted}` : "");
+            }
+            if (speedText) speedText.innerText = data.speed || "Đang tải...";
+            if (fileText) fileText.innerText = data.fileName || "CyberSecGame_Setup.exe";
+        } else if (data.state === "ready") {
+            this.stopUpdatePolling();
+            if (boxReady) boxReady.classList.add("hidden");
+            if (boxDl) boxDl.classList.add("hidden");
+            if (boxErr) boxErr.classList.add("hidden");
+            if (boxDone) boxDone.classList.remove("hidden");
+
+            if (completeDesc) {
+                const fName = data.fileName || "Bản cập nhật";
+                const fSize = data.downloadedFormatted || "";
+                completeDesc.innerText = `Tệp ${fName} (${fSize}) đã được tải về an toàn và sẵn sàng nâng cấp.`;
+            }
+            this._showToast("🎉 Tải bản cập nhật hoàn tất! Nhấn Cài Đặt Ngay để hoàn tất.", "star");
+        } else if (data.state === "installing") {
+            this.stopUpdatePolling();
+            if (boxReady) boxReady.classList.add("hidden");
+            if (boxDl) boxDl.classList.remove("hidden");
+            if (statusText) statusText.innerText = "🚀 Đang khởi chạy trình cài đặt và nâng cấp...";
+            if (percentText) percentText.innerText = "100%";
+            this._showToast("🚀 Đang khởi chạy trình cài đặt bản mới...", "sword");
+        } else if (data.state === "completed") {
+            this.stopUpdatePolling();
+            if (statusText) statusText.innerText = "✅ Nâng cấp thành công! Đang khởi động lại...";
+            this._showToast("✅ Đã nâng cấp thành công!", "star");
+        } else if (data.state === "error") {
+            this.stopUpdatePolling();
+            this.handleUpdateError(data.error);
+        } else if (data.state === "idle") {
+            this.stopUpdatePolling();
+            if (boxDl) boxDl.classList.add("hidden");
+            if (boxDone) boxDone.classList.add("hidden");
+            if (boxErr) boxErr.classList.add("hidden");
+            if (boxReady) boxReady.classList.remove("hidden");
+        }
+    }
+
+    async cancelInAppUpdate() {
+        this.stopUpdatePolling();
+        try {
+            await fetch("/api/update/cancel", { method: "POST" });
+        } catch (e) {}
+        const boxReady = document.getElementById("updateReadyBox");
+        const boxDl = document.getElementById("updateDownloadingBox");
+        const boxDone = document.getElementById("updateCompleteBox");
+        const boxErr = document.getElementById("updateErrorBox");
+
+        if (boxDl) boxDl.classList.add("hidden");
+        if (boxDone) boxDone.classList.add("hidden");
+        if (boxErr) boxErr.classList.add("hidden");
+        if (boxReady) boxReady.classList.remove("hidden");
+        this._showToast("Đã hủy tải bản cập nhật.", "shield");
+    }
+
+    async applyInAppUpdate() {
+        const btnApply = document.getElementById("btnApplyUpdateNow");
+        if (btnApply) {
+            btnApply.disabled = true;
+            btnApply.innerText = "⏳ ĐANG KHỞI CHẠY...";
+        }
+
+        try {
+            const res = await fetch("/api/update/apply", { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                this._showToast("🚀 " + (data.message || "Đang mở trình cài đặt..."), "star");
+            } else {
+                throw new Error(data.error || "Không thể áp dụng bản cập nhật");
+            }
+        } catch (err) {
+            if (btnApply) {
+                btnApply.disabled = false;
+                btnApply.innerText = "🚀 CÀI ĐẶT & KHỞI ĐỘNG LẠI NGAY";
+            }
+            alert("Lỗi cài đặt: " + err.message);
+        }
+    }
+
+    async openUpdateFolder() {
+        try {
+            await fetch("/api/update/open-folder", { method: "POST" });
+        } catch (e) {}
+    }
+
+    startUpdatePolling() {
+        this.stopUpdatePolling();
+        this.updatePollTimer = setInterval(async () => {
+            try {
+                const res = await fetch("/api/update/status");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success) {
+                        this.handleUpdateProgress(data);
+                    }
+                }
+            } catch (e) {}
+        }, 500);
+    }
+
+    stopUpdatePolling() {
+        if (this.updatePollTimer) {
+            clearInterval(this.updatePollTimer);
+            this.updatePollTimer = null;
+        }
+    }
+
+    handleUpdateError(msg) {
+        const boxReady = document.getElementById("updateReadyBox");
+        const boxDl = document.getElementById("updateDownloadingBox");
+        const boxDone = document.getElementById("updateCompleteBox");
+        const boxErr = document.getElementById("updateErrorBox");
+        const errText = document.getElementById("updateErrorText");
+
+        if (boxReady) boxReady.classList.add("hidden");
+        if (boxDl) boxDl.classList.add("hidden");
+        if (boxDone) boxDone.classList.add("hidden");
+        if (boxErr) boxErr.classList.remove("hidden");
+        if (errText) errText.innerText = "Lỗi cập nhật: " + (msg || "Không xác định");
     }
 
     updatePlayerNameUI(name) {
@@ -2066,6 +2308,46 @@ class CyberSecGame {
         ctx.restore();
     }
 
+    _showToast(text, icon = "star", duration = 3.5) {
+        console.log(`[Toast] [${icon}] ${text}`);
+        this.weatherToast = {
+            text: text,
+            icon: icon,
+            timer: duration
+        };
+
+        // Hiển thị thông báo Toast nổi trên DOM (nổi trên cả các Modal và giao diện)
+        let toastEl = document.getElementById("gameFloatingToast");
+        if (!toastEl) {
+            toastEl = document.createElement("div");
+            toastEl.id = "gameFloatingToast";
+            toastEl.className = "game-floating-toast";
+            document.body.appendChild(toastEl);
+        }
+        const emojiMap = {
+            star: "⭐",
+            sword: "⚔️",
+            trophy: "🏆",
+            shield: "🛡️",
+            lightbulb: "💡",
+            sun: "☀️",
+            rain: "🌧️",
+            snow: "❄️"
+        };
+        const iconSym = emojiMap[icon] || "🔔";
+        toastEl.innerHTML = `<span class="toast-sym">${iconSym}</span> <span class="toast-msg">${text}</span>`;
+        toastEl.classList.remove("hidden");
+        toastEl.classList.add("show");
+
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => {
+            if (toastEl) {
+                toastEl.classList.remove("show");
+                toastEl.classList.add("hidden");
+            }
+        }, duration * 1000);
+    }
+
     _renderWeatherToast(ctx, w, h) {
         if (!this.weatherToast || this.weatherToast.timer <= 0) return;
         const toast = this.weatherToast;
@@ -2074,7 +2356,9 @@ class CyberSecGame {
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        const boxW = 460;
+        ctx.font = "bold 15px 'Segoe UI', Tahoma, sans-serif";
+        const textWidth = ctx.measureText(toast.text).width;
+        const boxW = Math.max(380, Math.min(w - 40, textWidth + 80));
         const boxH = 46;
         const boxX = (w - boxW) / 2;
         const boxY = 64;
@@ -2085,10 +2369,11 @@ class CyberSecGame {
         ctx.lineWidth = 2;
         ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-        window.PixelSprites.drawPixelIcon(ctx, toast.icon, boxX + 14, boxY + 11, 24);
+        if (window.PixelSprites && window.PixelSprites.drawPixelIcon) {
+            window.PixelSprites.drawPixelIcon(ctx, toast.icon, boxX + 14, boxY + 11, 24);
+        }
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 16px 'Segoe UI', Tahoma, sans-serif";
         ctx.textAlign = "left";
         ctx.fillText(toast.text, boxX + 48, boxY + 29);
 
