@@ -761,6 +761,17 @@
             this.logoSoftLab.src = "images/logo_softlab.png";
             this.imgSoftLabSigned = new Image();
             this.imgSoftLabSigned.src = "images/softlab_signed.png";
+            this.imgNBKSigned = new Image();
+            this.imgNBKSigned.src = "images/nbk_signed.png";
+
+            // Tự động re-render khi hình ảnh chữ ký tải xong nếu modal đang mở
+            this.imgSoftLabSigned.onload = () => {
+                if (this.modalEl && this.modalEl.classList.contains("show")) this.renderPreview();
+            };
+            this.imgNBKSigned.onload = () => {
+                if (this.modalEl && this.modalEl.classList.contains("show")) this.renderPreview();
+            };
+
             this.trophyKratos = new Image();
             this.trophyKratos.src = "images/trophy_kratos.jpg";
             this.imgFlash = new Image();
@@ -842,11 +853,70 @@
         renderPreview() {
             if (!this.canvasPreview) return;
             const ctx = this.canvasPreview.getContext("2d");
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
             this.drawCertificate(ctx, this.canvasPreview.width, this.canvasPreview.height, this.currentStats);
+        }
+
+        /**
+         * Kỹ thuật Multi-step Downscaling (Mipmapping) giữ nguyên 100% độ sắc nét cho con dấu & chữ ký:
+         * Khi thu nhỏ từ ảnh gốc 2.5K xuống kích thước hiển thị trên Canvas, nếu chỉ dùng 1 lệnh drawImage
+         * thông thường thì trình duyệt sẽ bỏ qua hầu hết các điểm ảnh, dẫn tới hiện tượng chữ bị vỡ hạt,
+         * nét bút bị đứt gãy và mờ nhòe. Kỹ thuật chia nửa kích thước từng bước giúp khử hoàn toàn răng cưa.
+         */
+        _drawSmoothImage(ctx, img, dx, dy, dWidth, dHeight) {
+            if (!img || !img.complete || !img.naturalWidth) return false;
+
+            ctx.save();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+
+            const nw = img.naturalWidth;
+            const nh = img.naturalHeight;
+
+            if (nw > dWidth * 2.2 || nh > dHeight * 2.2) {
+                let curCanvas = document.createElement("canvas");
+                let curCtx = curCanvas.getContext("2d");
+                let curW = nw;
+                let curH = nh;
+
+                curCanvas.width = curW;
+                curCanvas.height = curH;
+                curCtx.imageSmoothingEnabled = true;
+                curCtx.imageSmoothingQuality = "high";
+                curCtx.drawImage(img, 0, 0);
+
+                while (curW * 0.5 > dWidth * 1.4 && curH * 0.5 > dHeight * 1.4) {
+                    const nextW = Math.round(curW * 0.5);
+                    const nextH = Math.round(curH * 0.5);
+                    const nextCanvas = document.createElement("canvas");
+                    const nextCtx = nextCanvas.getContext("2d");
+                    nextCanvas.width = nextW;
+                    nextCanvas.height = nextH;
+                    nextCtx.imageSmoothingEnabled = true;
+                    nextCtx.imageSmoothingQuality = "high";
+                    nextCtx.drawImage(curCanvas, 0, 0, nextW, nextH);
+
+                    curCanvas = nextCanvas;
+                    curCtx = nextCtx;
+                    curW = nextW;
+                    curH = nextH;
+                }
+
+                ctx.drawImage(curCanvas, dx, dy, dWidth, dHeight);
+                curCanvas = null;
+            } else {
+                ctx.drawImage(img, dx, dy, dWidth, dHeight);
+            }
+
+            ctx.restore();
+            return true;
         }
 
         drawCertificate(ctx, w, h, stats) {
             ctx.save();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
 
             // Tính toán tỷ lệ co giãn (Dynamic Proportional Scaling)
             // Chuẩn hóa dựa trên kích thước cơ sở 1200 x 750 (hoặc 2048 x 1280 khi xuất 2K)
@@ -1089,7 +1159,7 @@
             ctx.fillText(`⏱️ Tổng thời gian: ${durationText}   •   ⚔️ Thời gian diệt Boss: ${bossSec}s   •   🌹 Hoa hồng tích lũy: ${rosesText}`, w / 2, statsY + Math.round(21 * scaleY));
 
             // 8. CHỮ KÝ, CON DẤU & NGÀY CẤP (SEALS & SIGNATURES - CÂN XỨNG HOÀN MỸ DƯỚI ĐÁY)
-            const sigY = statsY + statsH + Math.round(26 * scaleY);
+            const sigY = statsY + statsH + Math.round(22 * scaleY);
 
             // Ngày cấp
             const now = stats.completedDate || new Date();
@@ -1097,26 +1167,40 @@
             ctx.font = `italic ${Math.round(13 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#2c3e50";
             ctx.textAlign = "right";
-            ctx.fillText(dateStr, w - margin - Math.round(60 * scaleX), sigY);
+            ctx.fillText(dateStr, w - margin - Math.round(50 * scaleX), sigY);
 
-            // Chữ ký bên trái: Chuyên gia SoftLab
-            const leftColX = margin + Math.round(190 * scaleX);
+            // Tọa độ 2 cột chữ ký cân xứng
+            const leftColX = margin + Math.round(195 * scaleX);
+            const rightColX = w - margin - Math.round(195 * scaleX);
+
+            // Tiêu đề 2 đơn vị
             ctx.textAlign = "center";
             ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
             ctx.fillStyle = "#1e272e";
-            ctx.fillText("ĐẠI DIỆN SOFTLAB", leftColX, sigY + Math.round(22 * scaleY));
+            ctx.fillText("ĐẠI DIỆN SOFTLAB", leftColX, sigY + Math.round(18 * scaleY));
+            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM", rightColX, sigY + Math.round(18 * scaleY));
 
-            // Vẽ ảnh chữ ký & con dấu thực tế của SoftLab (softlab_signed.png)
-            if (this.imgSoftLabSigned && this.imgSoftLabSigned.complete && this.imgSoftLabSigned.naturalWidth > 0) {
-                const signW = Math.round(145 * scale);
-                const signH = Math.round(signW / 1.6);
-                ctx.drawImage(this.imgSoftLabSigned, leftColX - signW / 2, sigY + Math.round(28 * scaleY), signW, signH);
-            } else {
+            // Kích thước chuẩn hiển thị chữ ký & con dấu (Bảo toàn 100% độ sắc nét)
+            const targetSignH = Math.round(112 * scaleY);
+            const softlabSignW = Math.round(targetSignH * 1.608);
+            const nbkSignW = Math.round(targetSignH * 1.339);
+            const signTopY = sigY + Math.round(22 * scaleY);
+
+            // 1. Chữ ký & Con dấu SoftLab bên trái (sắc nét với multi-step downscale)
+            const softlabDrawn = this._drawSmoothImage(
+                ctx,
+                this.imgSoftLabSigned,
+                leftColX - softlabSignW / 2,
+                signTopY,
+                softlabSignW,
+                targetSignH
+            );
+
+            if (!softlabDrawn) {
                 ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
                 ctx.fillStyle = "#57606f";
                 ctx.fillText("(Ký & đóng dấu số)", leftColX, sigY + Math.round(40 * scaleY));
 
-                // Huy hiệu xác thực điện tử SoftLab fallback
                 const stampW = Math.round(170 * scale);
                 const stampH = Math.round(24 * scaleY);
                 ctx.fillStyle = "rgba(41, 128, 185, 0.12)";
@@ -1130,38 +1214,35 @@
                 ctx.fillText("✓ SOFTLAB CYBERSEC VERIFIED", leftColX, sigY + Math.round(68 * scaleY));
             }
 
-            // ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            // ctx.fillStyle = "#0c2461";
-            // ctx.fillText("Ban An Toàn Thông Tin SoftLab", leftColX, sigY + Math.round(102 * scaleY));
+            // 2. Con dấu đỏ chứng nhận danh dự (Official Red Seal) ở chính giữa
+            this._drawOfficialRedSeal(ctx, w / 2, sigY + Math.round(58 * scaleY), scale);
 
-            // Con dấu đỏ chứng nhận danh dự (Official Red Seal) ở chính giữa
-            this._drawOfficialRedSeal(ctx, w / 2, sigY + Math.round(56 * scaleY), scale);
-
-            // Chữ ký bên phải: THCS Nguyễn Bỉnh Khiêm
-            const rightColX = w - margin - Math.round(190 * scaleX);
-            ctx.font = `bold ${Math.round(13.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#1e272e";
-            ctx.fillText("TRƯỜNG THCS NGUYỄN BỈNH KHIÊM", rightColX, sigY + Math.round(22 * scaleY));
-
-            // ctx.font = `italic ${Math.round(12 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            // ctx.fillStyle = "#57606f";
-            // ctx.fillText("(Ban Giám Hiệu xác nhận)", rightColX, sigY + Math.round(40 * scaleY));
-
-            // Nét ký trang trọng
-            ctx.strokeStyle = "#2c3e50";
-            ctx.lineWidth = Math.max(1.5, Math.round(2 * scale));
-            ctx.beginPath();
-            ctx.moveTo(rightColX - Math.round(60 * scale), sigY + Math.round(68 * scaleY));
-            ctx.bezierCurveTo(
-                rightColX - Math.round(20 * scale), sigY + Math.round(54 * scaleY),
-                rightColX + Math.round(20 * scale), sigY + Math.round(78 * scaleY),
-                rightColX + Math.round(60 * scale), sigY + Math.round(64 * scaleY)
+            // 3. Chữ ký & Con dấu THCS Nguyễn Bỉnh Khiêm bên phải (sắc nét với multi-step downscale)
+            const nbkDrawn = this._drawSmoothImage(
+                ctx,
+                this.imgNBKSigned,
+                rightColX - nbkSignW / 2,
+                signTopY,
+                nbkSignW,
+                targetSignH
             );
-            ctx.stroke();
 
-            ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
-            ctx.fillStyle = "#0c2461";
-            ctx.fillText("Ban Tổ Chức Hội Thi", rightColX, sigY + Math.round(100 * scaleY));
+            if (!nbkDrawn) {
+                ctx.strokeStyle = "#2c3e50";
+                ctx.lineWidth = Math.max(1.5, Math.round(2 * scale));
+                ctx.beginPath();
+                ctx.moveTo(rightColX - Math.round(60 * scale), sigY + Math.round(68 * scaleY));
+                ctx.bezierCurveTo(
+                    rightColX - Math.round(20 * scale), sigY + Math.round(54 * scaleY),
+                    rightColX + Math.round(20 * scale), sigY + Math.round(78 * scaleY),
+                    rightColX + Math.round(60 * scale), sigY + Math.round(64 * scaleY)
+                );
+                ctx.stroke();
+
+                ctx.font = `bold ${Math.round(14.5 * scale)}px 'Segoe UI', Tahoma, sans-serif`;
+                ctx.fillStyle = "#0c2461";
+                ctx.fillText("Ban Tổ Chức Hội Thi", rightColX, sigY + Math.round(100 * scaleY));
+            }
 
             ctx.restore();
         }
@@ -1223,6 +1304,8 @@
             exportCanvas.width = 2048;
             exportCanvas.height = 1280;
             const expCtx = exportCanvas.getContext("2d");
+            expCtx.imageSmoothingEnabled = true;
+            expCtx.imageSmoothingQuality = "high";
 
             this.drawCertificate(expCtx, exportCanvas.width, exportCanvas.height, this.currentStats);
 
