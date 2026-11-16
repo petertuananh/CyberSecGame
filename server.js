@@ -27,7 +27,7 @@ try {
 const TunnelManager = require('./tunnel_manager');
 
 // Lấy phiên bản phần mềm hiện tại từ package.json
-let CURRENT_VERSION = '3.0.0';
+let CURRENT_VERSION = '3.0.1';
 try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     if (pkg && pkg.version) CURRENT_VERSION = pkg.version;

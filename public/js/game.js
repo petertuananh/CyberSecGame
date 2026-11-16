@@ -28,10 +28,7 @@ class CyberSecGame {
         this.stageQuestionsAnswered = 0;
         this.roses = 0; // Số bông hồng tích lũy
 
-        // Xóa sạch huy hiệu thành tựu session cũ khi tải game
-        if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
-            window.AchievementManager.resetAll();
-        }
+        // Thành tựu được lưu trữ bền vững trong localStorage qua AchievementManager
 
         // Hành trình phiêu lưu (Traveling between worlds)
         this.travelFrom = 1;
@@ -1507,7 +1504,7 @@ class CyberSecGame {
                 if (cy >= 495 && cy <= 595) isPointer = true;
             } else if (this.state === "ACHIEVEMENTS") {
                 const btnY = this.canvas.height - 68;
-                if (cy >= btnY - 10 && cy <= btnY + 60) isPointer = true;
+                if (cy >= btnY - 26 && cy <= btnY + 60) isPointer = true;
             }
             this.canvas.style.cursor = isPointer ? "pointer" : "default";
         });
@@ -1662,6 +1659,13 @@ class CyberSecGame {
                     } else if (cx >= w * 0.725 && cx <= w * 0.725 + 240) {
                         // Nút 4: Chơi lại săn thành tựu
                         this.resetPlayerDataAndRestart("STAGE");
+                    }
+                } else if (cy >= btnY - 26 && cy <= btnY - 2 && cx >= w * 0.15 && cx <= w * 0.85) {
+                    if (confirm("Bạn có muốn đặt lại (xóa sạch) toàn bộ danh hiệu thành tựu để bắt đầu tích lũy lại không?")) {
+                        if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
+                            window.AchievementManager.resetAll();
+                            this._showToast("🔄 Đã xóa sạch toàn bộ danh hiệu thành tựu!", "star");
+                        }
                     }
                 } else {
                     // Click ngẫu nhiên trên màn hình thành tựu tỏa bụi sao
@@ -2007,12 +2011,7 @@ class CyberSecGame {
         this.storyCharProgress = 0;
         this.storyTextDone = false;
 
-        // 2. Xóa sạch huy hiệu & thành tựu của lượt chơi trước (kể cả Loser)
-        if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
-            window.AchievementManager.resetAll();
-        }
-
-        // 3. Đóng các modal nếu đang mở
+        // 2. Đóng các modal nếu đang mở (Giữ nguyên các thành tựu đã tích lũy)
         if (window.CertificateGenerator && typeof window.CertificateGenerator.close === "function") {
             window.CertificateGenerator.close();
         }
@@ -2041,9 +2040,6 @@ class CyberSecGame {
             this.lastBossDuration = 0;
             this.bossHP = this.bossMaxHP || 9;
             this.bossTimer = 0;
-            if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
-                window.AchievementManager.resetAll();
-            }
         }
 
         if (this.config && Array.isArray(this.config.storySlides) && this.config.storySlides.length > 0) {
@@ -2096,9 +2092,6 @@ class CyberSecGame {
             this.stageWrongCount = 0;
             this.stageQuestionsAnswered = 0;
             this.bossHP = this.bossMaxHP || 9;
-            if (window.AchievementManager && typeof window.AchievementManager.resetAll === "function") {
-                window.AchievementManager.resetAll();
-            }
         }
 
         if (this.config && Array.isArray(this.config.sections)) {

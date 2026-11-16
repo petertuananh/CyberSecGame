@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 # Script Tạo Tệp .DMG Cài Đặt Chuẩn macOS (Apple Silicon & Intel)
-# Dự án: Vệ Binh Mật Khẩu (CyberSec Password Guardian) v3.0.0
+# Dự án: Vệ Binh Mật Khẩu (CyberSec Password Guardian) v3.0.1
 # Đồng hành: Trường THCS Nguyễn Bỉnh Khiêm × SoftLab
 # =====================================================================
 set -e

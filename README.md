@@ -1,14 +1,14 @@
 <div align="center">
 
 # 🛡️ VỆ BINH MẬT KHẨU
-### CYBERSEC PASSWORD GUARDIAN • PHIÊN BẢN 3.0.0 (CROSS-PLATFORM EDITION)
+### CYBERSEC PASSWORD GUARDIAN • PHIÊN BẢN 3.0.1 (CROSS-PLATFORM EDITION)
 
 **HỆ THỐNG TRÒ CHƠI GIÁO DỤC AN TOÀN THÔNG TIN TƯƠNG TÁC ĐA NỀN TẢNG**  
 *Sự kết hợp độc đáo giữa Nghệ thuật Retro Pixel 16-bit, Phần cứng Vật lý Arduino & Điều khiển Di động Thời gian thực*
 
 ---
 
-[![Release](https://img.shields.io/badge/Release-v3.0.0-059669?style=for-the-badge&logo=github&logoColor=white)](https://github.com/petertuananh/CyberSecGame/releases/tag/v3.0.0)
+[![Release](https://img.shields.io/badge/Release-v3.0.1-059669?style=for-the-badge&logo=github&logoColor=white)](https://github.com/petertuananh/CyberSecGame/releases/tag/v3.0.1)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-3b82f6?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/petertuananh/CyberSecGame/releases)
 [![Hardware](https://img.shields.io/badge/Hardware-Arduino%20Arcade-00979D?style=for-the-badge&logo=arduino&logoColor=white)](https://www.arduino.cc/)
 [![Engine](https://img.shields.io/badge/Runtime-Electron%20%7C%20Node.js-68a063?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
@@ -27,16 +27,16 @@
 
 <br/>
 
-## 📥 CỔNG TẢI VỀ BẢN CÀI ĐẶT CHÍNH THỨC (RELEASE v3.0.0)
+## 📥 CỔNG TẢI VỀ BẢN CÀI ĐẶT CHÍNH THỨC (RELEASE v3.0.1)
 
 Hệ thống hỗ trợ gói cài đặt nguyên bản cho tất cả các hệ điều hành máy tính phổ biến hiện nay:
 
 | Hệ Điều Hành | Kiến Trúc Vi Xử Lý | Định Dạng Tệp | Liên Kết Tải Nhanh | Hướng Dẫn Nhanh |
 | :--- | :--- | :---: | :---: | :--- |
-| 🍏 **macOS** | **Apple Silicon (M1, M2, M3, M4)** | `.dmg` | [**Tải CyberSecGame-macOS-arm64.dmg**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.0/CyberSecGame-macOS-arm64.dmg) | Mở file `.dmg`, kéo biểu tượng game vào thư mục `Applications`. |
-| 💻 **macOS** | **Intel Core (x64)** | `.dmg` | [**Tải CyberSecGame-macOS-x64.dmg**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.0/CyberSecGame-macOS-x64.dmg) | Tương thích toàn bộ máy Mac dùng CPU Intel 64-bit. |
-| 🪟 **Windows** | **Windows 10 / 11 (64-bit)** | `.exe` | [**Tải CyberSecGame_Setup.exe**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.0/CyberSecGame_Setup.exe) | Trình cài đặt tự động tạo icon Desktop & Start Menu. |
-| 📦 **Windows Portable** | **Không cần cài đặt** | `.zip` | [**Tải CyberSecGame-Windows-x64.zip**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.0/CyberSecGame-Windows-x64.zip) | Giải nén vào USB và chạy trực tiếp mọi nơi. |
+| 🍏 **macOS** | **Apple Silicon (M1, M2, M3, M4)** | `.dmg` | [**Tải CyberSecGame-macOS-arm64.dmg**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.1/CyberSecGame-macOS-arm64.dmg) | Mở file `.dmg`, kéo biểu tượng game vào thư mục `Applications`. |
+| 💻 **macOS** | **Intel Core (x64)** | `.dmg` | [**Tải CyberSecGame-macOS-x64.dmg**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.1/CyberSecGame-macOS-x64.dmg) | Tương thích toàn bộ máy Mac dùng CPU Intel 64-bit. |
+| 🪟 **Windows** | **Windows 10 / 11 (64-bit)** | `.exe` | [**Tải CyberSecGame_Setup.exe**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.1/CyberSecGame_Setup.exe) | Trình cài đặt tự động tạo icon Desktop & Start Menu. |
+| 📦 **Windows Portable** | **Không cần cài đặt** | `.zip` | [**Tải CyberSecGame-Windows-x64.zip**](https://github.com/petertuananh/CyberSecGame/releases/download/v3.0.1/CyberSecGame-Windows-x64.zip) | Giải nén vào USB và chạy trực tiếp mọi nơi. |
 
 > [!TIP]
 > **Tính năng Tự Động Cập Nhật 1-Click (In-App Auto Update):**  
@@ -54,7 +54,7 @@ Hệ thống hỗ trợ gói cài đặt nguyên bản cho tất cả các hệ 
 
 ```
                                   ┌─────────────────────────────────────────┐
-                                  │   VỆ BINH MẬT KHẨU v3.0.0 (CORE ENGINE) │
+                                  │   VỆ BINH MẬT KHẨU v3.0.1 (CORE ENGINE) │
                                   └────────────────────┬────────────────────┘
                                                        │
          ┌───────────────────┬─────────────────────────┼─────────────────────────┬───────────────────┐
@@ -332,7 +332,7 @@ npm run build:dmg
 ```
 
 ### 3. Tự động hóa qua GitHub Actions CI/CD
-Kho chứa đã được tích hợp quy trình tự động tại `.github/workflows/build-dmg.yml`. Khi gắn thẻ phiên bản mới (ví dụ `git tag v3.0.0` và `git push origin v3.0.0`):
+Kho chứa đã được tích hợp quy trình tự động tại `.github/workflows/build-dmg.yml`. Khi gắn thẻ phiên bản mới (ví dụ `git tag v3.0.1` và `git push origin v3.0.1`):
 * GitHub Actions khởi chạy máy ảo macOS mới nhất.
 * Biên dịch mã nguồn, đóng gói ứng dụng cho cả 2 kiến trúc vi xử lý.
 * Tạo tệp `CyberSecGame-macOS-arm64.dmg` và `CyberSecGame-macOS-x64.dmg`.
