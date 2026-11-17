@@ -15,7 +15,6 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
-// Nếu Electron được gọi dưới dạng node hoặc không có đối tượng app
 if (!electron || typeof electron !== 'object' || !electron.app) {
     console.log("[Launcher] Đang khởi chạy Server Node.js và mở Trình duyệt...");
     require(path.join(__dirname, 'server.js'));
@@ -31,7 +30,6 @@ if (!electron || typeof electron !== 'object' || !electron.app) {
 
 const { app, BrowserWindow, dialog, shell, Menu } = electron;
 
-// Đảm bảo chỉ chạy duy nhất 1 phiên bản của ứng dụng
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     console.log("[Electron] Một phiên bản khác của game đang chạy. Tiến trình này sẽ dừng ngay lập tức.");
