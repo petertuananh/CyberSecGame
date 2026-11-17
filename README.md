@@ -18,7 +18,7 @@
 <br/>
 
 > 🏛️ **ĐƠN VỊ ĐỒNG HÀNH VÀ BẢO TRỢ CHUYÊN MÔN**  
-> **TRƯỜNG THCS NGUYỄN BỈNH KHIÊM** &nbsp;×&nbsp; **PHÒNG NGHIÊN CỨU & PHÁT TRIỂN SOFTLAB**  
+> **TRƯỜNG THCS NGUYỄN BỈNH KHIÊM** &nbsp;×&nbsp; **SOFTLAB**  
 > *Sản phẩm đổi mới sáng tạo phục vụ công tác giảng dạy, trải nghiệm số và ngày hội an toàn không gian mạng.*
 
 ---
